@@ -38,16 +38,72 @@ body {
   color: var(--text-primary);
   font-family: 'Plus Jakarta Sans', sans-serif;
   margin: 0;
+  padding: 0;
   overflow-x: hidden;
+  min-height: 100vh;
+  width: 100vw;
+  background: var(--bg-deep);
+  background-image: radial-gradient(circle at 15% 50%, rgba(99, 102, 241, 0.12), transparent 25%),
+                    radial-gradient(circle at 85% 30%, rgba(236, 72, 153, 0.1), transparent 25%);
+  background-attachment: fixed;
+  animation: pulseBg 15s ease-in-out infinite alternate;
+}
+
+/* Ensure root elements fill viewport */
+html {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  background: var(--bg-deep);
+  background-image: radial-gradient(circle at 15% 50%, rgba(99, 102, 241, 0.12), transparent 25%),
+                    radial-gradient(circle at 85% 30%, rgba(236, 72, 153, 0.1), transparent 25%);
+  background-attachment: fixed;
 }
 
 /* Animated Ambient Background */
 .main-view {
-  background: radial-gradient(circle at 15% 50%, rgba(99, 102, 241, 0.12), transparent 25%),
-  radial-gradient(circle at 85% 30%, rgba(236, 72, 153, 0.1), transparent 25%);
-  background-color: var(--bg-deep) !important;
+  background: var(--bg-deep);
+  background-image: radial-gradient(circle at 15% 50%, rgba(99, 102, 241, 0.12), transparent 25%),
+                    radial-gradient(circle at 85% 30%, rgba(236, 72, 153, 0.1), transparent 25%);
   background-attachment: fixed;
   animation: pulseBg 15s ease-in-out infinite alternate;
+  min-height: 100vh;
+  width: 100vw;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* Ensure Vaadin app fills entire viewport */
+.v-application {
+  width: 100vw !important;
+  min-height: 100vh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: var(--bg-deep) !important;
+  background-image: radial-gradient(circle at 15% 50%, rgba(99, 102, 241, 0.12), transparent 25%),
+                    radial-gradient(circle at 85% 30%, rgba(236, 72, 153, 0.1), transparent 25%) !important;
+  background-attachment: fixed !important;
+}
+
+/* Fix Vaadin layout centering */
+vaadin-vertical-layout.main-view {
+  align-items: center !important;
+  width: 100vw !important;
+  min-height: 100vh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: var(--bg-deep) !important;
+  background-image: radial-gradient(circle at 15% 50%, rgba(99, 102, 241, 0.12), transparent 25%),
+                    radial-gradient(circle at 85% 30%, rgba(236, 72, 153, 0.1), transparent 25%) !important;
+}
+
+vaadin-vertical-layout.main-view > vaadin-vertical-layout {
+  width: 100% !important;
+  max-width: none !important;
+  align-items: center !important;
 }
 
 @keyframes pulseBg {
@@ -64,6 +120,10 @@ body {
   position: sticky;
   top: 0;
   z-index: 1000;
+  width: 100vw;
+  margin: 0;
+  padding: 20px;
+  box-sizing: border-box;
 }
 
 .logo-text {
@@ -94,6 +154,13 @@ body {
 .hero-section {
   padding: 80px 20px 60px;
   position: relative;
+  width: 100%;
+  max-width: 1200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
 
 .hero-title {
@@ -126,6 +193,9 @@ body {
   box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02), 0 20px 40px rgba(0,0,0,0.4);
   position: relative;
   overflow: hidden;
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
 }
 
 /* Glowing top edge for input card */
@@ -396,7 +466,7 @@ body {
   background: rgba(167, 139, 250, 0.05);
 }
 
-/* Responsive Design */
+/* Responsive design */
 @media (max-width: 768px) {
   .vault-grid {
     grid-template-columns: 1fr;
@@ -414,6 +484,67 @@ body {
   .header-search {
     max-width: 200px;
   }
+}
+
+/* Vaadin Layout Fixes */
+vaadin-horizontal-layout {
+  width: 100% !important;
+}
+
+vaadin-vertical-layout {
+  width: 100% !important;
+}
+
+/* Header should span full width */
+vaadin-horizontal-layout.glass-header {
+  width: 100vw !important;
+  margin-left: calc(-50vw + 50%);
+  margin-right: calc(-50vw + 50%);
+}
+
+/* Content wrapper centering */
+vaadin-vertical-layout[style*="max-width: 1200px"] {
+  margin: 0 auto !important;
+  align-items: center !important;
+}
+
+/* Main container fixes */
+.v-application {
+  width: 100% !important;
+}
+
+/* Root layout fixes */
+#outlet {
+  width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  background: var(--bg-deep) !important;
+  background-image: radial-gradient(circle at 15% 50%, rgba(99, 102, 241, 0.12), transparent 25%),
+                    radial-gradient(circle at 85% 30%, rgba(236, 72, 153, 0.1), transparent 25%) !important;
+  background-attachment: fixed !important;
+  min-height: 100vh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Universal background coverage */
+* {
+  box-sizing: border-box;
+}
+
+/* Ensure no element has black background */
+vaadin-app-layout,
+vaadin-vertical-layout,
+vaadin-horizontal-layout {
+  background: transparent !important;
+}
+
+/* Full viewport coverage */
+.v-system-error,
+.v-loading-indicator,
+.v-reconnect-dialog {
+  background: var(--bg-deep) !important;
 }
 
 /* Additional text color fixes */

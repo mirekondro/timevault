@@ -41,27 +41,37 @@ public class MainView extends VerticalLayout {
         setSizeFull();
         setPadding(false);
         setSpacing(false);
+        setMargin(false);
         addClassName("main-view");
 
         itemsGrid.addClassName("vault-grid");
         itemsGrid.setWidthFull();
 
+        // Create main container with proper centering
         VerticalLayout main = new VerticalLayout();
         main.setSizeFull();
         main.setPadding(false);
         main.setSpacing(false);
+        main.setMargin(false);
+        main.setAlignItems(Alignment.CENTER);
 
-        main.add(createHeader());
-        main.add(createHeroSection());
+        // Header spans full width
+        Component header = createHeader();
+        main.add(header);
+        main.setHorizontalComponentAlignment(Alignment.STRETCH, header);
 
+        // Hero section centered
+        Component hero = createHeroSection();
+        main.add(hero);
+        main.setHorizontalComponentAlignment(Alignment.CENTER, hero);
+
+        // Content wrapper with max width and centered
         VerticalLayout contentWrapper = new VerticalLayout();
         contentWrapper.setMaxWidth("1200px");
         contentWrapper.setWidth("100%");
         contentWrapper.setPadding(true);
         contentWrapper.setMargin(false);
-        contentWrapper.setSpacing(false);
-        contentWrapper.setAlignSelf(Alignment.CENTER);
-        contentWrapper.setAlignItems(Alignment.CENTER);
+        contentWrapper.setSpacing(true);
 
         contentWrapper.add(
                 createContentSection(),
@@ -69,15 +79,20 @@ public class MainView extends VerticalLayout {
         );
 
         main.add(contentWrapper);
+        main.setHorizontalComponentAlignment(Alignment.CENTER, contentWrapper);
         main.setFlexGrow(1, contentWrapper);
 
         add(main);
+        setHorizontalComponentAlignment(Alignment.STRETCH, main);
     }
 
     private Component createHeader() {
         HorizontalLayout header = new HorizontalLayout();
         header.addClassName("glass-header");
         header.setWidthFull();
+        header.getStyle().set("width", "100vw");
+        header.getStyle().set("margin-left", "calc(-50vw + 50%)");
+        header.getStyle().set("margin-right", "calc(-50vw + 50%)");
         header.setPadding(true);
         header.setAlignItems(FlexComponent.Alignment.CENTER);
         header.setJustifyContentMode(FlexComponent.JustifyContentMode.BETWEEN);
