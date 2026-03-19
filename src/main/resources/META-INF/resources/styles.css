@@ -4,6 +4,15 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
+html {
+  --lumo-body-text-color: #ffffff;
+  --lumo-header-text-color: #ffffff;
+  --lumo-secondary-text-color: #cbd5e1;
+  --lumo-tertiary-text-color: #94a3b8;
+  --lumo-primary-text-color: #a78bfa;
+  --lumo-base-color: #14141e;
+}
+
 :root {
   --bg-deep: #05050A;
   --glass-bg: rgba(20, 20, 30, 0.6);
@@ -371,6 +380,7 @@ body {
   font-size: 14px;
   margin: 0 0 20px 0;
   line-height: 1.6;
+  text-align: center;
 }
 
 /* Upload Component Styling */

@@ -61,6 +61,7 @@ public class MainView extends VerticalLayout {
         contentWrapper.setMargin(false);
         contentWrapper.setSpacing(false);
         contentWrapper.setAlignSelf(Alignment.CENTER);
+        contentWrapper.setAlignItems(Alignment.CENTER);
 
         contentWrapper.add(
                 createContentSection(),
@@ -132,13 +133,14 @@ public class MainView extends VerticalLayout {
         VerticalLayout section = new VerticalLayout();
         section.addClassName("modern-card");
         section.setWidthFull();
+        section.setAlignItems(FlexComponent.Alignment.CENTER);
 
         Tab urlTab = new Tab(VaadinIcon.LINK.create(), new Span("Web URL"));
         Tab imageTab = new Tab(VaadinIcon.MAGIC.create(), new Span("Vision AI"));
         Tab textTab = new Tab(VaadinIcon.TEXT_LABEL.create(), new Span("Smart Note"));
 
         Tabs tabs = new Tabs(urlTab, imageTab, textTab);
-        tabs.addThemeVariants(TabsVariant.LUMO_EQUAL_WIDTH_TABS);
+        tabs.addThemeVariants(TabsVariant.LUMO_EQUAL_WIDTH_TABS, TabsVariant.LUMO_CENTERED);
         tabs.setWidthFull();
         tabs.addClassName("modern-tabs");
 
@@ -163,6 +165,8 @@ public class MainView extends VerticalLayout {
         VerticalLayout panel = new VerticalLayout();
         panel.setPadding(false);
         panel.addClassName("input-panel");
+        panel.setAlignItems(FlexComponent.Alignment.CENTER);
+        panel.setDefaultHorizontalComponentAlignment(FlexComponent.Alignment.CENTER);
 
         TextField urlField = new TextField();
         urlField.setPlaceholder("Paste any link (e.g. https://github.com/...)");
@@ -199,6 +203,8 @@ public class MainView extends VerticalLayout {
         VerticalLayout panel = new VerticalLayout();
         panel.setPadding(false);
         panel.addClassName("input-panel");
+        panel.setAlignItems(FlexComponent.Alignment.CENTER);
+        panel.setDefaultHorizontalComponentAlignment(FlexComponent.Alignment.CENTER);
 
         MemoryBuffer buffer = new MemoryBuffer();
         Upload upload = new Upload(buffer);
@@ -226,6 +232,8 @@ public class MainView extends VerticalLayout {
         VerticalLayout panel = new VerticalLayout();
         panel.setPadding(false);
         panel.addClassName("input-panel");
+        panel.setAlignItems(FlexComponent.Alignment.CENTER);
+        panel.setDefaultHorizontalComponentAlignment(FlexComponent.Alignment.CENTER);
 
         TextArea textArea = new TextArea();
         textArea.setPlaceholder("Dump your thoughts, meeting notes, or raw text here...");
