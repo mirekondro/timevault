@@ -503,19 +503,14 @@ public class VaultManager {
         if (item.isUnlockedInSession()) {
             return true;
         }
-        if (rawPassword == null || rawPassword.isBlank()) {
-            appModel.showErrorKey("status.lock.password.required");
+        String password = safePasswordValue(rawPassword);
+        if (password.isBlank()) {
+            appModel.showErrorKey("dialog.validation.unlock.password.required");
             return false;
         }
 
         try {
-            byte[] protectedImageData = loadStoredImageRecord(item.getOwnerId(), item.getId())
-                    .map(StoredImageRecord::protectedImageData)
-                    .orElseGet(() -> new byte[0]);
-            UnlockedItemSession unlockedSession = protectedItemCrypto.unlock(item, protectedImageData, rawPassword);
-            VaultItemFx unlockedItem = copyItem(item);
-            unlockedItem.setUnlockedSession(unlockedSession);
-            appModel.updateItem(unlockedItem);
+            VaultItemFx unlockedItem = unlockItemInSession(appModel, item, password);
             appModel.showSuccessKey("status.lock.unlock.success", unlockedItem.getId());
             return true;
         } catch (SQLException exception) {
@@ -527,6 +522,31 @@ public class VaultManager {
         } catch (IllegalStateException exception) {
             appModel.showErrorKey("status.lock.unlock.error", safeMessage(exception));
             return false;
+        }
+    }
+
+    public DialogActionResult unlockItemInDialog(AppModel appModel, VaultItemFx item, String rawPassword) {
+        if (item == null) {
+            return dialogFormError(appModel, "status.lock.unlock.select");
+        }
+        if (!item.isLocked() || item.isUnlockedInSession()) {
+            return DialogActionResult.successful();
+        }
+
+        String password = safePasswordValue(rawPassword);
+        if (password.isBlank()) {
+            return dialogFieldError(appModel, DialogFieldIds.UNLOCK_PASSWORD, "dialog.validation.unlock.password.required");
+        }
+
+        try {
+            unlockItemInSession(appModel, item, password);
+            return DialogActionResult.successful();
+        } catch (SQLException exception) {
+            return dialogFormError(appModel, "status.lock.unlock.error", safeMessage(exception));
+        } catch (IllegalArgumentException exception) {
+            return dialogFieldError(appModel, DialogFieldIds.UNLOCK_PASSWORD, "status.lock.unlock.invalid");
+        } catch (IllegalStateException exception) {
+            return dialogFormError(appModel, "status.lock.unlock.error", safeMessage(exception));
         }
     }
 
@@ -593,6 +613,33 @@ public class VaultManager {
         } catch (SQLException exception) {
             appModel.showErrorKey("status.delete.error", safeMessage(exception));
             return false;
+        } finally {
+            appModel.setBusy(false);
+        }
+    }
+
+    public DialogActionResult deleteItem(AppModel appModel, VaultItemFx item) {
+        UserSession currentUser = currentDialogUser(appModel);
+        if (currentUser == null) {
+            return authRequiredDialogResult(appModel);
+        }
+        if (item == null) {
+            return dialogFormError(appModel, "status.delete.select");
+        }
+        if (item.isLocked() && !item.isUnlockedInSession()) {
+            return dialogFormError(appModel, "status.lock.unlock.required");
+        }
+
+        appModel.setBusy(true);
+        try {
+            boolean deleted = vaultItemDAO.deleteById(currentUser.id(), item.getId());
+            if (!deleted) {
+                return dialogFormError(appModel, "status.delete.missing");
+            }
+            appModel.removeItem(item.getId());
+            return DialogActionResult.successMainToast(appModel.text("status.delete.deleted", item.getId()));
+        } catch (SQLException exception) {
+            return dialogFormError(appModel, "status.delete.error", safeMessage(exception));
         } finally {
             appModel.setBusy(false);
         }
@@ -904,6 +951,17 @@ public class VaultManager {
         item.setLockSalt("");
         item.setLockPayload("");
         item.clearUnlockedSession();
+    }
+
+    private VaultItemFx unlockItemInSession(AppModel appModel, VaultItemFx item, String password) throws SQLException {
+        byte[] protectedImageData = loadStoredImageRecord(item.getOwnerId(), item.getId())
+                .map(StoredImageRecord::protectedImageData)
+                .orElseGet(() -> new byte[0]);
+        UnlockedItemSession unlockedSession = protectedItemCrypto.unlock(item, protectedImageData, password);
+        VaultItemFx unlockedItem = copyItem(item);
+        unlockedItem.setUnlockedSession(unlockedSession);
+        appModel.updateItem(unlockedItem);
+        return unlockedItem;
     }
 
     private Optional<StoredImageRecord> loadStoredImageRecord(long userId, long itemId) throws SQLException {
