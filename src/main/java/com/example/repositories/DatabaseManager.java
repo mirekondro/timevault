@@ -1,72 +1,85 @@
 package com.example.repositories;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 
 public class DatabaseManager {
 
-    private final String jdbcUrl;
+    private final ConnectionManager connectionManager;
 
-    public DatabaseManager(Path databasePath) {
-        try {
-            Files.createDirectories(databasePath.toAbsolutePath().getParent());
-        } catch (Exception exception) {
-            throw new IllegalStateException("Unable to create database directory", exception);
-        }
-        this.jdbcUrl = "jdbc:sqlite:" + databasePath.toAbsolutePath();
+    public DatabaseManager() {
+        this.connectionManager = new ConnectionManager();
         initialize();
     }
 
     public Connection getConnection() throws SQLException {
-        Connection connection = DriverManager.getConnection(jdbcUrl);
-        try (Statement statement = connection.createStatement()) {
-            statement.execute("PRAGMA foreign_keys = ON");
-        }
-        return connection;
+        return connectionManager.getConnection();
+    }
+
+    public String getDatabaseName() {
+        return connectionManager.getProperty("db.database", "timevault");
     }
 
     private void initialize() {
         try (Connection connection = getConnection(); Statement statement = connection.createStatement()) {
+            if (connectionManager.getBoolean("db.resetOnStart", true)) {
+                statement.execute("DROP TABLE IF EXISTS dbo.tags");
+                statement.execute("DROP TABLE IF EXISTS dbo.daily_capsules");
+                statement.execute("DROP TABLE IF EXISTS dbo.archives");
+            }
+
             statement.execute("""
-                    CREATE TABLE IF NOT EXISTS archives (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        type TEXT NOT NULL CHECK(type IN ('url','image','text','event')),
-                        url TEXT,
-                        title TEXT,
-                        content TEXT,
-                        file_path TEXT,
-                        ai_context TEXT,
-                        source_platform TEXT,
-                        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+                    IF OBJECT_ID('dbo.archives', 'U') IS NULL
+                    CREATE TABLE dbo.archives (
+                        id BIGINT IDENTITY(1,1) PRIMARY KEY,
+                        type NVARCHAR(20) NOT NULL CHECK (type IN ('url','image','text','event')),
+                        url NVARCHAR(2000) NULL,
+                        title NVARCHAR(500) NULL,
+                        content NVARCHAR(MAX) NULL,
+                        file_path NVARCHAR(1000) NULL,
+                        ai_context NVARCHAR(MAX) NULL,
+                        source_platform NVARCHAR(255) NULL,
+                        created_at DATETIME2 NOT NULL DEFAULT SYSDATETIME()
                     )
                     """);
+
             statement.execute("""
-                    CREATE TABLE IF NOT EXISTS tags (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        archive_id INTEGER NOT NULL,
-                        tag TEXT NOT NULL,
-                        FOREIGN KEY (archive_id) REFERENCES archives(id) ON DELETE CASCADE
+                    IF OBJECT_ID('dbo.tags', 'U') IS NULL
+                    CREATE TABLE dbo.tags (
+                        id BIGINT IDENTITY(1,1) PRIMARY KEY,
+                        archive_id BIGINT NOT NULL,
+                        tag NVARCHAR(100) NOT NULL,
+                        CONSTRAINT fk_tags_archive FOREIGN KEY (archive_id) REFERENCES dbo.archives(id) ON DELETE CASCADE
                     )
                     """);
+
             statement.execute("""
-                    CREATE TABLE IF NOT EXISTS daily_capsules (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        capsule_date TEXT UNIQUE,
-                        headline TEXT,
-                        vibe_summary TEXT,
-                        trending_topics TEXT,
-                        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+                    IF OBJECT_ID('dbo.daily_capsules', 'U') IS NULL
+                    CREATE TABLE dbo.daily_capsules (
+                        id BIGINT IDENTITY(1,1) PRIMARY KEY,
+                        capsule_date DATE NOT NULL UNIQUE,
+                        headline NVARCHAR(1000) NULL,
+                        vibe_summary NVARCHAR(MAX) NULL,
+                        trending_topics NVARCHAR(1000) NULL,
+                        created_at DATETIME2 NOT NULL DEFAULT SYSDATETIME()
                     )
                     """);
-            statement.execute("CREATE INDEX IF NOT EXISTS idx_archives_created_at ON archives(created_at DESC)");
-            statement.execute("CREATE INDEX IF NOT EXISTS idx_tags_archive_id ON tags(archive_id)");
-            statement.execute("CREATE INDEX IF NOT EXISTS idx_capsules_date ON daily_capsules(capsule_date DESC)");
+
+            statement.execute("""
+                    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'idx_archives_created_at' AND object_id = OBJECT_ID('dbo.archives'))
+                    CREATE INDEX idx_archives_created_at ON dbo.archives(created_at DESC)
+                    """);
+            statement.execute("""
+                    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'idx_tags_archive_id' AND object_id = OBJECT_ID('dbo.tags'))
+                    CREATE INDEX idx_tags_archive_id ON dbo.tags(archive_id)
+                    """);
+            statement.execute("""
+                    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'idx_capsules_date' AND object_id = OBJECT_ID('dbo.daily_capsules'))
+                    CREATE INDEX idx_capsules_date ON dbo.daily_capsules(capsule_date DESC)
+                    """);
         } catch (SQLException exception) {
-            throw new IllegalStateException("Unable to initialize SQLite schema", exception);
+            throw new IllegalStateException("Unable to initialize SQL Server schema", exception);
         }
     }
 }

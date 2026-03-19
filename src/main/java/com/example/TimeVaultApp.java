@@ -34,7 +34,7 @@ public class TimeVaultApp extends javafx.application.Application {
         });
 
         TimeVaultPaths paths = TimeVaultPaths.defaultPaths();
-        DatabaseManager databaseManager = new DatabaseManager(paths.databasePath());
+        DatabaseManager databaseManager = new DatabaseManager();
         ArchiveRepository archiveRepository = new ArchiveRepository(databaseManager);
         TagRepository tagRepository = new TagRepository(databaseManager);
         CapsuleRepository capsuleRepository = new CapsuleRepository(databaseManager);
@@ -58,13 +58,14 @@ public class TimeVaultApp extends javafx.application.Application {
         CapsuleService capsuleService = new CapsuleService(httpClient, capsuleRepository, aiContextService);
 
         MainView root = new MainView(stage, archiveService, rescueService, capsuleService, executor, paths);
-        Scene scene = new Scene(root, 1440, 920);
+        Scene scene = new Scene(root, 1320, 820);
         scene.getStylesheets().add(TimeVaultApp.class.getResource("/styles.css").toExternalForm());
 
         stage.setTitle("TimeVault - The Archive of Tomorrow");
-        stage.setMinWidth(1280);
-        stage.setMinHeight(820);
+        stage.setMinWidth(1024);
+        stage.setMinHeight(700);
         stage.setScene(scene);
+        stage.setMaximized(true);
         stage.show();
 
         Platform.runLater(root::initialize);

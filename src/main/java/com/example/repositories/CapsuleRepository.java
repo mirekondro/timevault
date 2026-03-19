@@ -1,13 +1,12 @@
 package com.example.repositories;
 
 import com.example.entities.DailyCapsule;
-import com.example.support.DateFormats;
-
 import java.sql.Connection;
+import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -33,10 +32,10 @@ public class CapsuleRepository {
     }
 
     public Optional<DailyCapsule> findByDate(LocalDate date) {
-        String sql = "SELECT * FROM daily_capsules WHERE capsule_date = ?";
+        String sql = "SELECT * FROM dbo.daily_capsules WHERE capsule_date = ?";
         try (Connection connection = databaseManager.getConnection();
              PreparedStatement statement = connection.prepareStatement(sql)) {
-            statement.setString(1, date.format(DateFormats.DATABASE_DATE));
+            statement.setDate(1, Date.valueOf(date));
             try (ResultSet resultSet = statement.executeQuery()) {
                 if (resultSet.next()) {
                     return Optional.of(map(resultSet));
@@ -49,7 +48,7 @@ public class CapsuleRepository {
     }
 
     public List<DailyCapsule> findAll() {
-        String sql = "SELECT * FROM daily_capsules ORDER BY capsule_date DESC";
+        String sql = "SELECT * FROM dbo.daily_capsules ORDER BY capsule_date DESC";
         try (Connection connection = databaseManager.getConnection();
              PreparedStatement statement = connection.prepareStatement(sql);
              ResultSet resultSet = statement.executeQuery()) {
@@ -65,21 +64,22 @@ public class CapsuleRepository {
 
     private DailyCapsule insert(DailyCapsule capsule) {
         String sql = """
-                INSERT INTO daily_capsules(capsule_date, headline, vibe_summary, trending_topics, created_at)
+                INSERT INTO dbo.daily_capsules(capsule_date, headline, vibe_summary, trending_topics, created_at)
+                OUTPUT INSERTED.id
                 VALUES (?, ?, ?, ?, ?)
                 """;
         try (Connection connection = databaseManager.getConnection();
-             PreparedStatement statement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            statement.setString(1, capsule.getCapsuleDate().format(DateFormats.DATABASE_DATE));
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setDate(1, Date.valueOf(capsule.getCapsuleDate()));
             statement.setString(2, capsule.getHeadline());
             statement.setString(3, capsule.getVibeSummary());
             statement.setString(4, capsule.getTrendingTopics());
-            statement.setString(5, capsule.getCreatedAt().format(DateFormats.DATABASE_DATE_TIME));
-            statement.executeUpdate();
-            try (ResultSet keys = statement.getGeneratedKeys()) {
-                if (keys.next()) {
-                    capsule.setId(keys.getLong(1));
+            statement.setTimestamp(5, Timestamp.valueOf(capsule.getCreatedAt()));
+            try (ResultSet keys = statement.executeQuery()) {
+                if (!keys.next()) {
+                    throw new IllegalStateException("SQL Server did not return a generated capsule id.");
                 }
+                capsule.setId(keys.getLong(1));
             }
             return capsule;
         } catch (SQLException exception) {
@@ -89,7 +89,7 @@ public class CapsuleRepository {
 
     private void update(DailyCapsule capsule, long id) {
         String sql = """
-                UPDATE daily_capsules
+                UPDATE dbo.daily_capsules
                 SET headline = ?, vibe_summary = ?, trending_topics = ?, created_at = ?
                 WHERE id = ?
                 """;
@@ -98,7 +98,7 @@ public class CapsuleRepository {
             statement.setString(1, capsule.getHeadline());
             statement.setString(2, capsule.getVibeSummary());
             statement.setString(3, capsule.getTrendingTopics());
-            statement.setString(4, capsule.getCreatedAt().format(DateFormats.DATABASE_DATE_TIME));
+            statement.setTimestamp(4, Timestamp.valueOf(capsule.getCreatedAt()));
             statement.setLong(5, id);
             statement.executeUpdate();
         } catch (SQLException exception) {
@@ -109,11 +109,11 @@ public class CapsuleRepository {
     private DailyCapsule map(ResultSet resultSet) throws SQLException {
         return new DailyCapsule(
                 resultSet.getLong("id"),
-                LocalDate.parse(resultSet.getString("capsule_date"), DateFormats.DATABASE_DATE),
+                resultSet.getDate("capsule_date").toLocalDate(),
                 resultSet.getString("headline"),
                 resultSet.getString("vibe_summary"),
                 resultSet.getString("trending_topics"),
-                LocalDateTime.parse(resultSet.getString("created_at"), DateFormats.DATABASE_DATE_TIME)
+                resultSet.getTimestamp("created_at").toLocalDateTime()
         );
     }
 }

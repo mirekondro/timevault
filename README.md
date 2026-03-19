@@ -1,6 +1,6 @@
 # TimeVault
 
-TimeVault is a local-first Java desktop app for Hack Esbjerg 2026. It captures URLs, text, and images into a SQLite archive, writes a three-sentence AI context note, rescues dead links from the Wayback Machine, and stores Denmark Today vibe capsules from Danish news feeds.
+TimeVault is a local-first Java desktop app for Hack Esbjerg 2026. It captures URLs, text, and images into a Microsoft SQL Server archive, writes a three-sentence AI context note, rescues dead links from the Wayback Machine, and stores Denmark Today vibe capsules from Danish news feeds.
 
 ## Run
 
@@ -35,12 +35,20 @@ TIMEVAULT_AI_PROVIDER=gemini
 TIMEVAULT_AI_PROVIDER=anthropic
 ```
 
-## Storage
+## Database Config
 
-All local data is stored in:
+Create your local ignored file from the tracked example:
+
+```bash
+copy src\main\resources\db.example.properties src\main\resources\db.properties
+```
+
+The real `db.properties` file is gitignored, so credentials stay out of GitHub.
+
+## Artifact Storage
+
+Saved HTML snapshots, copied images, and exports still live in:
 
 ```text
 ~/.timevault
 ```
-
-That folder contains the SQLite database, rescued HTML snapshots, copied images, and exported archive files.

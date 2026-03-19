@@ -149,7 +149,7 @@ public class MainView extends BorderPane {
     public void initialize() {
         showSection(Section.DASHBOARD);
         reloadEverything();
-        setStatus("Vault ready. Local archive stored in " + paths.baseDir());
+        setStatus("Vault ready. SQL Server connected, artifacts stored in " + paths.baseDir());
     }
 
     private void configureInteractions() {
@@ -219,7 +219,7 @@ public class MainView extends BorderPane {
     private Node buildSidebar() {
         VBox sidebar = new VBox(14);
         sidebar.setPadding(new Insets(26));
-        sidebar.setPrefWidth(240);
+        sidebar.setPrefWidth(220);
         sidebar.getStyleClass().add("sidebar");
 
         Label title = new Label("TimeVault");
@@ -251,13 +251,15 @@ public class MainView extends BorderPane {
     }
 
     private Node buildTopBar() {
-        HBox bar = new HBox(14);
+        FlowPane bar = new FlowPane(14, 14);
         bar.setPadding(new Insets(22, 28, 18, 28));
         bar.setAlignment(Pos.CENTER_LEFT);
         bar.getStyleClass().add("top-bar");
 
         searchField.getStyleClass().add("search-field");
-        HBox.setHgrow(searchField, Priority.ALWAYS);
+        searchField.setPrefWidth(420);
+        searchField.setMinWidth(260);
+        filterBox.setPrefWidth(150);
 
         Button searchButton = pillButton("Search");
         searchButton.setOnAction(event -> {
@@ -282,7 +284,7 @@ public class MainView extends BorderPane {
         bar.getStyleClass().add("status-bar");
 
         statusLabel.getStyleClass().add("status-label");
-        Label storageLabel = new Label(paths.databasePath().toString());
+        Label storageLabel = new Label("Artifacts: " + paths.baseDir());
         storageLabel.getStyleClass().add("muted-copy");
         storageLabel.setContentDisplay(ContentDisplay.RIGHT);
 
@@ -304,9 +306,10 @@ public class MainView extends BorderPane {
         body.setWrapText(true);
         body.getStyleClass().add("muted-copy");
 
-        HBox quickBar = new HBox(12);
+        FlowPane quickBar = new FlowPane(12, 12);
         quickBar.setAlignment(Pos.CENTER_LEFT);
-        HBox.setHgrow(quickCaptureField, Priority.ALWAYS);
+        quickCaptureField.setPrefWidth(420);
+        quickCaptureField.setMinWidth(260);
         Button saveUrlButton = pillButton("Save URL");
         Button saveTextButton = pillButton("Save Text");
         Button openStudioButton = pillButton("Preview in Studio");
@@ -321,7 +324,7 @@ public class MainView extends BorderPane {
 
         hero.getChildren().addAll(kicker, headline, body, quickBar);
 
-        HBox statsRow = new HBox(16,
+        FlowPane statsRow = new FlowPane(16, 16,
                 statCard("Total Saved", totalSavedValue, "Everything in the local vault"),
                 statCard("This Week", savedThisWeekValue, "Fresh captures from the last 7 days"),
                 statCard("Rescued Links", rescuedLinksValue, "Recovered through Wayback")
@@ -341,6 +344,7 @@ public class MainView extends BorderPane {
     private Node buildArchiveView() {
         VBox leftPane = sectionCard();
         leftPane.setPadding(new Insets(22));
+        leftPane.setMinWidth(320);
         Label archiveTitle = sectionTitle("Archive View");
         Label archiveHint = new Label("Live search and type filters update this wall as you browse.");
         archiveHint.getStyleClass().add("muted-copy");
@@ -355,6 +359,7 @@ public class MainView extends BorderPane {
         VBox rightPane = sectionCard();
         rightPane.setPadding(new Insets(22));
         rightPane.setSpacing(16);
+        rightPane.setMinWidth(320);
         detailTitleLabel.getStyleClass().add("detail-title");
         detailMetaLabel.getStyleClass().add("muted-copy");
         detailSourceLabel.getStyleClass().add("muted-copy");
@@ -362,7 +367,7 @@ public class MainView extends BorderPane {
         detailAiContextLabel.setWrapText(true);
         detailTagPane.setHgap(8);
         detailTagPane.setVgap(8);
-        detailImageView.setFitWidth(380);
+        detailImageView.setFitWidth(320);
         detailImageView.setPreserveRatio(true);
         detailImageView.setSmooth(true);
         detailButtonRow.getChildren().addAll(exportButton, deleteButton, rescueButton);
@@ -387,8 +392,9 @@ public class MainView extends BorderPane {
         Label body = new Label("Paste a broken URL and TimeVault will ask the Wayback Machine for the closest surviving snapshot.");
         body.setWrapText(true);
         body.getStyleClass().add("muted-copy");
-        HBox row = new HBox(12);
-        HBox.setHgrow(rescueUrlField, Priority.ALWAYS);
+        FlowPane row = new FlowPane(12, 12);
+        rescueUrlField.setPrefWidth(460);
+        rescueUrlField.setMinWidth(260);
         rescueUrlField.setPromptText("https://example.com");
         rescueProgress.setVisible(false);
         rescueProgress.setMaxSize(30, 30);
@@ -753,16 +759,17 @@ public class MainView extends BorderPane {
             }, () -> progress.setVisible(false));
         });
 
-        HBox root = new HBox(20, tabs, previewBox);
-        root.setPadding(new Insets(24));
-        HBox.setHgrow(tabs, Priority.ALWAYS);
-        HBox.setHgrow(previewBox, Priority.ALWAYS);
-        tabs.setPrefWidth(420);
-        previewBox.setPrefWidth(440);
+        SplitPane splitPane = new SplitPane(tabs, previewBox);
+        splitPane.setDividerPositions(0.47);
+        tabs.setMinWidth(0);
+        previewBox.setMinWidth(0);
 
-        Scene scene = new Scene(root, 980, 640);
+        Scene scene = new Scene(splitPane, 900, 620);
         scene.getStylesheets().add(getClass().getResource("/styles.css").toExternalForm());
         dialog.setScene(scene);
+        dialog.setMinWidth(760);
+        dialog.setMinHeight(560);
+        dialog.setResizable(true);
         dialog.show();
     }
 
@@ -800,7 +807,7 @@ public class MainView extends BorderPane {
 
     private VBox statCard(String title, Label valueLabel, String subtitle) {
         VBox card = sectionCard();
-        card.setPrefWidth(250);
+        card.setPrefWidth(220);
         Label titleLabel = new Label(title);
         titleLabel.getStyleClass().add("muted-copy");
         valueLabel.getStyleClass().add("stat-value");

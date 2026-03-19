@@ -2,13 +2,11 @@ package com.example.repositories;
 
 import com.example.entities.Archive;
 import com.example.entities.ArchiveType;
-import com.example.support.DateFormats;
-
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -24,11 +22,12 @@ public class ArchiveRepository {
 
     public Archive save(Archive archive) {
         String sql = """
-                INSERT INTO archives(type, url, title, content, file_path, ai_context, source_platform, created_at)
+                INSERT INTO dbo.archives(type, url, title, content, file_path, ai_context, source_platform, created_at)
+                OUTPUT INSERTED.id
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """;
         try (Connection connection = databaseManager.getConnection();
-             PreparedStatement statement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+             PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setString(1, archive.getType().databaseValue());
             statement.setString(2, archive.getUrl());
             statement.setString(3, archive.getTitle());
@@ -36,12 +35,12 @@ public class ArchiveRepository {
             statement.setString(5, archive.getFilePath());
             statement.setString(6, archive.getAiContext());
             statement.setString(7, archive.getSourcePlatform());
-            statement.setString(8, archive.getCreatedAt().format(DateFormats.DATABASE_DATE_TIME));
-            statement.executeUpdate();
-            try (ResultSet keys = statement.getGeneratedKeys()) {
-                if (keys.next()) {
-                    archive.setId(keys.getLong(1));
+            statement.setTimestamp(8, Timestamp.valueOf(archive.getCreatedAt()));
+            try (ResultSet keys = statement.executeQuery()) {
+                if (!keys.next()) {
+                    throw new IllegalStateException("SQL Server did not return a generated archive id.");
                 }
+                archive.setId(keys.getLong(1));
             }
             return archive;
         } catch (SQLException exception) {
@@ -50,7 +49,7 @@ public class ArchiveRepository {
     }
 
     public Optional<Archive> findById(long id) {
-        String sql = "SELECT * FROM archives WHERE id = ?";
+        String sql = "SELECT * FROM dbo.archives WHERE id = ?";
         try (Connection connection = databaseManager.getConnection();
              PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setLong(1, id);
@@ -66,7 +65,11 @@ public class ArchiveRepository {
     }
 
     public List<Archive> findRecent(int limit) {
-        String sql = "SELECT * FROM archives ORDER BY created_at DESC LIMIT ?";
+        String sql = """
+                SELECT * FROM dbo.archives
+                ORDER BY created_at DESC
+                OFFSET 0 ROWS FETCH NEXT ? ROWS ONLY
+                """;
         try (Connection connection = databaseManager.getConnection();
              PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setInt(1, limit);
@@ -80,8 +83,8 @@ public class ArchiveRepository {
 
     public List<Archive> search(String query, ArchiveType filter) {
         StringBuilder sql = new StringBuilder("""
-                SELECT DISTINCT a.* FROM archives a
-                LEFT JOIN tags t ON t.archive_id = a.id
+                SELECT DISTINCT a.* FROM dbo.archives a
+                LEFT JOIN dbo.tags t ON t.archive_id = a.id
                 WHERE 1 = 1
                 """);
         List<String> parameters = new ArrayList<>();
@@ -123,7 +126,7 @@ public class ArchiveRepository {
     }
 
     public void delete(long archiveId) {
-        String sql = "DELETE FROM archives WHERE id = ?";
+        String sql = "DELETE FROM dbo.archives WHERE id = ?";
         try (Connection connection = databaseManager.getConnection();
              PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setLong(1, archiveId);
@@ -134,15 +137,24 @@ public class ArchiveRepository {
     }
 
     public long countAll() {
-        return singleCount("SELECT COUNT(*) FROM archives");
+        return singleCount("SELECT COUNT(*) FROM dbo.archives");
     }
 
     public long countSince(LocalDateTime since) {
-        return singleCount("SELECT COUNT(*) FROM archives WHERE created_at >= ?", since.format(DateFormats.DATABASE_DATE_TIME));
+        String sql = "SELECT COUNT(*) FROM dbo.archives WHERE created_at >= ?";
+        try (Connection connection = databaseManager.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setTimestamp(1, Timestamp.valueOf(since));
+            try (ResultSet resultSet = statement.executeQuery()) {
+                return resultSet.next() ? resultSet.getLong(1) : 0L;
+            }
+        } catch (SQLException exception) {
+            throw new IllegalStateException("Unable to calculate recent archive statistics", exception);
+        }
     }
 
     public long countRescued() {
-        return singleCount("SELECT COUNT(*) FROM archives WHERE LOWER(COALESCE(source_platform, '')) LIKE '%wayback%'");
+        return singleCount("SELECT COUNT(*) FROM dbo.archives WHERE LOWER(COALESCE(source_platform, '')) LIKE '%wayback%'");
     }
 
     private long singleCount(String sql, String... parameters) {
@@ -177,7 +189,7 @@ public class ArchiveRepository {
                 resultSet.getString("file_path"),
                 resultSet.getString("ai_context"),
                 resultSet.getString("source_platform"),
-                LocalDateTime.parse(resultSet.getString("created_at"), DateFormats.DATABASE_DATE_TIME),
+                resultSet.getTimestamp("created_at").toLocalDateTime(),
                 List.of()
         );
     }
