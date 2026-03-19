@@ -60,10 +60,16 @@ public class VaultItem {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    @Column(name = "user_id", nullable = false)
+    private Long userId = 1L; // Default user ID for single-user application
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
+        if (userId == null) {
+            userId = 1L; // Ensure user_id is always set
+        }
     }
 
     @PreUpdate
@@ -110,6 +116,9 @@ public class VaultItem {
 
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+
+    public Long getUserId() { return userId; }
+    public void setUserId(Long userId) { this.userId = userId; }
 
     @Override
     public String toString() {
