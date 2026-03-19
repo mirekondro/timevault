@@ -103,7 +103,7 @@ public class MainView extends VerticalLayout {
 
         searchField.addValueChangeListener(e -> {
             if (e.getValue() != null && !e.getValue().trim().isEmpty()) {
-                updateItemsList(vaultItemService.search(e.getValue().trim()));
+                updateItemsList(vaultItemService.searchComprehensive(e.getValue().trim()));
             } else {
                 loadRecentItems();
             }

@@ -28,9 +28,17 @@ public interface VaultItemRepository extends JpaRepository<VaultItem, Long> {
     // Search by title (case-insensitive)
     List<VaultItem> findByTitleContainingIgnoreCase(String keyword);
 
-    // Search by title or content
-    @Query("SELECT v FROM VaultItem v WHERE LOWER(v.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(v.content) LIKE LOWER(CONCAT('%', :keyword, '%'))")
+    // Search by title, content, or AI context
+    @Query("SELECT v FROM VaultItem v WHERE LOWER(v.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(v.content) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(v.aiContext) LIKE LOWER(CONCAT('%', :keyword, '%'))")
     List<VaultItem> searchByKeyword(@Param("keyword") String keyword);
+
+    // Search specifically in AI context (descriptions)
+    @Query("SELECT v FROM VaultItem v WHERE LOWER(v.aiContext) LIKE LOWER(CONCAT('%', :keyword, '%'))")
+    List<VaultItem> searchByAiContext(@Param("keyword") String keyword);
+
+    // Comprehensive search including tags
+    @Query("SELECT v FROM VaultItem v WHERE LOWER(v.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(v.content) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(v.aiContext) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(v.tags) LIKE LOWER(CONCAT('%', :keyword, '%'))")
+    List<VaultItem> searchComprehensive(@Param("keyword") String keyword);
 
     // Find by tags containing
     List<VaultItem> findByTagsContainingIgnoreCase(String tag);

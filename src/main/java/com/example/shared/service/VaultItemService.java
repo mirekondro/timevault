@@ -147,6 +147,14 @@ public class VaultItemService {
         return repository.searchByKeyword(keyword);
     }
 
+    public List<VaultItem> searchByAiDescription(String keyword) {
+        return repository.searchByAiContext(keyword);
+    }
+
+    public List<VaultItem> searchComprehensive(String keyword) {
+        return repository.searchComprehensive(keyword);
+    }
+
     // ============================================
     // DELETE OPERATIONS
     // ============================================

@@ -51,7 +51,9 @@ public class GeminiService {
      * Check if Gemini API is configured
      */
     public boolean isConfigured() {
-        return apiKey != null && !apiKey.isEmpty();
+        boolean configured = apiKey != null && !apiKey.isEmpty();
+        System.out.println("Gemini API configured: " + configured + " (API key: " + (apiKey != null ? apiKey.substring(0, Math.min(10, apiKey.length())) + "..." : "null") + ")");
+        return configured;
     }
 
     /**
@@ -64,16 +66,23 @@ public class GeminiService {
 
         try {
             String prompt = """
-                Analyze the following text and provide exactly 3 concise sentences that summarize:
-                1. What this content is about
-                2. The key information or main points
-                3. Why it might be useful to save
+                Analyze this text and create exactly 3 comprehensive sentences that describe:
+                1. The main topic, theme, or subject matter of the text
+                2. Key concepts, ideas, facts, or information contained within
+                3. The context, purpose, or significance of this content
+                
+                Generate rich, keyword-heavy descriptions that capture the essence and searchable terms someone might look for. Include:
+                - Main topics and subtopics
+                - Important keywords and concepts
+                - Context and domain (business, personal, technical, etc.)
+                - Purpose or intent of the text
+                - Notable facts, figures, or details mentioned
                 
                 Text to analyze:
                 %s
                 
-                Respond with only the 3 sentences, no numbering or bullets.
-                """.formatted(truncate(content, 2000));
+                Respond with only the 3 detailed sentences, no numbering or bullets.
+                """.formatted(truncate(content, 3000));
 
             return callGemini(prompt, null);
         } catch (Exception e) {
@@ -91,16 +100,24 @@ public class GeminiService {
 
         try {
             String prompt = """
-                Analyze this web page and provide exactly 3 concise sentences that summarize:
-                1. What this page is about
-                2. The key information it contains
-                3. Why it might be useful to save
+                Analyze this webpage content and create exactly 3 comprehensive sentences that describe:
+                1. The main topic, purpose, or subject of the webpage/article
+                2. Key information, facts, concepts, or data presented
+                3. The type of content and its value or significance
+                
+                Generate rich, searchable descriptions with relevant keywords that capture what someone might search for. Include:
+                - Main topics and categories
+                - Important keywords and terms
+                - Type of content (article, tutorial, news, reference, etc.)
+                - Domain or field (technology, business, health, etc.)
+                - Key facts, figures, or notable information
+                - Purpose or intended audience
                 
                 URL: %s
-                Page content:
+                Content:
                 %s
                 
-                Respond with only the 3 sentences, no numbering or bullets.
+                Respond with only the 3 detailed sentences, no numbering or bullets.
                 """.formatted(url, truncate(pageContent, 3000));
 
             return callGemini(prompt, null);
@@ -113,22 +130,38 @@ public class GeminiService {
      * Analyze an image and generate context using Gemini Vision
      */
     public String analyzeImage(byte[] imageData, String mimeType, String filename) {
+        System.out.println("Analyzing image: " + filename + " (" + mimeType + "), size: " + imageData.length + " bytes");
+
         if (!isConfigured()) {
+            System.out.println("Gemini API not configured, using fallback");
             return generateFallbackContext(filename, "IMAGE");
         }
 
         try {
             String prompt = """
-                Analyze this image and provide exactly 3 concise sentences that describe:
-                1. What the image shows or contains
-                2. Any important details, text, or elements visible
-                3. The likely purpose or context of this image
+                Analyze this image in detail and provide exactly 3 comprehensive sentences that describe:
+                1. What the image shows, including objects, people, scenes, text, or any content visible
+                2. The setting, context, colors, style, and any important visual details
+                3. The purpose, mood, or significance of this image
                 
-                Respond with only the 3 sentences, no numbering or bullets.
+                Make your description rich in keywords that someone might search for. Include specific details like:
+                - Objects and their characteristics
+                - People and their actions or expressions
+                - Text content if visible
+                - Colors, lighting, and atmosphere
+                - Location or setting if identifiable
+                - Activity or event depicted
+                
+                Respond with only the 3 detailed sentences, no numbering or bullets.
                 """;
 
-            return callGeminiWithImage(prompt, imageData, mimeType);
+            System.out.println("Calling Gemini API for image analysis...");
+            String result = callGeminiWithImage(prompt, imageData, mimeType);
+            System.out.println("Gemini API response: " + result);
+            return result;
         } catch (Exception e) {
+            System.out.println("Gemini API error: " + e.getMessage());
+            e.printStackTrace();
             return generateFallbackContext(filename, "IMAGE");
         }
     }
@@ -262,11 +295,16 @@ public class GeminiService {
 
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
+        System.out.println("Gemini API response status: " + response.statusCode());
+
         if (response.statusCode() == 200) {
             JsonNode root = objectMapper.readTree(response.body());
             JsonNode text = root.path("candidates").get(0).path("content").path("parts").get(0).path("text");
-            return text.asText();
+            String result = text.asText();
+            System.out.println("Gemini API successful response: " + result.substring(0, Math.min(100, result.length())) + "...");
+            return result;
         } else {
+            System.out.println("Gemini API error response: " + response.body());
             throw new RuntimeException("Gemini API error: " + response.statusCode() + " - " + response.body());
         }
     }
