@@ -9,6 +9,7 @@ import javafx.beans.binding.Bindings;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
+import javafx.geometry.Rectangle2D;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -16,6 +17,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.stage.Modality;
+import javafx.stage.Screen;
 import javafx.stage.Stage;
 
 import java.io.IOException;
@@ -25,6 +27,10 @@ import java.util.function.Consumer;
  * Controller for the archive table pane.
  */
 public class ArchiveController implements AppContextAware {
+
+    private static final DialogWindowSize FORM_DIALOG_SIZE = new DialogWindowSize(760, 620, 640, 520);
+    private static final DialogWindowSize DELETE_DIALOG_SIZE = new DialogWindowSize(700, 340, 580, 300);
+    private static final DialogWindowSize UNLOCK_DIALOG_SIZE = new DialogWindowSize(680, 320, 560, 280);
 
     @FXML
     private Label archiveTitleLabel;
@@ -132,14 +138,17 @@ public class ArchiveController implements AppContextAware {
         switch (selectedType) {
             case AppModel.TYPE_URL -> openDialog(
                     "/com/example/desktop/gui/url-dialog.fxml",
+                    FORM_DIALOG_SIZE,
                     UrlDialogController.class,
                     UrlDialogController::prepareForCreate);
             case AppModel.TYPE_TEXT -> openDialog(
                     "/com/example/desktop/gui/text-dialog.fxml",
+                    FORM_DIALOG_SIZE,
                     TextDialogController.class,
                     TextDialogController::prepareForCreate);
             case AppModel.TYPE_IMAGE -> openDialog(
                     "/com/example/desktop/gui/image-dialog.fxml",
+                    FORM_DIALOG_SIZE,
                     ImageDialogController.class,
                     ImageDialogController::prepareForCreate);
             default -> appModel.showInfoKey("status.archive.chooseType");
@@ -161,14 +170,17 @@ public class ArchiveController implements AppContextAware {
         switch (selectedItem.getItemType()) {
             case AppModel.TYPE_URL -> openDialog(
                     "/com/example/desktop/gui/url-dialog.fxml",
+                    FORM_DIALOG_SIZE,
                     UrlDialogController.class,
                     controller -> controller.prepareForEdit(selectedItem));
             case AppModel.TYPE_TEXT -> openDialog(
                     "/com/example/desktop/gui/text-dialog.fxml",
+                    FORM_DIALOG_SIZE,
                     TextDialogController.class,
                     controller -> controller.prepareForEdit(selectedItem));
             case AppModel.TYPE_IMAGE -> openDialog(
                     "/com/example/desktop/gui/image-dialog.fxml",
+                    FORM_DIALOG_SIZE,
                     ImageDialogController.class,
                     controller -> controller.prepareForEdit(selectedItem));
             default -> appModel.showErrorKey("status.edit.unsupported");
@@ -185,6 +197,7 @@ public class ArchiveController implements AppContextAware {
         VaultItemFx selectedItem = appModel.getSelectedItem();
         openDialog(
                 "/com/example/desktop/gui/delete-item-dialog.fxml",
+                DELETE_DIALOG_SIZE,
                 DeleteItemDialogController.class,
                 controller -> controller.prepareForItem(selectedItem));
     }
@@ -243,6 +256,7 @@ public class ArchiveController implements AppContextAware {
 
         openDialog(
                 "/com/example/desktop/gui/unlock-item-dialog.fxml",
+                UNLOCK_DIALOG_SIZE,
                 UnlockItemDialogController.class,
                 controller -> controller.prepare(selectedItem, promptHeaderKey));
 
@@ -256,6 +270,7 @@ public class ArchiveController implements AppContextAware {
     }
 
     private <T extends AppContextAware> void openDialog(String fxmlPath,
+                                                        DialogWindowSize windowSize,
                                                         Class<T> controllerType,
                                                         Consumer<T> initializer) {
         try {
@@ -266,7 +281,7 @@ public class ArchiveController implements AppContextAware {
             Stage dialogStage = new Stage();
             dialogStage.initOwner(ownerStage);
             dialogStage.initModality(Modality.WINDOW_MODAL);
-            dialogStage.setResizable(false);
+            dialogStage.setResizable(true);
 
             Scene scene = new Scene(root);
             scene.getStylesheets().add(getClass().getResource("/desktop/styles.css").toExternalForm());
@@ -274,9 +289,34 @@ public class ArchiveController implements AppContextAware {
 
             controller.setContext(appModel, vaultManager, hostServices, dialogStage, navigator);
             initializer.accept(controller);
+            applyDialogWindowSize(dialogStage, windowSize);
             dialogStage.showAndWait();
         } catch (IOException exception) {
             appModel.showErrorKey("status.dialog.open.error", exception.getMessage());
         }
+    }
+
+    private void applyDialogWindowSize(Stage dialogStage, DialogWindowSize windowSize) {
+        Rectangle2D visualBounds = Screen.getPrimary().getVisualBounds();
+        double availableWidth = Math.max(360, visualBounds.getWidth() - 80);
+        double availableHeight = Math.max(300, visualBounds.getHeight() - 80);
+
+        double dialogWidth = Math.min(windowSize.preferredWidth(), availableWidth);
+        dialogWidth = Math.max(dialogWidth, Math.min(windowSize.minWidth(), availableWidth));
+
+        double dialogHeight = Math.min(windowSize.preferredHeight(), availableHeight);
+        dialogHeight = Math.max(dialogHeight, Math.min(windowSize.minHeight(), availableHeight));
+
+        dialogStage.setMinWidth(Math.min(windowSize.minWidth(), availableWidth));
+        dialogStage.setMinHeight(Math.min(windowSize.minHeight(), availableHeight));
+        dialogStage.setWidth(dialogWidth);
+        dialogStage.setHeight(dialogHeight);
+        dialogStage.centerOnScreen();
+    }
+
+    private record DialogWindowSize(double preferredWidth,
+                                    double preferredHeight,
+                                    double minWidth,
+                                    double minHeight) {
     }
 }
