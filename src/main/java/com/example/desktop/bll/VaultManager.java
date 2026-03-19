@@ -163,13 +163,6 @@ public class VaultManager {
         return appModel.text("detail.meta.empty.auth");
     }
 
-    public String getArchiveSummary(AppModel appModel) {
-        if (!appModel.isAuthenticated()) {
-            return appModel.text("archive.login.required");
-        }
-        return appModel.getVisibleArchiveSummary(appModel.getFilteredItems().size());
-    }
-
     public boolean createUrl(AppModel appModel, String urlInput, String titleInput, String notesInput) {
         UserSession currentUser = requireAuthenticatedUser(appModel);
         if (currentUser == null) {

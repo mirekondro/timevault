@@ -62,7 +62,7 @@
 }
 
 .header-controls {
-    -fx-padding: 0 18px;
+    -fx-padding: 0 12px;
 }
 
 .header-actions {
@@ -104,7 +104,7 @@
 }
 
 .header-search-field {
-    -fx-padding: 9px 46px 9px 14px;
+    -fx-padding: 8px 42px 8px 12px;
 }
 
 .header-search-shell {
@@ -119,14 +119,14 @@
 
 .header-filter > .list-cell {
     -fx-text-fill: white;
-    -fx-font-size: 14px;
+    -fx-font-size: 13px;
     -fx-font-weight: 700;
-    -fx-padding: 0 8px 0 16px;
+    -fx-padding: 0 6px 0 12px;
 }
 
 .header-filter .arrow-button {
     -fx-background-color: transparent;
-    -fx-padding: 0 14px 0 6px;
+    -fx-padding: 0 12px 0 6px;
 }
 
 .header-filter .arrow {
@@ -288,6 +288,21 @@
 
 .stat-card {
     -fx-background-color: linear-gradient(to bottom right, rgba(88, 196, 221, 0.09), rgba(255,255,255,0.02));
+}
+
+.stats-scroll,
+.stats-scroll .viewport,
+.stats-scroll .corner {
+    -fx-background-color: transparent;
+}
+
+.stats-scroll {
+    -fx-padding: 0 0 6px 0;
+}
+
+.stats-row {
+    -fx-alignment: center-left;
+    -fx-padding: 0 2px 10px 0;
 }
 
 .workspace-shell {

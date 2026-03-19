@@ -92,10 +92,19 @@ public class ArchiveController implements AppContextAware {
         configureActions();
 
         visibleCountLabel.textProperty().bind(Bindings.createStringBinding(
-                () -> vaultManager.getArchiveSummary(appModel),
+                appModel::getArchiveSummaryText,
                 appModel.localeProperty(),
                 appModel.getFilteredItems(),
-                appModel.authenticatedProperty()));
+                appModel.authenticatedProperty(),
+                appModel.selectedTypeProperty(),
+                appModel.selectedSearchColumnProperty(),
+                appModel.searchTextProperty()));
+        visibleCountLabel.visibleProperty().bind(Bindings.createBooleanBinding(
+                appModel::shouldShowArchiveSummary,
+                appModel.authenticatedProperty(),
+                appModel.selectedTypeProperty(),
+                appModel.searchTextProperty()));
+        visibleCountLabel.managedProperty().bind(visibleCountLabel.visibleProperty());
 
         itemsTableView.getSelectionModel().selectedItemProperty().addListener((obs, oldItem, newItem) -> {
             if (newItem != appModel.getSelectedItem()) {

@@ -2,36 +2,41 @@
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Label?>
-<?import javafx.scene.layout.FlowPane?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 
 <VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.example.desktop.gui.TopBarController"
       spacing="0.0">
-    <FlowPane hgap="16.0" vgap="16.0" prefWrapLength="1100.0">
-        <VBox minWidth="180.0" prefWidth="220.0" spacing="6.0" styleClass="stat-card">
-            <padding><Insets top="18.0" right="18.0" bottom="18.0" left="18.0"/></padding>
-            <Label fx:id="totalTitleLabel" styleClass="muted-copy"/>
-            <Label fx:id="totalCountValue" styleClass="stat-value" text="0"/>
-            <Label fx:id="totalCopyLabel" styleClass="card-copy" wrapText="true"/>
-        </VBox>
-        <VBox minWidth="180.0" prefWidth="220.0" spacing="6.0" styleClass="stat-card">
-            <padding><Insets top="18.0" right="18.0" bottom="18.0" left="18.0"/></padding>
-            <Label fx:id="urlTitleLabel" styleClass="muted-copy"/>
-            <Label fx:id="urlCountValue" styleClass="stat-value" text="0"/>
-            <Label fx:id="urlCopyLabel" styleClass="card-copy" wrapText="true"/>
-        </VBox>
-        <VBox minWidth="180.0" prefWidth="220.0" spacing="6.0" styleClass="stat-card">
-            <padding><Insets top="18.0" right="18.0" bottom="18.0" left="18.0"/></padding>
-            <Label fx:id="textTitleLabel" styleClass="muted-copy"/>
-            <Label fx:id="textCountValue" styleClass="stat-value" text="0"/>
-            <Label fx:id="textCopyLabel" styleClass="card-copy" wrapText="true"/>
-        </VBox>
-        <VBox minWidth="180.0" prefWidth="220.0" spacing="6.0" styleClass="stat-card">
-            <padding><Insets top="18.0" right="18.0" bottom="18.0" left="18.0"/></padding>
-            <Label fx:id="imageTitleLabel" styleClass="muted-copy"/>
-            <Label fx:id="imageCountValue" styleClass="stat-value" text="0"/>
-            <Label fx:id="imageCopyLabel" styleClass="card-copy" wrapText="true"/>
-        </VBox>
-    </FlowPane>
+    <ScrollPane fitToHeight="true" hbarPolicy="AS_NEEDED" pannable="true" styleClass="stats-scroll" vbarPolicy="NEVER">
+        <content>
+            <HBox alignment="CENTER_LEFT" spacing="16.0" styleClass="stats-row">
+                <VBox minWidth="260.0" prefWidth="260.0" spacing="6.0" styleClass="stat-card">
+                    <padding><Insets top="18.0" right="18.0" bottom="18.0" left="18.0"/></padding>
+                    <Label fx:id="totalTitleLabel" styleClass="muted-copy"/>
+                    <Label fx:id="totalCountValue" styleClass="stat-value" text="0"/>
+                    <Label fx:id="totalCopyLabel" styleClass="card-copy" wrapText="true"/>
+                </VBox>
+                <VBox minWidth="260.0" prefWidth="260.0" spacing="6.0" styleClass="stat-card">
+                    <padding><Insets top="18.0" right="18.0" bottom="18.0" left="18.0"/></padding>
+                    <Label fx:id="urlTitleLabel" styleClass="muted-copy"/>
+                    <Label fx:id="urlCountValue" styleClass="stat-value" text="0"/>
+                    <Label fx:id="urlCopyLabel" styleClass="card-copy" wrapText="true"/>
+                </VBox>
+                <VBox minWidth="260.0" prefWidth="260.0" spacing="6.0" styleClass="stat-card">
+                    <padding><Insets top="18.0" right="18.0" bottom="18.0" left="18.0"/></padding>
+                    <Label fx:id="textTitleLabel" styleClass="muted-copy"/>
+                    <Label fx:id="textCountValue" styleClass="stat-value" text="0"/>
+                    <Label fx:id="textCopyLabel" styleClass="card-copy" wrapText="true"/>
+                </VBox>
+                <VBox minWidth="260.0" prefWidth="260.0" spacing="6.0" styleClass="stat-card">
+                    <padding><Insets top="18.0" right="18.0" bottom="18.0" left="18.0"/></padding>
+                    <Label fx:id="imageTitleLabel" styleClass="muted-copy"/>
+                    <Label fx:id="imageCountValue" styleClass="stat-value" text="0"/>
+                    <Label fx:id="imageCopyLabel" styleClass="card-copy" wrapText="true"/>
+                </VBox>
+            </HBox>
+        </content>
+    </ScrollPane>
 </VBox>

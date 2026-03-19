@@ -422,6 +422,54 @@ public class AppModel {
         return authScene ? "app.title.auth" : "app.title.main";
     }
 
+    public boolean shouldShowArchiveSummary() {
+        return isAuthenticated() && (hasActiveArchiveSearch() || !TYPE_ALL.equals(normalizeTypeCode(selectedType.get())));
+    }
+
+    public String getArchiveSummaryText() {
+        if (!isAuthenticated()) {
+            return text("archive.login.required");
+        }
+
+        int count = filteredItems.size();
+        String typeCode = normalizeTypeCode(selectedType.get());
+        String searchColumn = normalizeSearchColumn(selectedSearchColumn.get());
+        String query = searchText.get() == null ? "" : searchText.get().trim();
+
+        boolean hasTypeFilter = !TYPE_ALL.equals(typeCode);
+        boolean hasQuery = !query.isBlank();
+        boolean hasSpecificColumn = !SEARCH_COLUMN_ALL.equals(searchColumn);
+
+        if (hasTypeFilter && hasQuery && hasSpecificColumn) {
+            return text("archive.summary.type.column.query",
+                    count,
+                    asSentenceLabel(getTypeLabel(typeCode)),
+                    getSearchColumnLabel(searchColumn),
+                    query);
+        }
+        if (hasTypeFilter && hasQuery) {
+            return text("archive.summary.type.query",
+                    count,
+                    asSentenceLabel(getTypeLabel(typeCode)),
+                    query);
+        }
+        if (hasTypeFilter) {
+            return text("archive.summary.type",
+                    count,
+                    asSentenceLabel(getTypeLabel(typeCode)));
+        }
+        if (hasQuery && hasSpecificColumn) {
+            return text("archive.summary.column.query",
+                    count,
+                    getSearchColumnLabel(searchColumn),
+                    query);
+        }
+        if (hasQuery) {
+            return text("archive.summary.query", count, query);
+        }
+        return text("archive.visible", count);
+    }
+
     public String getVisibleArchiveSummary(int count) {
         return text("archive.visible", count);
     }
@@ -562,6 +610,14 @@ public class AppModel {
         return firstNonBlank(
                 item == null ? null : item.getPreviewSource(),
                 text("item.preview.none"));
+    }
+
+    private boolean hasActiveArchiveSearch() {
+        return searchText.get() != null && !searchText.get().trim().isBlank();
+    }
+
+    private String asSentenceLabel(String value) {
+        return value == null ? "" : value.toLowerCase(getLocale());
     }
 
     private String normalizeTypeCode(String typeCode) {
