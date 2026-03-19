@@ -1,5 +1,6 @@
 package com.example.shared.service;
 
+import com.example.shared.model.VaultItem;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -72,8 +73,136 @@ public class GeminiService {
     }
 
     /**
-     * Generate a 3-sentence context for text content
+     * Generate a proper title and context for URL content
      */
+    public VaultItem generateUrlSummary(String url, String pageContent) {
+        if (!isConfigured()) {
+            return createFallbackUrlSummary(url, pageContent);
+        }
+
+        try {
+            String prompt = """
+                Analyze this webpage content and create a clean, user-friendly summary. Provide your response in this EXACT format:
+                
+                TITLE: [Generate a clear, descriptive title for this webpage - NO URLs, just describe what it is]
+                DESCRIPTION: [Provide exactly 3 comprehensive sentences describing the content, purpose, and value as before]
+                
+                Focus on:
+                1. TITLE should be clear and descriptive (e.g., "React Navigation Tutorial", "Python API Documentation", "Design System Guidelines")
+                2. DESCRIPTION should explain what's on the page, why it's useful, and what the user can do with it
+                
+                Do not include the URL in the title. Make it sound like a proper document or article title.
+                
+                URL: %s
+                Content:
+                %s
+                """.formatted(url, truncate(pageContent, 3000));
+
+            String response = callGemini(prompt, null);
+            return parseUrlSummaryResponse(response, url, pageContent);
+        } catch (Exception e) {
+            return createFallbackUrlSummary(url, pageContent);
+        }
+    }
+
+    private VaultItem parseUrlSummaryResponse(String response, String url, String pageContent) {
+        try {
+            String[] lines = response.split("\n");
+            String title = "Saved Webpage";
+            String description = response;
+
+            for (String line : lines) {
+                if (line.startsWith("TITLE:")) {
+                    title = line.substring(6).trim();
+                } else if (line.startsWith("DESCRIPTION:")) {
+                    description = line.substring(12).trim();
+                    // Get the rest of the description if it spans multiple lines
+                    int index = response.indexOf("DESCRIPTION:") + 12;
+                    description = response.substring(index).trim();
+                    break;
+                }
+            }
+
+            VaultItem item = new VaultItem();
+            item.setTitle(title);
+            item.setAiContext(description);
+            item.setSourceUrl(url);
+            item.setContent(truncate(pageContent, 5000)); // Store more content for search
+            return item;
+        } catch (Exception e) {
+            return createFallbackUrlSummary(url, pageContent);
+        }
+    }
+
+    private VaultItem createFallbackUrlSummary(String url, String pageContent) {
+        VaultItem item = new VaultItem();
+
+        // Generate a simple title from URL
+        String title = generateTitleFromUrl(url);
+
+        // Generate a descriptive fallback
+        String description = String.format(
+            "This webpage from %s contains saved content including text, images, and interactive elements. " +
+            "The page has been archived locally for offline access and future reference. " +
+            "Content is searchable by keywords and can be found using the site name or topic mentioned within the page.",
+            extractDomain(url)
+        );
+
+        item.setTitle(title);
+        item.setAiContext(description);
+        item.setSourceUrl(url);
+        item.setContent(truncate(pageContent, 5000));
+        return item;
+    }
+
+    private String generateTitleFromUrl(String url) {
+        try {
+            String domain = extractDomain(url);
+            String path = URI.create(url).getPath();
+
+            // Clean up the domain name
+            domain = domain.replace("www.", "").replace(".com", "").replace(".org", "").replace(".net", "");
+
+            // Try to extract meaningful parts from path
+            if (path != null && path.length() > 1) {
+                String[] parts = path.split("/");
+                for (String part : parts) {
+                    if (!part.isEmpty() && !part.equals("index") && !part.equals("home")) {
+                        String cleaned = part.replace("-", " ").replace("_", " ");
+                        return capitalizeWords(domain + " - " + cleaned);
+                    }
+                }
+            }
+
+            return capitalizeWords(domain + " Page");
+        } catch (Exception e) {
+            return "Saved Webpage";
+        }
+    }
+
+    private String capitalizeWords(String str) {
+        StringBuilder result = new StringBuilder();
+        boolean capitalizeNext = true;
+
+        for (char c : str.toCharArray()) {
+            if (Character.isWhitespace(c) || c == '-') {
+                result.append(' ');
+                capitalizeNext = true;
+            } else if (capitalizeNext) {
+                result.append(Character.toUpperCase(c));
+                capitalizeNext = false;
+            } else {
+                result.append(Character.toLowerCase(c));
+            }
+        }
+
+        return result.toString();
+    }
+
+    /**
+     * @deprecated Use generateUrlSummary instead
+     */
+    @Deprecated
     public String generateTextContext(String content) {
         if (!isConfigured()) {
             return generateFallbackContext(content, "TEXT");
@@ -81,17 +210,15 @@ public class GeminiService {
 
         try {
             String prompt = """
-                Analyze this text and create exactly 3 comprehensive sentences that describe:
-                1. The main topic, theme, or subject matter of the text
-                2. Key concepts, ideas, facts, or information contained within
-                3. The context, purpose, or significance of this content
+                Analyze this text content and create a detailed, meaningful summary that helps the user understand exactly what they saved and why it's valuable. Provide exactly 3 comprehensive sentences:
                 
-                Generate rich, keyword-heavy descriptions that capture the essence and searchable terms someone might look for. Include:
-                - Main topics and subtopics
-                - Important keywords and concepts
-                - Context and domain (business, personal, technical, etc.)
-                - Purpose or intent of the text
-                - Notable facts, figures, or details mentioned
+                1. CONTENT TYPE & TOPIC: What kind of text is this and what is it about? Is it notes, ideas, instructions, a quote, important information, a draft, or something else? Describe the specific subject matter and context.
+                
+                2. KEY POINTS & INSIGHTS: What are the most important ideas, facts, conclusions, or actionable items? Summarize the core message, main arguments, or essential information that makes this text worth saving.
+                
+                3. VALUE & APPLICATION: Why would someone want to keep this text? What can they do with this information? Is it reference material, inspiration, instructions to follow, important reminders, or knowledge to apply later?
+                
+                Create a summary that clearly answers "What is this text about?" and "Why is it worth keeping?" with specific details that make it memorable and findable.
                 
                 Text to analyze:
                 %s
@@ -115,18 +242,15 @@ public class GeminiService {
 
         try {
             String prompt = """
-                Analyze this webpage content and create exactly 3 comprehensive sentences that describe:
-                1. The main topic, purpose, or subject of the webpage/article
-                2. Key information, facts, concepts, or data presented
-                3. The type of content and its value or significance
+                Analyze this webpage content and create a detailed, actionable summary that will help the user remember exactly what they saved and why it's valuable. Provide exactly 3 comprehensive sentences:
                 
-                Generate rich, searchable descriptions with relevant keywords that capture what someone might search for. Include:
-                - Main topics and categories
-                - Important keywords and terms
-                - Type of content (article, tutorial, news, reference, etc.)
-                - Domain or field (technology, business, health, etc.)
-                - Key facts, figures, or notable information
-                - Purpose or intended audience
+                1. MAIN CONTENT & PURPOSE: What is this webpage about? Describe the specific topic, type of content (tutorial, article, documentation, product page, etc.), and the main subject matter. Include the website/source if identifiable.
+                
+                2. KEY INFORMATION & VALUE: What are the most important facts, insights, instructions, data, or takeaways? What specific problem does this solve or information does it provide? Include any important names, dates, numbers, or technical details.
+                
+                3. PRACTICAL USE & CONTEXT: Why would someone save this? What can they do with this information? Is it reference material, a how-to guide, important news, a tool, or something to buy/try later?
+                
+                Focus on creating a summary that answers "What is this?" and "Why did I save this?" with specific, memorable details that make it easy to find and recall later.
                 
                 URL: %s
                 Content:
@@ -154,23 +278,20 @@ public class GeminiService {
 
         try {
             String prompt = """
-                Analyze this image in detail and provide exactly 3 comprehensive sentences that describe:
-                1. What the image shows, including objects, people, scenes, text, or any content visible
-                2. The setting, context, colors, style, and any important visual details
-                3. The purpose, mood, or significance of this image
+                Analyze this image thoroughly and create a detailed, memorable description that will help the user recall exactly what they saved and why it might be important. Provide exactly 3 comprehensive sentences:
                 
-                Make your description rich in keywords that someone might search for. Include specific details like:
-                - Objects and their characteristics
-                - People and their actions or expressions
-                - Text content if visible
-                - Colors, lighting, and atmosphere
-                - Location or setting if identifiable
-                - Activity or event depicted
+                1. CONTENT DESCRIPTION: What is actually shown in the image - describe specific objects, people, text, scenes, or activities in detail. Include colors, brands, locations, or any readable text.
+                
+                2. CONTEXT & PURPOSE: Explain the likely context, setting, or purpose. Is this a screenshot of something important? A photo of a document? A reference image? What story does it tell?
+                
+                3. KEY DETAILS & VALUE: Highlight specific details that make this image useful or memorable - important information, data, names, dates, instructions, or anything the user might want to find later.
+                
+                Make this description rich with searchable keywords and specific details that would help someone remember and find this image weeks or months later. Focus on practical value and memorability.
                 
                 Respond with only the 3 detailed sentences, no numbering or bullets.
                 """;
 
-            System.out.println("Calling Gemini API for image analysis...");
+            System.out.println("Calling Gemini API for detailed image analysis...");
             String result = callGeminiWithImage(prompt, imageData, mimeType);
             System.out.println("Gemini API response: " + result);
             return result;
@@ -325,12 +446,12 @@ public class GeminiService {
     }
 
     private String generateFallbackContext(String content, String type) {
-        String preview = truncate(content, 100);
+        String preview = truncate(content, 200);
         return switch (type) {
-            case "URL" -> "Saved web page from " + extractDomain(content) + ". Content archived for offline access. Auto-tagged by date and platform.";
-            case "IMAGE" -> "Image saved to vault. Visual content stored locally. Ready for future reference and search.";
-            case "TEXT" -> "Text note: " + preview + " Saved for quick access. Tagged and timestamped automatically.";
-            default -> "Content saved to TimeVault. Available for search and browsing. Auto-organized by type and date.";
+            case "URL" -> String.format("Webpage saved from %s. Content archived locally for offline access including text, images and layout. This web resource has been preserved for future reference and can be searched by URL or content. Auto-tagged with domain and save date for easy discovery.", extractDomain(content));
+            case "IMAGE" -> String.format("Visual content saved as %s. Image file stored locally with full resolution preserved. This visual resource contains graphics, photos, or diagrams that can be referenced later. File automatically organized by date and searchable by filename and visual characteristics.", content.length() > 50 ? content.substring(content.lastIndexOf("/") + 1) : content);
+            case "TEXT" -> String.format("Text content saved: \"%s\". This written content includes notes, ideas, or important information preserved for future reference. Content is fully searchable and can be found by keywords, phrases, or topics mentioned within the text.", preview);
+            default -> String.format("Digital content archived to TimeVault. Resource type: %s. Content preserved with metadata for easy retrieval through search. Automatically organized by type, date, and content for efficient discovery and reference.", type.toLowerCase());
         };
     }
 

@@ -128,6 +128,41 @@ public class MainView extends VerticalLayout {
         return header;
     }
 
+    private String fetchWebpageContent(String url) {
+        try {
+            java.net.http.HttpClient client = java.net.http.HttpClient.newBuilder()
+                .connectTimeout(java.time.Duration.ofSeconds(10))
+                .build();
+
+            java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
+                .uri(java.net.URI.create(url))
+                .header("User-Agent", "Mozilla/5.0 (TimeVault/1.0)")
+                .timeout(java.time.Duration.ofSeconds(15))
+                .build();
+
+            java.net.http.HttpResponse<String> response = client.send(request,
+                java.net.http.HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() == 200) {
+                // Extract text content from HTML
+                String content = response.body();
+                // Remove HTML tags for cleaner analysis
+                content = content.replaceAll("<script[^>]*>.*?</script>", "")
+                                .replaceAll("<style[^>]*>.*?</style>", "")
+                                .replaceAll("<[^>]+>", " ")
+                                .replaceAll("\\s+", " ")
+                                .trim();
+
+                // Limit content size
+                return content.length() > 5000 ? content.substring(0, 5000) + "..." : content;
+            } else {
+                return "Unable to fetch content from: " + url;
+            }
+        } catch (Exception e) {
+            return "Error fetching content: " + e.getMessage() + " URL: " + url;
+        }
+    }
+
     private Component createHeroSection() {
         VerticalLayout hero = new VerticalLayout();
         hero.addClassName("hero-section");
@@ -199,9 +234,19 @@ public class MainView extends VerticalLayout {
             } else {
                 try {
                     String url = urlField.getValue().trim();
-                    String title = "URL: " + url.substring(0, Math.min(url.length(), 40));
-                    vaultItemService.saveUrl(url, title, url);
-                    showNeonNotification("URL saved & analyzed by AI!", true);
+                    // Add protocol if missing
+                    if (!url.startsWith("http://") && !url.startsWith("https://")) {
+                        url = "https://" + url;
+                    }
+
+                    showNeonNotification("Fetching webpage content...", true);
+
+                    // Fetch webpage content for better analysis
+                    String pageContent = fetchWebpageContent(url);
+
+                    // Save with AI-generated title and context
+                    vaultItemService.saveUrl(url, pageContent);
+                    showNeonNotification("Webpage saved & analyzed by AI!", true);
                     urlField.clear();
                     loadRecentItems();
                 } catch (Exception ex) {
