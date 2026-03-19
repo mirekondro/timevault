@@ -1,31 +1,18 @@
 package com.example;
 
 import com.vaadin.flow.component.page.AppShellConfigurator;
-import com.vaadin.flow.theme.Theme;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.autoconfigure.domain.EntityScan;
+import org.springframework.boot.persistence.autoconfigure.EntityScan;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 /**
- * ╔═══════════════════════════════════════════════════════════════════════════╗
- * ║                         TIMEVAULT APPLICATION                              ║
- * ╠═══════════════════════════════════════════════════════════════════════════╣
- * ║                                                                            ║
- * ║  PROJECT STRUCTURE:                                                        ║
- * ║                                                                            ║
- * ║  com.example.shared.*     → SHARED BACKEND (both versions use this)       ║
- * ║    ├── model/             → Database entities (VaultItem)                  ║
- * ║    ├── repository/        → JPA repositories                              ║
- * ║    └── service/           → Business logic services                       ║
- * ║                                                                            ║
- * ║  com.example.web.*        → WEB VERSION (Vaadin) - YOUR PART              ║
- * ║    └── views/             → Vaadin views (MainView)                       ║
- * ║                                                                            ║
- * ║  com.example.desktop.*    → DESKTOP VERSION (JavaFX) - FRIEND'S PART      ║
- * ║    └── (implement here)   → JavaFX controllers and views                 ║
- * ║                                                                            ║
- * ╚═══════════════════════════════════════════════════════════════════════════╝
+ * Web entry point for the Vaadin version of TimeVault.
+ *
+ * The repository is organized around one shared backend package used by both frontends:
+ * `com.example.shared` contains the data model, repositories, and services.
+ * `com.example.web` contains the Vaadin UI.
+ * `com.example.desktop` contains the JavaFX UI.
  */
 @SpringBootApplication(scanBasePackages = "com.example")
 @EntityScan("com.example.shared.model")

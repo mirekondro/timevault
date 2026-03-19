@@ -13,23 +13,6 @@
     -fx-text-fill: -color-text;
 }
 
-.sidebar {
-    -fx-background-color: linear-gradient(to bottom, #15151a, #0f1015);
-    -fx-border-color: transparent rgba(255, 255, 255, 0.05) transparent transparent;
-    -fx-border-width: 0 1 0 0;
-}
-
-.sidebar-title {
-    -fx-text-fill: white;
-    -fx-font-size: 30px;
-    -fx-font-weight: 800;
-}
-
-.sidebar-subtitle {
-    -fx-text-fill: -color-muted;
-    -fx-font-size: 13px;
-}
-
 .top-bar,
 .status-bar {
     -fx-background-color: transparent;
@@ -37,7 +20,7 @@
 
 .section-title {
     -fx-text-fill: white;
-    -fx-font-size: 22px;
+    -fx-font-size: 18px;
     -fx-font-weight: 700;
 }
 
@@ -101,8 +84,7 @@
 }
 
 .pill-button:hover,
-.button:hover,
-.nav-button:hover {
+.button:hover {
     -fx-background-color: #2b2b35;
 }
 
@@ -119,21 +101,6 @@
     -fx-background-color: rgba(255, 255, 255, 0.04);
     -fx-border-color: rgba(255, 255, 255, 0.08);
     -fx-border-width: 1px;
-}
-
-.nav-button {
-    -fx-alignment: CENTER_LEFT;
-    -fx-background-color: transparent;
-    -fx-border-color: transparent;
-    -fx-text-fill: #d6d6df;
-    -fx-padding: 13px 18px;
-}
-
-.nav-button-active {
-    -fx-background-color: rgba(108, 99, 255, 0.18);
-    -fx-border-color: rgba(108, 99, 255, 0.4);
-    -fx-border-width: 1px;
-    -fx-text-fill: white;
 }
 
 .search-field,
@@ -162,6 +129,22 @@
 
 .combo-box-popup .list-cell:hover {
     -fx-background-color: #262630;
+}
+
+.list-view {
+    -fx-background-color: transparent;
+    -fx-control-inner-background: transparent;
+    -fx-padding: 0;
+}
+
+.list-cell {
+    -fx-background-color: transparent;
+    -fx-padding: 0 0 12px 0;
+}
+
+.list-cell:filled:selected,
+.list-cell:filled:hover {
+    -fx-background-color: transparent;
 }
 
 .text-area {
@@ -242,8 +225,13 @@
     -fx-font-weight: 700;
 }
 
-.progress-indicator {
-    -fx-progress-color: -color-accent;
+.hyperlink {
+    -fx-text-fill: #b9b6ff;
+    -fx-border-color: transparent;
+}
+
+.hyperlink:hover {
+    -fx-text-fill: white;
 }
 
 .scroll-bar:vertical,

@@ -1,112 +1,94 @@
 # TimeVault
 
-TimeVault is a local-first application for Hack Esbjerg 2026. It captures URLs, text, and images into a SQL Server database, writes a three-sentence AI context note, and auto-tags content.
+TimeVault currently contains two UI directions in the same repository:
 
-## 🏗️ Project Structure
+- a Vaadin web app that still uses the Spring/JPA shared backend
+- a desktop-first JavaFX app that now uses a classic layered structure with `dao`, `bll`, `gui`, and an observable `AppModel`
 
+## Desktop Structure
+
+```text
+src/main/java/com/example/desktop/
+|-- DesktopApp.java                  # JavaFX bootstrap
+|-- DesktopLauncher.java             # IDE-friendly launcher
+|-- bll/
+|   `-- VaultManager.java            # Business logic
+|-- dao/
+|   |-- DatabaseConfig.java          # Loads db.properties
+|   |-- ConnectionManager.java       # SQL Server connections
+|   |-- SchemaInitializer.java       # Ensures table exists
+|   |-- VaultItemDAO.java            # DAO contract
+|   `-- SqlVaultItemDAO.java         # SQL Server DAO implementation
+|-- gui/
+|   |-- MainController.java
+|   |-- TopBarController.java
+|   |-- SaveController.java
+|   |-- ArchiveController.java
+|   |-- DetailController.java
+|   |-- VaultItemCell.java
+|   `-- AppContextAware.java
+`-- model/
+    |-- AppModel.java                # Shared observable application state
+    `-- VaultItemFx.java             # Observable item model
 ```
-src/main/java/com/example/
-│
-├── Application.java           # Spring Boot entry point
-│
-├── shared/                    # ⭐ SHARED BACKEND (both versions use this)
-│   ├── model/
-│   │   └── VaultItem.java     # Database entity
-│   ├── repository/
-│   │   └── VaultItemRepository.java  # JPA repository
-│   └── service/
-│       └── VaultItemService.java     # Business logic
-│
-├── web/                       # 🌐 WEB VERSION (Vaadin) - Miroslav
-│   └── views/
-│       └── MainView.java      # Web UI
-│
-└── desktop/                   # 🖥️ DESKTOP VERSION (JavaFX) - Friend
-    └── (implement here)       # JavaFX app
+
+## Desktop FXML
+
+```text
+src/main/resources/com/example/desktop/gui/
+|-- main-view.fxml
+|-- top-bar.fxml
+|-- save-view.fxml
+|-- archive-view.fxml
+`-- detail-view.fxml
 ```
 
-## 👥 Team Division
+Controllers do not talk to each other directly. They only:
 
-| Part | Owner | Technology | Folder |
-|------|-------|------------|--------|
-| **Shared Backend** | Both | Spring Data JPA, MS SQL | `shared/` |
-| **Web Frontend** | Miroslav | Vaadin 25 | `web/` |
-| **Desktop Frontend** | Friend | JavaFX | `desktop/` |
+- bind to `AppModel`
+- call `VaultManager`
+- react to observable state changes
 
-## 🚀 Run Web Version
+## Desktop Flow
+
+1. `DesktopLauncher` starts `DesktopApp`
+2. `DesktopApp` creates the DAO, BLL, and `AppModel`
+3. `DesktopApp` loads `main-view.fxml`
+4. `MainController` injects the shared context into child controllers
+5. `VaultManager` initializes the schema and loads the first data set
+6. All GUI updates then happen through observable properties in `AppModel`
+
+## Database Configuration
+
+Desktop database settings come from:
+
+- `src/main/resources/db.properties` for your real local credentials
+- `src/main/resources/db.example.properties` as the safe template
+
+The desktop app uses Microsoft SQL Server through the Microsoft JDBC driver and creates `dbo.vault_items` if it does not already exist. If `db.resetOnStart=true`, the table is recreated on startup.
+
+## Run The Desktop App
+
+From Maven:
 
 ```bash
-./mvnw spring-boot:run
+./mvnw javafx:run
 ```
 
-Then open: **http://localhost:8080**
+From an IDE:
 
-## 🔧 Configuration
+- run `com.example.desktop.DesktopLauncher`
 
-Edit `src/main/resources/application.properties`:
+## Web App
 
-```properties
-spring.datasource.url=jdbc:sqlserver://localhost:1433;databaseName=School;encrypt=true;trustServerCertificate=true
-spring.datasource.username=YOUR_USERNAME
-spring.datasource.password=YOUR_PASSWORD
-```
+The web app is still present under `src/main/java/com/example/web` and uses the Spring/JPA path from `com.example.shared`. I did not remove it, but the new architectural work in this pass is focused on the desktop app.
 
-## 📦 Using Shared Backend
+## Tech Stack
 
-Both web and desktop versions use the same `VaultItemService`:
-
-```java
-@Autowired
-private VaultItemService vaultItemService;
-
-// Save URL
-vaultItemService.saveUrl(url, title, content, aiContext);
-
-// Save text
-vaultItemService.saveText(title, content, aiContext);
-
-// Save image
-vaultItemService.saveImage(title, imagePath, aiContext);
-
-// Get recent items
-List<VaultItem> items = vaultItemService.findRecent();
-
-// Search
-List<VaultItem> results = vaultItemService.search("keyword");
-
-// Delete
-vaultItemService.delete(itemId);
-```
-
-## 🗄️ Database (MS SQL Server)
-
-The table `vault_items` is auto-created by Hibernate. Schema:
-
-| Column | Type | Description |
-|--------|------|-------------|
-| id | BIGINT | Primary key |
-| title | NVARCHAR(500) | Item title |
-| content | NVARCHAR(MAX) | Full content |
-| ai_context | NVARCHAR(MAX) | AI-generated summary |
-| item_type | NVARCHAR(50) | URL, IMAGE, or TEXT |
-| tags | NVARCHAR(500) | Auto-generated tags |
-| source_url | NVARCHAR(1000) | Original URL (for URL type) |
-| created_at | DATETIME2 | Creation timestamp |
-| updated_at | DATETIME2 | Last update timestamp |
-
-## 🎯 Features
-
-- ✅ User pastes URL, uploads image, or types text
-- ✅ App saves content to MS SQL database
-- ✅ Auto-tags by type, platform, date
-- ✅ Search and browse saved items
-- 🔄 AI context generation (pending)
-
-## 🛠️ Tech Stack
-
-- **Backend**: Spring Boot 4.0.3, Spring Data JPA
-- **Database**: MS SQL Server
-- **Web UI**: Vaadin 25.0.7
-- **Desktop UI**: JavaFX (to be implemented)
-- **Java**: 21
-
+- Java 21
+- JavaFX 21
+- FXML
+- Microsoft SQL Server
+- Java JDBC DAO layer
+- JavaFX observable AppModel
+- Spring Boot 4.0.3 and Vaadin 25.0.7 for the separate web side

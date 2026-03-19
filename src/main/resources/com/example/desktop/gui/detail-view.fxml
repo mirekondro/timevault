@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Hyperlink?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.layout.FlowPane?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.example.desktop.gui.DetailController"
+      spacing="14.0" styleClass="vault-card">
+    <padding>
+        <Insets top="18.0" right="18.0" bottom="18.0" left="18.0"/>
+    </padding>
+    <Label fx:id="detailTitleLabel" styleClass="detail-title" text="Select an item"/>
+    <Label fx:id="detailMetaLabel" styleClass="muted-copy" text="Search or save an item to see its details." wrapText="true"/>
+    <Hyperlink fx:id="sourceLink" onAction="#handleOpenSource" text="" visible="false" managed="false"/>
+    <Separator/>
+    <Label styleClass="section-title" text="AI / Context"/>
+    <TextArea fx:id="contextArea" editable="false" prefRowCount="5" styleClass="context-box" wrapText="true"/>
+    <Label styleClass="section-title" text="Tags"/>
+    <FlowPane fx:id="tagsPane" hgap="8.0" vgap="8.0"/>
+    <Label styleClass="section-title" text="Content"/>
+    <TextArea fx:id="contentArea" editable="false" prefRowCount="10" styleClass="readonly-area" wrapText="true"/>
+    <Button fx:id="deleteButton" mnemonicParsing="false" onAction="#handleDelete"
+            styleClass="ghost-button" text="Delete Item"/>
+</VBox>
