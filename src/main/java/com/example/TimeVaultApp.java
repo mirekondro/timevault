@@ -1,6 +1,6 @@
 package com.example;
 
-import com.example.gui.MainView;
+import com.example.views.MainView;
 import com.example.repositories.ArchiveRepository;
 import com.example.repositories.CapsuleRepository;
 import com.example.repositories.DatabaseManager;
