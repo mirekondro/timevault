@@ -2,59 +2,58 @@
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Hyperlink?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.PasswordField?>
-<?import javafx.scene.control.Tab?>
-<?import javafx.scene.control.TabPane?>
 <?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
-<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
-      fx:controller="com.example.desktop.gui.AuthController"
-      spacing="12.0" styleClass="vault-card">
-    <padding>
-        <Insets top="18.0" right="18.0" bottom="18.0" left="18.0"/>
-    </padding>
+<StackPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="com.example.desktop.gui.AuthController"
+           styleClass="auth-scene-root">
+    <VBox maxWidth="470.0" spacing="18.0" styleClass="auth-shell">
+        <padding>
+            <Insets top="28.0" right="28.0" bottom="28.0" left="28.0"/>
+        </padding>
 
-    <Label styleClass="section-title" text="Account Access"/>
-    <Label styleClass="muted-copy"
-           text="Create an account with email and password, then every saved item is attached to that user id in the database."
-           wrapText="true"/>
+        <VBox spacing="8.0">
+            <Label styleClass="eyebrow" text="PERSONAL DIGITAL VAULT"/>
+            <Label styleClass="hero-title" text="TimeVault"/>
+            <Label styleClass="muted-copy"
+                   text="Log in to open your vault. Need an account? Jump to registration from the link below."
+                   wrapText="true"/>
+        </VBox>
 
-    <VBox fx:id="authFormsBox" spacing="12.0">
-        <TabPane fx:id="authTabPane" tabClosingPolicy="UNAVAILABLE">
-            <tabs>
-                <Tab text="Log In">
-                    <content>
-                        <VBox spacing="12.0">
-                            <padding><Insets top="18.0" right="18.0" bottom="18.0" left="18.0"/></padding>
-                            <TextField fx:id="loginEmailField" promptText="Email" styleClass="text-field"/>
-                            <PasswordField fx:id="loginPasswordField" promptText="Password" styleClass="text-field"/>
-                            <Button fx:id="loginButton" mnemonicParsing="false" onAction="#handleLogin"
-                                    styleClass="accent-button" text="Log In"/>
-                        </VBox>
-                    </content>
-                </Tab>
-                <Tab text="Register">
-                    <content>
-                        <VBox spacing="12.0">
-                            <padding><Insets top="18.0" right="18.0" bottom="18.0" left="18.0"/></padding>
-                            <TextField fx:id="registerEmailField" promptText="Email" styleClass="text-field"/>
-                            <PasswordField fx:id="registerPasswordField" promptText="Password (8+ characters)" styleClass="text-field"/>
-                            <PasswordField fx:id="registerConfirmPasswordField" promptText="Confirm password" styleClass="text-field"/>
-                            <Button fx:id="registerButton" mnemonicParsing="false" onAction="#handleRegister"
-                                    styleClass="accent-button" text="Create Account"/>
-                        </VBox>
-                    </content>
-                </Tab>
-            </tabs>
-        </TabPane>
+        <VBox fx:id="loginPane" spacing="14.0">
+            <Label styleClass="section-title" text="Log In"/>
+            <TextField fx:id="loginEmailField" promptText="Email address" styleClass="text-field"/>
+            <PasswordField fx:id="loginPasswordField" promptText="Password" styleClass="text-field"/>
+            <Button fx:id="loginButton" maxWidth="1.7976931348623157E308" mnemonicParsing="false"
+                    onAction="#handleLogin" styleClass="accent-button" text="Log In"/>
+            <HBox alignment="CENTER_LEFT" spacing="6.0">
+                <Label styleClass="muted-copy" text="Don't have an account?"/>
+                <Hyperlink fx:id="showRegisterLink" onAction="#handleShowRegister"
+                           styleClass="auth-link" text="Register here"/>
+            </HBox>
+        </VBox>
+
+        <VBox fx:id="registerPane" managed="false" spacing="14.0" visible="false">
+            <Label styleClass="section-title" text="Register"/>
+            <TextField fx:id="registerEmailField" promptText="Email address" styleClass="text-field"/>
+            <PasswordField fx:id="registerPasswordField" promptText="Password (8+ characters)" styleClass="text-field"/>
+            <PasswordField fx:id="registerConfirmPasswordField" promptText="Confirm password" styleClass="text-field"/>
+            <Button fx:id="registerButton" maxWidth="1.7976931348623157E308" mnemonicParsing="false"
+                    onAction="#handleRegister" styleClass="accent-button" text="Create Account"/>
+            <HBox alignment="CENTER_LEFT" spacing="6.0">
+                <Label styleClass="muted-copy" text="Already registered?"/>
+                <Hyperlink fx:id="showLoginLink" onAction="#handleShowLogin"
+                           styleClass="auth-link" text="Back to log in"/>
+            </HBox>
+        </VBox>
+
+        <Label fx:id="authStatusLabel" styleClass="auth-status-label"
+               text="Register or log in to open your vault." wrapText="true"/>
     </VBox>
-
-    <VBox fx:id="sessionBox" spacing="8.0" visible="false" managed="false">
-        <Label fx:id="sessionSummaryLabel" styleClass="section-title" text="Signed in"/>
-        <Label fx:id="sessionMetaLabel" styleClass="muted-copy" text="Account #0 owns every saved item in this session." wrapText="true"/>
-        <Button fx:id="logoutButton" mnemonicParsing="false" onAction="#handleLogout"
-                styleClass="ghost-button" text="Log Out"/>
-    </VBox>
-</VBox>
+</StackPane>

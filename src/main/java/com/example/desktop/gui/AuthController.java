@@ -1,14 +1,15 @@
 package com.example.desktop.gui;
 
+import com.example.desktop.DesktopNavigator;
 import com.example.desktop.bll.VaultManager;
 import com.example.desktop.model.AppModel;
 import javafx.application.HostServices;
-import javafx.beans.binding.Bindings;
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
+import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
-import javafx.scene.control.TabPane;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
@@ -19,19 +20,10 @@ import javafx.stage.Stage;
 public class AuthController implements AppContextAware {
 
     @FXML
-    private VBox authFormsBox;
+    private VBox loginPane;
 
     @FXML
-    private TabPane authTabPane;
-
-    @FXML
-    private VBox sessionBox;
-
-    @FXML
-    private Label sessionSummaryLabel;
-
-    @FXML
-    private Label sessionMetaLabel;
+    private VBox registerPane;
 
     @FXML
     private TextField loginEmailField;
@@ -41,6 +33,9 @@ public class AuthController implements AppContextAware {
 
     @FXML
     private Button loginButton;
+
+    @FXML
+    private Hyperlink showRegisterLink;
 
     @FXML
     private TextField registerEmailField;
@@ -55,15 +50,24 @@ public class AuthController implements AppContextAware {
     private Button registerButton;
 
     @FXML
-    private Button logoutButton;
+    private Hyperlink showLoginLink;
+
+    @FXML
+    private Label authStatusLabel;
 
     private AppModel appModel;
     private VaultManager vaultManager;
+    private DesktopNavigator navigator;
 
     @Override
-    public void setContext(AppModel appModel, VaultManager vaultManager, HostServices hostServices, Stage stage) {
+    public void setContext(AppModel appModel,
+                           VaultManager vaultManager,
+                           HostServices hostServices,
+                           Stage stage,
+                           DesktopNavigator navigator) {
         this.appModel = appModel;
         this.vaultManager = vaultManager;
+        this.navigator = navigator;
 
         loginEmailField.textProperty().bindBidirectional(appModel.loginEmailInputProperty());
         loginPasswordField.textProperty().bindBidirectional(appModel.loginPasswordInputProperty());
@@ -71,36 +75,51 @@ public class AuthController implements AppContextAware {
         registerPasswordField.textProperty().bindBidirectional(appModel.registerPasswordInputProperty());
         registerConfirmPasswordField.textProperty().bindBidirectional(appModel.registerConfirmPasswordInputProperty());
 
-        authFormsBox.visibleProperty().bind(appModel.authenticatedProperty().not());
-        authFormsBox.managedProperty().bind(authFormsBox.visibleProperty());
-        sessionBox.visibleProperty().bind(appModel.authenticatedProperty());
-        sessionBox.managedProperty().bind(sessionBox.visibleProperty());
-
+        authStatusLabel.textProperty().bind(appModel.statusMessageProperty());
         loginButton.disableProperty().bind(appModel.busyProperty());
         registerButton.disableProperty().bind(appModel.busyProperty());
-        logoutButton.disableProperty().bind(appModel.busyProperty());
-        authTabPane.disableProperty().bind(appModel.busyProperty());
-
-        sessionSummaryLabel.textProperty().bind(Bindings.createStringBinding(
-                () -> vaultManager.getSessionSummary(appModel),
-                appModel.currentUserProperty()));
-        sessionMetaLabel.textProperty().bind(Bindings.createStringBinding(
-                () -> vaultManager.getSessionMeta(appModel),
-                appModel.currentUserProperty()));
+        showLoginView();
     }
 
     @FXML
     private void handleLogin() {
         vaultManager.login(appModel);
+        if (appModel.isAuthenticated()) {
+            navigator.showMainScene();
+        }
     }
 
     @FXML
     private void handleRegister() {
         vaultManager.register(appModel);
+        if (appModel.isAuthenticated()) {
+            navigator.showMainScene();
+        }
     }
 
     @FXML
-    private void handleLogout() {
-        vaultManager.logout(appModel);
+    private void handleShowRegister() {
+        showRegisterView();
+    }
+
+    @FXML
+    private void handleShowLogin() {
+        showLoginView();
+    }
+
+    public void showLoginView() {
+        loginPane.setVisible(true);
+        loginPane.setManaged(true);
+        registerPane.setVisible(false);
+        registerPane.setManaged(false);
+        Platform.runLater(loginEmailField::requestFocus);
+    }
+
+    public void showRegisterView() {
+        registerPane.setVisible(true);
+        registerPane.setManaged(true);
+        loginPane.setVisible(false);
+        loginPane.setManaged(false);
+        Platform.runLater(registerEmailField::requestFocus);
     }
 }

@@ -1,5 +1,6 @@
 package com.example.desktop.gui;
 
+import com.example.desktop.DesktopNavigator;
 import com.example.desktop.bll.VaultManager;
 import com.example.desktop.model.AppModel;
 import com.example.desktop.model.VaultItemFx;
@@ -24,7 +25,11 @@ public class ArchiveController implements AppContextAware {
     private AppModel appModel;
 
     @Override
-    public void setContext(AppModel appModel, VaultManager vaultManager, HostServices hostServices, Stage stage) {
+    public void setContext(AppModel appModel,
+                           VaultManager vaultManager,
+                           HostServices hostServices,
+                           Stage stage,
+                           DesktopNavigator navigator) {
         this.appModel = appModel;
 
         itemsListView.setItems(appModel.getFilteredItems());

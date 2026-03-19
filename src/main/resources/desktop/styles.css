@@ -1,21 +1,95 @@
 .root,
-.app-root {
-    -color-bg: #0f0f0f;
-    -color-surface: #1a1a1a;
-    -color-surface-alt: #232326;
-    -color-accent: #6c63ff;
-    -color-accent-soft: #8f88ff;
-    -color-text: #f5f5f7;
-    -color-muted: #a7a7b3;
-    -color-border: rgba(255, 255, 255, 0.08);
-    -fx-background-color: linear-gradient(to bottom right, #101012, #15151a 38%, #111116 100%);
+.app-root,
+.auth-scene-root {
+    -color-bg: #0d1117;
+    -color-bg-soft: #131a22;
+    -color-surface: #18212b;
+    -color-surface-alt: #223041;
+    -color-surface-strong: #2d3c4f;
+    -color-accent: #58c4dd;
+    -color-accent-soft: #8fe2f2;
+    -color-text: #f4f7fb;
+    -color-muted: #9fb1c4;
+    -color-border: rgba(255, 255, 255, 0.09);
+    -color-shadow: rgba(0, 0, 0, 0.34);
     -fx-font-family: "Inter", "Segoe UI", "Arial", sans-serif;
     -fx-text-fill: -color-text;
 }
 
-.top-bar,
-.status-bar {
+.app-root {
+    -fx-background-color: linear-gradient(to bottom, #0b1016, #0f141b 42%, #101922 100%);
+}
+
+.auth-scene-root {
+    -fx-background-color:
+        radial-gradient(center 20% 15%, radius 45%, rgba(88, 196, 221, 0.16), transparent),
+        radial-gradient(center 80% 80%, radius 40%, rgba(143, 226, 242, 0.12), transparent),
+        linear-gradient(to bottom right, #0b1117, #101924 50%, #0d131a 100%);
+}
+
+.page-scroll,
+.page-scroll .viewport,
+.content-shell,
+.content-split {
     -fx-background-color: transparent;
+}
+
+.app-header,
+.app-footer {
+    -fx-background-color: linear-gradient(to right, rgba(12, 17, 23, 0.96), rgba(18, 27, 38, 0.96));
+    -fx-border-color: -color-border;
+}
+
+.app-header {
+    -fx-border-width: 0 0 1 0;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.22), 18, 0.18, 0, 2);
+}
+
+.app-footer {
+    -fx-border-width: 1 0 0 0;
+}
+
+.header-brand {
+    -fx-text-fill: white;
+    -fx-font-size: 20px;
+    -fx-font-weight: 800;
+}
+
+.header-user {
+    -fx-text-fill: -color-muted;
+    -fx-font-size: 13px;
+    -fx-font-weight: 600;
+}
+
+.footer-credit {
+    -fx-text-fill: -color-muted;
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+}
+
+.auth-shell {
+    -fx-background-color: linear-gradient(to bottom right, rgba(24, 33, 43, 0.96), rgba(17, 24, 33, 0.98));
+    -fx-background-radius: 24px;
+    -fx-border-color: rgba(255, 255, 255, 0.1);
+    -fx-border-radius: 24px;
+    -fx-border-width: 1px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.45), 40, 0.2, 0, 16);
+}
+
+.auth-link {
+    -fx-text-fill: -color-accent-soft;
+    -fx-border-color: transparent;
+    -fx-font-weight: 700;
+}
+
+.auth-link:hover {
+    -fx-text-fill: white;
+}
+
+.auth-status-label {
+    -fx-text-fill: -color-muted;
+    -fx-font-size: 13px;
+    -fx-padding: 6px 0 0 0;
 }
 
 .section-title {
@@ -54,17 +128,21 @@
     -fx-font-size: 13px;
 }
 
-.vault-card {
-    -fx-background-color: linear-gradient(to bottom right, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
-    -fx-background-radius: 16px;
+.vault-card,
+.stat-card {
+    -fx-background-color: linear-gradient(to bottom right, rgba(255,255,255,0.035), rgba(255,255,255,0.015));
+    -fx-background-radius: 18px;
     -fx-border-color: -color-border;
-    -fx-border-radius: 16px;
+    -fx-border-radius: 18px;
     -fx-border-width: 1px;
     -fx-padding: 18px;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.26), 26, 0.2, 0, 10);
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.24), 26, 0.18, 0, 8);
 }
 
-.pill-button,
+.stat-card {
+    -fx-background-color: linear-gradient(to bottom right, rgba(88, 196, 221, 0.09), rgba(255,255,255,0.02));
+}
+
 .combo-box,
 .search-field,
 .text-field,
@@ -74,7 +152,6 @@
     -fx-border-radius: 50px;
 }
 
-.pill-button,
 .button {
     -fx-background-color: -color-surface-alt;
     -fx-text-fill: white;
@@ -83,24 +160,27 @@
     -fx-border-color: transparent;
 }
 
-.pill-button:hover,
 .button:hover {
-    -fx-background-color: #2b2b35;
+    -fx-background-color: -color-surface-strong;
 }
 
 .accent-button {
-    -fx-background-color: linear-gradient(to right, -color-accent, #8b6cff);
-    -fx-text-fill: white;
+    -fx-background-color: linear-gradient(to right, -color-accent, #77d0e4);
+    -fx-text-fill: #0d141b;
 }
 
 .accent-button:hover {
-    -fx-background-color: linear-gradient(to right, #7a72ff, #977cff);
+    -fx-background-color: linear-gradient(to right, #72d3e7, #9be6f2);
 }
 
 .ghost-button {
     -fx-background-color: rgba(255, 255, 255, 0.04);
     -fx-border-color: rgba(255, 255, 255, 0.08);
     -fx-border-width: 1px;
+}
+
+.compact-button {
+    -fx-padding: 8px 14px;
 }
 
 .search-field,
@@ -110,7 +190,7 @@
     -fx-background-color: rgba(255, 255, 255, 0.05);
     -fx-text-fill: white;
     -fx-prompt-text-fill: rgba(255, 255, 255, 0.45);
-    -fx-border-color: rgba(255, 255, 255, 0.07);
+    -fx-border-color: rgba(255, 255, 255, 0.08);
     -fx-border-width: 1px;
     -fx-padding: 12px 16px;
 }
@@ -119,16 +199,13 @@
     -fx-text-fill: white;
 }
 
-.combo-box-popup .list-view {
-    -fx-background-color: #1a1a1a;
-}
-
+.combo-box-popup .list-view,
 .combo-box-popup .list-cell {
-    -fx-background-color: #1a1a1a;
+    -fx-background-color: #18212b;
 }
 
 .combo-box-popup .list-cell:hover {
-    -fx-background-color: #262630;
+    -fx-background-color: #223041;
 }
 
 .list-view {
@@ -161,12 +238,6 @@
     -fx-font-size: 13px;
 }
 
-.page-scroll,
-.page-scroll .viewport,
-.split-pane {
-    -fx-background-color: transparent;
-}
-
 .split-pane-divider {
     -fx-background-color: rgba(255, 255, 255, 0.06);
 }
@@ -178,16 +249,16 @@
 }
 
 .card-copy {
-    -fx-text-fill: #ececf2;
+    -fx-text-fill: #e4ecf5;
     -fx-font-size: 13px;
 }
 
 .context-box {
-    -fx-background-color: rgba(108, 99, 255, 0.14);
+    -fx-background-color: rgba(88, 196, 221, 0.12);
     -fx-background-radius: 16px;
     -fx-padding: 14px;
-    -fx-text-fill: #f4f3ff;
-    -fx-border-color: rgba(108, 99, 255, 0.35);
+    -fx-text-fill: #f1fbff;
+    -fx-border-color: rgba(88, 196, 221, 0.32);
     -fx-border-width: 1px;
     -fx-border-radius: 16px;
 }
@@ -217,7 +288,7 @@
 }
 
 .tab-pane .tab:selected {
-    -fx-background-color: rgba(108, 99, 255, 0.16);
+    -fx-background-color: rgba(88, 196, 221, 0.18);
 }
 
 .tab-pane .tab-label {
@@ -226,7 +297,7 @@
 }
 
 .hyperlink {
-    -fx-text-fill: #b9b6ff;
+    -fx-text-fill: -color-accent-soft;
     -fx-border-color: transparent;
 }
 

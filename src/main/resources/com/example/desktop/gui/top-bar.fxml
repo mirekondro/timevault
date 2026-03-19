@@ -11,16 +11,12 @@
 <VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.example.desktop.gui.TopBarController"
       spacing="18.0">
-    <VBox spacing="12.0">
-        <VBox spacing="4.0">
-            <Label styleClass="eyebrow" text="DESKTOP ARCHIVE"/>
-            <Label styleClass="hero-title" text="TimeVault"/>
-            <Label styleClass="muted-copy" text="Three layers: DAO, BLL, and GUI, all sharing one observable AppModel." wrapText="true"/>
-            <Label fx:id="sessionSummaryLabel" styleClass="section-title" text="Not signed in"/>
-            <Label fx:id="sessionMetaLabel" styleClass="muted-copy"
-                   text="Create an account to keep every upload attached to your own user id."
-                   wrapText="true"/>
-        </VBox>
+    <VBox spacing="8.0" styleClass="vault-card">
+        <padding><Insets top="18.0" right="18.0" bottom="18.0" left="18.0"/></padding>
+        <Label styleClass="section-title" text="Vault Overview"/>
+        <Label styleClass="muted-copy"
+               text="Search, filter, and refresh the items that belong to your signed-in account."
+               wrapText="true"/>
         <FlowPane hgap="12.0" vgap="12.0" prefWrapLength="900.0">
             <TextField fx:id="searchField" prefWidth="240.0" promptText="Search title, content, tags, or URL"
                        styleClass="search-field"/>
@@ -31,25 +27,25 @@
     </VBox>
 
     <FlowPane hgap="16.0" vgap="16.0" prefWrapLength="1100.0">
-        <VBox minWidth="180.0" prefWidth="220.0" spacing="6.0" styleClass="vault-card">
+        <VBox minWidth="180.0" prefWidth="220.0" spacing="6.0" styleClass="stat-card">
             <padding><Insets top="18.0" right="18.0" bottom="18.0" left="18.0"/></padding>
             <Label styleClass="muted-copy" text="Total saved"/>
             <Label fx:id="totalCountValue" styleClass="stat-value" text="0"/>
             <Label styleClass="card-copy" text="Everything currently stored in the vault." wrapText="true"/>
         </VBox>
-        <VBox minWidth="180.0" prefWidth="220.0" spacing="6.0" styleClass="vault-card">
+        <VBox minWidth="180.0" prefWidth="220.0" spacing="6.0" styleClass="stat-card">
             <padding><Insets top="18.0" right="18.0" bottom="18.0" left="18.0"/></padding>
             <Label styleClass="muted-copy" text="URL items"/>
             <Label fx:id="urlCountValue" styleClass="stat-value" text="0"/>
             <Label styleClass="card-copy" text="Saved links and web references." wrapText="true"/>
         </VBox>
-        <VBox minWidth="180.0" prefWidth="220.0" spacing="6.0" styleClass="vault-card">
+        <VBox minWidth="180.0" prefWidth="220.0" spacing="6.0" styleClass="stat-card">
             <padding><Insets top="18.0" right="18.0" bottom="18.0" left="18.0"/></padding>
             <Label styleClass="muted-copy" text="Text items"/>
             <Label fx:id="textCountValue" styleClass="stat-value" text="0"/>
             <Label styleClass="card-copy" text="Notes, copied text, and quick captures." wrapText="true"/>
         </VBox>
-        <VBox minWidth="180.0" prefWidth="220.0" spacing="6.0" styleClass="vault-card">
+        <VBox minWidth="180.0" prefWidth="220.0" spacing="6.0" styleClass="stat-card">
             <padding><Insets top="18.0" right="18.0" bottom="18.0" left="18.0"/></padding>
             <Label styleClass="muted-copy" text="Image items"/>
             <Label fx:id="imageCountValue" styleClass="stat-value" text="0"/>

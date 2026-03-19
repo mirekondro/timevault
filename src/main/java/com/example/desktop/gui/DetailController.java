@@ -1,5 +1,6 @@
 package com.example.desktop.gui;
 
+import com.example.desktop.DesktopNavigator;
 import com.example.desktop.bll.VaultManager;
 import com.example.desktop.model.AppModel;
 import com.example.desktop.model.VaultItemFx;
@@ -46,7 +47,11 @@ public class DetailController implements AppContextAware {
     private HostServices hostServices;
 
     @Override
-    public void setContext(AppModel appModel, VaultManager vaultManager, HostServices hostServices, Stage stage) {
+    public void setContext(AppModel appModel,
+                           VaultManager vaultManager,
+                           HostServices hostServices,
+                           Stage stage,
+                           DesktopNavigator navigator) {
         this.appModel = appModel;
         this.vaultManager = vaultManager;
         this.hostServices = hostServices;

@@ -1,5 +1,6 @@
 package com.example.desktop.gui;
 
+import com.example.desktop.DesktopNavigator;
 import com.example.desktop.bll.VaultManager;
 import com.example.desktop.model.AppModel;
 import javafx.application.HostServices;
@@ -13,10 +14,10 @@ import javafx.stage.Stage;
 public class MainController {
 
     @FXML
-    private TopBarController topBarViewController;
+    private HeaderController headerViewController;
 
     @FXML
-    private AuthController authViewController;
+    private TopBarController topBarViewController;
 
     @FXML
     private SaveController saveViewController;
@@ -30,23 +31,26 @@ public class MainController {
     @FXML
     private Label statusLabel;
 
-    public void setContext(AppModel appModel, VaultManager vaultManager, HostServices hostServices, Stage stage) {
+    public void setContext(AppModel appModel,
+                           VaultManager vaultManager,
+                           HostServices hostServices,
+                           Stage stage,
+                           DesktopNavigator navigator) {
         statusLabel.textProperty().bind(appModel.statusMessageProperty());
 
-        initializeChild(topBarViewController, appModel, vaultManager, hostServices, stage);
-        initializeChild(authViewController, appModel, vaultManager, hostServices, stage);
-        initializeChild(saveViewController, appModel, vaultManager, hostServices, stage);
-        initializeChild(archiveViewController, appModel, vaultManager, hostServices, stage);
-        initializeChild(detailViewController, appModel, vaultManager, hostServices, stage);
-
-        vaultManager.initialize(appModel);
+        initializeChild(headerViewController, appModel, vaultManager, hostServices, stage, navigator);
+        initializeChild(topBarViewController, appModel, vaultManager, hostServices, stage, navigator);
+        initializeChild(saveViewController, appModel, vaultManager, hostServices, stage, navigator);
+        initializeChild(archiveViewController, appModel, vaultManager, hostServices, stage, navigator);
+        initializeChild(detailViewController, appModel, vaultManager, hostServices, stage, navigator);
     }
 
     private void initializeChild(AppContextAware controller,
                                  AppModel appModel,
                                  VaultManager vaultManager,
                                  HostServices hostServices,
-                                 Stage stage) {
-        controller.setContext(appModel, vaultManager, hostServices, stage);
+                                 Stage stage,
+                                 DesktopNavigator navigator) {
+        controller.setContext(appModel, vaultManager, hostServices, stage, navigator);
     }
 }

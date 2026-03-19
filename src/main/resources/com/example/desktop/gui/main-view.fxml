@@ -2,38 +2,47 @@
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.SplitPane?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.VBox?>
 
 <BorderPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.example.desktop.gui.MainController"
             prefHeight="820.0" prefWidth="1200.0" styleClass="app-root">
-    <padding>
-        <Insets top="22.0" right="22.0" bottom="22.0" left="22.0"/>
-    </padding>
     <top>
-        <VBox spacing="18.0">
-            <fx:include fx:id="topBarView" source="top-bar.fxml"/>
-            <fx:include fx:id="authView" source="auth-view.fxml"/>
-            <fx:include fx:id="saveView" source="save-view.fxml"/>
-        </VBox>
+        <fx:include fx:id="headerView" source="header-bar.fxml"/>
     </top>
     <center>
-        <SplitPane dividerPositions="0.42">
-            <items>
-                <fx:include fx:id="archiveView" source="archive-view.fxml"/>
-                <fx:include fx:id="detailView" source="detail-view.fxml"/>
-            </items>
-        </SplitPane>
+        <ScrollPane fitToWidth="true" hbarPolicy="NEVER" styleClass="page-scroll">
+            <content>
+                <VBox spacing="18.0" styleClass="content-shell">
+                    <padding>
+                        <Insets top="22.0" right="22.0" bottom="22.0" left="22.0"/>
+                    </padding>
+                    <fx:include fx:id="topBarView" source="top-bar.fxml"/>
+                    <fx:include fx:id="saveView" source="save-view.fxml"/>
+                    <SplitPane dividerPositions="0.42" prefHeight="560.0" styleClass="content-split">
+                        <items>
+                            <fx:include fx:id="archiveView" source="archive-view.fxml"/>
+                            <fx:include fx:id="detailView" source="detail-view.fxml"/>
+                        </items>
+                    </SplitPane>
+                </VBox>
+            </content>
+        </ScrollPane>
     </center>
     <bottom>
-        <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="status-bar">
+        <HBox alignment="CENTER_LEFT" maxHeight="60.0" minHeight="60.0" prefHeight="60.0"
+              spacing="12.0" styleClass="app-footer">
             <padding>
-                <Insets top="16.0" right="4.0" bottom="4.0" left="4.0"/>
+                <Insets top="0.0" right="22.0" bottom="0.0" left="22.0"/>
             </padding>
             <Label fx:id="statusLabel" styleClass="status-label" text="Ready"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Label styleClass="footer-credit" text="Designed and coded by Asim and Mirek"/>
         </HBox>
     </bottom>
 </BorderPane>
