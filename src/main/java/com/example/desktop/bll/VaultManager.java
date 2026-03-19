@@ -459,8 +459,7 @@ public class VaultManager {
     }
 
     private void resetVaultFilters(AppModel appModel) {
-        appModel.searchTextProperty().set("");
-        appModel.selectedTypeProperty().set(AppModel.TYPE_ALL);
+        appModel.resetArchiveFilters();
     }
 
     private VaultItemFx copyItem(VaultItemFx source) {

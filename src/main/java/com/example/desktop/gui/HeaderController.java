@@ -8,9 +8,11 @@ import javafx.application.HostServices;
 import javafx.beans.binding.Bindings;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.CustomMenuItem;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListCell;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.RadioMenuItem;
@@ -19,6 +21,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import javafx.util.StringConverter;
 
 /**
  * Fixed header controller for the main desktop scene.
@@ -30,6 +33,12 @@ public class HeaderController implements AppContextAware {
 
     @FXML
     private TextField searchField;
+
+    @FXML
+    private ComboBox<String> searchColumnComboBox;
+
+    @FXML
+    private Button clearSearchButton;
 
     @FXML
     private Button reloadButton;
@@ -62,8 +71,7 @@ public class HeaderController implements AppContextAware {
         this.vaultManager = vaultManager;
         this.navigator = navigator;
 
-        searchField.textProperty().bindBidirectional(appModel.searchTextProperty());
-        searchField.disableProperty().bind(appModel.authenticatedProperty().not());
+        configureSearchControls();
         reloadButton.disableProperty().bind(appModel.busyProperty().or(appModel.authenticatedProperty().not()));
         avatarLetterLabel.textProperty().bind(Bindings.createStringBinding(this::resolveCurrentUserInitial,
                 appModel.currentUserProperty(), appModel.localeProperty()));
@@ -78,14 +86,21 @@ public class HeaderController implements AppContextAware {
         appModel.localeProperty().addListener((obs, oldLocale, newLocale) -> {
             updateMenuIdentity();
             updateLanguageSelection();
+            refreshSearchColumnLabels();
         });
         updateMenuIdentity();
         updateLanguageSelection();
+        refreshSearchColumnLabels();
     }
 
     @FXML
     private void handleReload() {
         vaultManager.loadVault(appModel);
+    }
+
+    @FXML
+    private void handleClearSearch() {
+        appModel.searchTextProperty().set("");
     }
 
     @FXML
@@ -154,6 +169,20 @@ public class HeaderController implements AppContextAware {
         userMenu.setAutoFix(true);
     }
 
+    private void configureSearchControls() {
+        searchField.textProperty().bindBidirectional(appModel.searchTextProperty());
+        searchField.disableProperty().bind(appModel.authenticatedProperty().not());
+
+        searchColumnComboBox.setItems(appModel.getSearchColumnOptions());
+        searchColumnComboBox.valueProperty().bindBidirectional(appModel.selectedSearchColumnProperty());
+        searchColumnComboBox.disableProperty().bind(searchField.disableProperty());
+
+        clearSearchButton.disableProperty().bind(searchField.disableProperty());
+        clearSearchButton.visibleProperty().bind(searchField.textProperty().isNotEmpty());
+        clearSearchButton.managedProperty().bind(clearSearchButton.visibleProperty());
+        clearSearchButton.setFocusTraversable(false);
+    }
+
     private void buildLanguageMenuItems() {
         languageToggleGroup = new ToggleGroup();
         languageMenu.getItems().clear();
@@ -205,6 +234,45 @@ public class HeaderController implements AppContextAware {
             return;
         }
         menuEmailLabel.setText(appModel.getCurrentUser().email());
+    }
+
+    private void refreshSearchColumnLabels() {
+        if (searchColumnComboBox == null) {
+            return;
+        }
+
+        searchColumnComboBox.setConverter(createSearchColumnConverter());
+        searchColumnComboBox.setCellFactory(listView -> createSearchColumnCell());
+        searchColumnComboBox.setButtonCell(createSearchColumnCell());
+
+        String selectedColumn = searchColumnComboBox.getValue();
+        if (selectedColumn != null) {
+            searchColumnComboBox.getSelectionModel().select(selectedColumn);
+        }
+    }
+
+    private StringConverter<String> createSearchColumnConverter() {
+        return new StringConverter<>() {
+            @Override
+            public String toString(String searchColumn) {
+                return searchColumn == null ? "" : appModel.getSearchColumnLabel(searchColumn);
+            }
+
+            @Override
+            public String fromString(String searchColumn) {
+                return searchColumn;
+            }
+        };
+    }
+
+    private ListCell<String> createSearchColumnCell() {
+        return new ListCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : appModel.getSearchColumnLabel(item));
+            }
+        };
     }
 
     private String resolveCurrentUserInitial() {

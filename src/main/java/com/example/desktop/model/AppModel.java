@@ -27,8 +27,10 @@ import java.text.MessageFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.MissingResourceException;
 import java.util.ResourceBundle;
 import java.util.function.Supplier;
@@ -45,11 +47,20 @@ public class AppModel {
     public static final String TYPE_URL = "URL";
     public static final String TYPE_TEXT = "TEXT";
     public static final String TYPE_IMAGE = "IMAGE";
+    public static final String SEARCH_COLUMN_ALL = "ALL";
+    public static final String SEARCH_COLUMN_TITLE = "TITLE";
+    public static final String SEARCH_COLUMN_TYPE = "TYPE";
+    public static final String SEARCH_COLUMN_CREATED = "CREATED";
+    public static final String SEARCH_COLUMN_PREVIEW = "PREVIEW";
 
     private static final String BUNDLE_BASE_NAME = "i18n.i18n";
 
     private final ObservableList<String> typeOptions = FXCollections.observableArrayList(
             TYPE_ALL, TYPE_URL, TYPE_TEXT, TYPE_IMAGE);
+    private final ObservableList<String> searchColumnOptions = FXCollections.observableArrayList(
+            SEARCH_COLUMN_ALL, SEARCH_COLUMN_TITLE, SEARCH_COLUMN_TYPE, SEARCH_COLUMN_CREATED, SEARCH_COLUMN_PREVIEW);
+    private final ObservableList<String> readOnlySearchColumnOptions =
+            FXCollections.unmodifiableObservableList(searchColumnOptions);
     private final ObservableList<LanguageOption> languageOptions = FXCollections.observableArrayList(
             new LanguageOption("en", Locale.ENGLISH, "language.english", true),
             new LanguageOption("da", Locale.forLanguageTag("da"), "language.danish", true)
@@ -62,11 +73,13 @@ public class AppModel {
 
     private final ObservableList<VaultItemFx> allItems = FXCollections.observableArrayList();
     private final FilteredList<VaultItemFx> filteredItems = new FilteredList<>(allItems);
+    private final Map<String, SearchState> searchStateByType = new LinkedHashMap<>();
 
     private final ObjectProperty<VaultItemFx> selectedItem = new SimpleObjectProperty<>();
     private final ObjectProperty<UserSession> currentUser = new SimpleObjectProperty<>();
     private final ObjectProperty<Locale> locale = new SimpleObjectProperty<>(Locale.ENGLISH);
     private final StringProperty searchText = new SimpleStringProperty("");
+    private final StringProperty selectedSearchColumn = new SimpleStringProperty(SEARCH_COLUMN_ALL);
     private final StringProperty selectedType = new SimpleStringProperty(TYPE_ALL);
     private final BooleanProperty busy = new SimpleBooleanProperty(false);
     private final BooleanProperty authenticated = new SimpleBooleanProperty(false);
@@ -83,13 +96,33 @@ public class AppModel {
     private final StringProperty registerConfirmPasswordInput = new SimpleStringProperty("");
 
     private long nextNotificationId = 1L;
+    private boolean syncingSearchState;
 
     public AppModel() {
-        searchText.addListener((obs, oldValue, newValue) -> updateFilter());
-        selectedType.addListener((obs, oldValue, newValue) -> updateFilter());
+        initializeSearchStates();
+        searchText.addListener((obs, oldValue, newValue) -> {
+            if (syncingSearchState) {
+                return;
+            }
+            getSearchState(selectedType.get()).searchTextProperty().set(newValue == null ? "" : newValue);
+            updateFilter();
+        });
+        selectedSearchColumn.addListener((obs, oldValue, newValue) -> {
+            if (syncingSearchState) {
+                return;
+            }
+            getSearchState(selectedType.get()).searchColumnProperty().set(normalizeSearchColumn(newValue));
+            updateFilter();
+        });
+        selectedType.addListener((obs, oldValue, newValue) -> {
+            loadSearchState(newValue);
+            updateFilter();
+        });
+        locale.addListener((obs, oldValue, newValue) -> updateFilter());
         allItems.addListener((ListChangeListener<VaultItemFx>) change -> updateCounts());
         currentUser.addListener((obs, oldUser, newUser) -> authenticated.set(newUser != null));
 
+        loadSearchState(TYPE_ALL);
         updateFilter();
         updateCounts();
     }
@@ -100,6 +133,10 @@ public class AppModel {
 
     public ObservableList<LanguageOption> getLanguageOptions() {
         return readOnlyLanguageOptions;
+    }
+
+    public ObservableList<String> getSearchColumnOptions() {
+        return readOnlySearchColumnOptions;
     }
 
     public ObservableList<ToastNotification> getNotifications() {
@@ -191,6 +228,10 @@ public class AppModel {
         return searchText;
     }
 
+    public StringProperty selectedSearchColumnProperty() {
+        return selectedSearchColumn;
+    }
+
     public StringProperty selectedTypeProperty() {
         return selectedType;
     }
@@ -277,6 +318,13 @@ public class AppModel {
         updateFilter();
     }
 
+    public void resetArchiveFilters() {
+        initializeSearchStates();
+        selectedType.set(TYPE_ALL);
+        loadSearchState(TYPE_ALL);
+        updateFilter();
+    }
+
     public String text(String key, Object... args) {
         String pattern = resolveBundle().containsKey(key) ? resolveBundle().getString(key) : "!" + key + "!";
         if (args == null || args.length == 0) {
@@ -313,12 +361,23 @@ public class AppModel {
     }
 
     public String getTypeLabel(String typeCode) {
-        return switch (typeCode == null ? "" : typeCode.toUpperCase(Locale.ROOT)) {
+        return switch (normalizeTypeCode(typeCode)) {
             case TYPE_ALL -> text("type.all");
             case TYPE_URL -> text("type.url");
             case TYPE_TEXT -> text("type.text");
             case TYPE_IMAGE -> text("type.image");
             default -> typeCode == null ? "" : typeCode;
+        };
+    }
+
+    public String getSearchColumnLabel(String searchColumn) {
+        return switch (normalizeSearchColumn(searchColumn)) {
+            case SEARCH_COLUMN_TITLE -> text("archive.column.title");
+            case SEARCH_COLUMN_TYPE -> text("archive.column.type");
+            case SEARCH_COLUMN_CREATED -> text("archive.column.created");
+            case SEARCH_COLUMN_PREVIEW -> text("archive.column.preview");
+            case SEARCH_COLUMN_ALL -> text("type.all");
+            default -> searchColumn == null ? "" : searchColumn;
         };
     }
 
@@ -334,9 +393,7 @@ public class AppModel {
     }
 
     public String getItemSnippet(VaultItemFx item) {
-        String source = firstNonBlank(
-                item == null ? null : item.getPreviewSource(),
-                text("item.preview.none"));
+        String source = getSearchablePreview(item);
         return source.length() > 180 ? source.substring(0, 180) + "..." : source;
     }
 
@@ -416,9 +473,10 @@ public class AppModel {
 
     private void updateFilter() {
         String query = searchText.get() == null ? "" : searchText.get().trim().toLowerCase(Locale.ROOT);
-        String type = selectedType.get() == null ? TYPE_ALL : selectedType.get().trim().toUpperCase(Locale.ROOT);
+        String type = normalizeTypeCode(selectedType.get());
+        String searchColumn = normalizeSearchColumn(selectedSearchColumn.get());
 
-        filteredItems.setPredicate(item -> matchesType(item, type) && matchesQuery(item, query));
+        filteredItems.setPredicate(item -> matchesType(item, type) && matchesQuery(item, query, searchColumn));
 
         if (selectedItem.get() != null && !filteredItems.contains(selectedItem.get())) {
             selectedItem.set(filteredItems.isEmpty() ? null : filteredItems.getFirst());
@@ -431,15 +489,29 @@ public class AppModel {
         return TYPE_ALL.equals(type) || type.equalsIgnoreCase(item.getItemType());
     }
 
-    private boolean matchesQuery(VaultItemFx item, String query) {
+    private boolean matchesQuery(VaultItemFx item, String query, String searchColumn) {
         if (query.isBlank()) {
             return true;
         }
-        return List.of(item.getTitle(), item.getContent(), item.getAiContext(), item.getTags(), item.getSourceUrl(), item.getItemType())
-                .stream()
+        return getSearchValues(item, searchColumn).stream()
                 .filter(value -> value != null)
                 .map(value -> value.toLowerCase(Locale.ROOT))
                 .anyMatch(value -> value.contains(query));
+    }
+
+    private List<String> getSearchValues(VaultItemFx item, String searchColumn) {
+        return switch (normalizeSearchColumn(searchColumn)) {
+            case SEARCH_COLUMN_TITLE -> List.of(getItemTitle(item));
+            case SEARCH_COLUMN_TYPE -> List.of(getTypeLabel(item == null ? null : item.getItemType()));
+            case SEARCH_COLUMN_CREATED -> List.of(formatTimestamp(item == null ? null : item.getCreatedAt()));
+            case SEARCH_COLUMN_PREVIEW -> List.of(getSearchablePreview(item));
+            case SEARCH_COLUMN_ALL -> List.of(
+                    getItemTitle(item),
+                    getTypeLabel(item == null ? null : item.getItemType()),
+                    formatTimestamp(item == null ? null : item.getCreatedAt()),
+                    getSearchablePreview(item));
+            default -> List.of();
+        };
     }
 
     private void updateCounts() {
@@ -464,6 +536,50 @@ public class AppModel {
         selectedItem.set(filteredItems.isEmpty() ? null : filteredItems.getFirst());
     }
 
+    private void initializeSearchStates() {
+        searchStateByType.clear();
+        for (String typeCode : typeOptions) {
+            searchStateByType.put(normalizeTypeCode(typeCode), new SearchState());
+        }
+    }
+
+    private SearchState getSearchState(String typeCode) {
+        return searchStateByType.computeIfAbsent(normalizeTypeCode(typeCode), key -> new SearchState());
+    }
+
+    private void loadSearchState(String typeCode) {
+        SearchState searchState = getSearchState(typeCode);
+        syncingSearchState = true;
+        try {
+            selectedSearchColumn.set(searchState.searchColumnProperty().get());
+            searchText.set(searchState.searchTextProperty().get());
+        } finally {
+            syncingSearchState = false;
+        }
+    }
+
+    private String getSearchablePreview(VaultItemFx item) {
+        return firstNonBlank(
+                item == null ? null : item.getPreviewSource(),
+                text("item.preview.none"));
+    }
+
+    private String normalizeTypeCode(String typeCode) {
+        return typeCode == null || typeCode.isBlank() ? TYPE_ALL : typeCode.trim().toUpperCase(Locale.ROOT);
+    }
+
+    private String normalizeSearchColumn(String searchColumn) {
+        if (searchColumn == null || searchColumn.isBlank()) {
+            return SEARCH_COLUMN_ALL;
+        }
+
+        String normalized = searchColumn.trim().toUpperCase(Locale.ROOT);
+        if (searchColumnOptions.contains(normalized)) {
+            return normalized;
+        }
+        return SEARCH_COLUMN_ALL;
+    }
+
     private String firstNonBlank(String... values) {
         for (String value : values) {
             if (value != null && !value.isBlank()) {
@@ -471,5 +587,19 @@ public class AppModel {
             }
         }
         return "";
+    }
+
+    private static final class SearchState {
+
+        private final StringProperty searchText = new SimpleStringProperty("");
+        private final StringProperty searchColumn = new SimpleStringProperty(SEARCH_COLUMN_ALL);
+
+        private StringProperty searchTextProperty() {
+            return searchText;
+        }
+
+        private StringProperty searchColumnProperty() {
+            return searchColumn;
+        }
     }
 }
