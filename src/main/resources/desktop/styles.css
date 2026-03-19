@@ -166,6 +166,25 @@
     -fx-font-weight: 700;
 }
 
+.dialog-scene-root {
+    -fx-background-color:
+        radial-gradient(center 20% 15%, radius 55%, rgba(88, 196, 221, 0.12), transparent),
+        linear-gradient(to bottom right, #0d131a, #111923 52%, #0d1319 100%);
+}
+
+.dialog-shell {
+    -fx-background-color: linear-gradient(to bottom right, rgba(24, 33, 43, 0.98), rgba(17, 24, 33, 0.98));
+    -fx-background-radius: 22px;
+    -fx-border-color: rgba(255, 255, 255, 0.1);
+    -fx-border-radius: 22px;
+    -fx-border-width: 1px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.38), 28, 0.16, 0, 12);
+}
+
+.dialog-actions {
+    -fx-padding: 6px 0 0 0;
+}
+
 .auth-shell {
     -fx-background-color: linear-gradient(to bottom right, rgba(24, 33, 43, 0.96), rgba(17, 24, 33, 0.98));
     -fx-background-radius: 24px;
@@ -308,6 +327,15 @@
     -fx-border-width: 1px;
 }
 
+.danger-button {
+    -fx-background-color: linear-gradient(to right, #a73c4a, #8b2c3a);
+    -fx-text-fill: white;
+}
+
+.danger-button:hover {
+    -fx-background-color: linear-gradient(to right, #b84a58, #9b3644);
+}
+
 .compact-button {
     -fx-padding: 8px 14px;
 }
@@ -427,6 +455,10 @@
     -fx-font-size: 13px;
     -fx-padding: 24px;
     -fx-text-alignment: center;
+}
+
+.table-action-bar {
+    -fx-padding: 6px 0 0 0;
 }
 
 .text-area {

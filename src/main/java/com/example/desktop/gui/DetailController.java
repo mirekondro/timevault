@@ -7,7 +7,6 @@ import com.example.desktop.model.VaultItemFx;
 import javafx.application.HostServices;
 import javafx.beans.binding.Bindings;
 import javafx.fxml.FXML;
-import javafx.scene.control.Button;
 import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
@@ -48,9 +47,6 @@ public class DetailController implements AppContextAware {
     @FXML
     private Label contentSectionLabel;
 
-    @FXML
-    private Button deleteButton;
-
     private AppModel appModel;
     private VaultManager vaultManager;
     private HostServices hostServices;
@@ -68,9 +64,7 @@ public class DetailController implements AppContextAware {
         appModel.bindText(contextSectionLabel, "detail.section.context");
         appModel.bindText(tagsSectionLabel, "detail.section.tags");
         appModel.bindText(contentSectionLabel, "detail.section.content");
-        appModel.bindText(deleteButton, "detail.button.delete");
 
-        deleteButton.disableProperty().bind(appModel.selectedItemProperty().isNull().or(appModel.busyProperty()));
         sourceLink.disableProperty().bind(Bindings.createBooleanBinding(() -> {
             VaultItemFx item = appModel.getSelectedItem();
             return item == null || item.getSourceUrl() == null || item.getSourceUrl().isBlank();
@@ -88,11 +82,6 @@ public class DetailController implements AppContextAware {
         if (item != null && item.getSourceUrl() != null && !item.getSourceUrl().isBlank()) {
             hostServices.showDocument(item.getSourceUrl());
         }
-    }
-
-    @FXML
-    private void handleDelete() {
-        vaultManager.deleteSelected(appModel);
     }
 
     private void updateDetails(VaultItemFx item) {

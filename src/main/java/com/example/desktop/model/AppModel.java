@@ -82,13 +82,6 @@ public class AppModel {
     private final StringProperty registerPasswordInput = new SimpleStringProperty("");
     private final StringProperty registerConfirmPasswordInput = new SimpleStringProperty("");
 
-    private final StringProperty urlInput = new SimpleStringProperty("");
-    private final StringProperty urlTitleInput = new SimpleStringProperty("");
-    private final StringProperty urlNotesInput = new SimpleStringProperty("");
-    private final StringProperty textTitleInput = new SimpleStringProperty("");
-    private final StringProperty textContentInput = new SimpleStringProperty("");
-    private final StringProperty imageTitleInput = new SimpleStringProperty("");
-    private final StringProperty imagePathInput = new SimpleStringProperty("");
     private long nextNotificationId = 1L;
 
     public AppModel() {
@@ -128,6 +121,23 @@ public class AppModel {
         selectedItem.set(item);
         updateCounts();
         updateFilter();
+    }
+
+    public void updateItem(VaultItemFx updatedItem) {
+        if (updatedItem == null) {
+            return;
+        }
+
+        Long selectedId = selectedItem.get() == null ? updatedItem.getId() : selectedItem.get().getId();
+        for (int index = 0; index < allItems.size(); index++) {
+            if (allItems.get(index).getId() == updatedItem.getId()) {
+                allItems.set(index, updatedItem);
+                break;
+            }
+        }
+        updateCounts();
+        updateFilter();
+        restoreSelection(selectedId);
     }
 
     public void removeItem(long itemId) {
@@ -229,10 +239,6 @@ public class AppModel {
         return imageCount;
     }
 
-    public StringProperty urlInputProperty() {
-        return urlInput;
-    }
-
     public StringProperty loginEmailInputProperty() {
         return loginEmailInput;
     }
@@ -253,30 +259,6 @@ public class AppModel {
         return registerConfirmPasswordInput;
     }
 
-    public StringProperty urlTitleInputProperty() {
-        return urlTitleInput;
-    }
-
-    public StringProperty urlNotesInputProperty() {
-        return urlNotesInput;
-    }
-
-    public StringProperty textTitleInputProperty() {
-        return textTitleInput;
-    }
-
-    public StringProperty textContentInputProperty() {
-        return textContentInput;
-    }
-
-    public StringProperty imageTitleInputProperty() {
-        return imageTitleInput;
-    }
-
-    public StringProperty imagePathInputProperty() {
-        return imagePathInput;
-    }
-
     public void clearLoginForm() {
         loginEmailInput.set("");
         loginPasswordInput.set("");
@@ -286,22 +268,6 @@ public class AppModel {
         registerEmailInput.set("");
         registerPasswordInput.set("");
         registerConfirmPasswordInput.set("");
-    }
-
-    public void clearUrlForm() {
-        urlInput.set("");
-        urlTitleInput.set("");
-        urlNotesInput.set("");
-    }
-
-    public void clearTextForm() {
-        textTitleInput.set("");
-        textContentInput.set("");
-    }
-
-    public void clearImageForm() {
-        imageTitleInput.set("");
-        imagePathInput.set("");
     }
 
     public void clearVault() {

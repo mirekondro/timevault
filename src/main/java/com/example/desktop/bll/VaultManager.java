@@ -153,9 +153,6 @@ public class VaultManager {
         appModel.clearVault();
         appModel.clearLoginForm();
         appModel.clearRegisterForm();
-        appModel.clearUrlForm();
-        appModel.clearTextForm();
-        appModel.clearImageForm();
         appModel.showSuccessKey("status.auth.logged.out", currentUser.email());
     }
 
@@ -173,20 +170,20 @@ public class VaultManager {
         return appModel.getVisibleArchiveSummary(appModel.getFilteredItems().size());
     }
 
-    public void saveUrl(AppModel appModel) {
+    public boolean createUrl(AppModel appModel, String urlInput, String titleInput, String notesInput) {
         UserSession currentUser = requireAuthenticatedUser(appModel);
         if (currentUser == null) {
-            return;
+            return false;
         }
 
-        String url = appModel.urlInputProperty().get().trim();
+        String url = sanitize(urlInput);
         if (url.isBlank()) {
             appModel.showErrorKey("status.save.url.missing");
-            return;
+            return false;
         }
 
-        String title = firstNonBlank(appModel.urlTitleInputProperty().get(), appModel.text("save.default.urlTitle"));
-        String notes = firstNonBlank(appModel.urlNotesInputProperty().get(), url);
+        String title = firstNonBlank(titleInput, appModel.text("save.default.urlTitle"));
+        String notes = firstNonBlank(notesInput, url);
         VaultItemFx item = new VaultItemFx();
         item.setTitle(title);
         item.setContent(notes);
@@ -198,21 +195,50 @@ public class VaultManager {
         item.setCreatedAt(LocalDateTime.now());
         item.setUpdatedAt(item.getCreatedAt());
 
-        saveItem(appModel, currentUser, item, "status.save.url.saved");
-        appModel.clearUrlForm();
+        return saveNewItem(appModel, currentUser, item, "status.save.url.saved");
     }
 
-    public void saveText(AppModel appModel) {
+    public boolean updateUrl(AppModel appModel, VaultItemFx existingItem, String urlInput, String titleInput, String notesInput) {
         UserSession currentUser = requireAuthenticatedUser(appModel);
         if (currentUser == null) {
-            return;
+            return false;
+        }
+        if (existingItem == null) {
+            appModel.showErrorKey("status.edit.select");
+            return false;
         }
 
-        String title = appModel.textTitleInputProperty().get().trim();
-        String content = appModel.textContentInputProperty().get().trim();
+        String url = sanitize(urlInput);
+        if (url.isBlank()) {
+            appModel.showErrorKey("status.save.url.missing");
+            return false;
+        }
+
+        String title = firstNonBlank(titleInput, appModel.text("save.default.urlTitle"));
+        String notes = firstNonBlank(notesInput, url);
+        VaultItemFx updatedItem = copyItem(existingItem);
+        updatedItem.setTitle(title);
+        updatedItem.setContent(notes);
+        updatedItem.setAiContext(buildContext("URL", title, notes));
+        updatedItem.setItemType(AppModel.TYPE_URL);
+        updatedItem.setTags(buildTags(AppModel.TYPE_URL, url));
+        updatedItem.setSourceUrl(url);
+        updatedItem.setUpdatedAt(LocalDateTime.now());
+
+        return updateExistingItem(appModel, currentUser, updatedItem, "status.edit.url.updated");
+    }
+
+    public boolean createText(AppModel appModel, String titleInput, String contentInput) {
+        UserSession currentUser = requireAuthenticatedUser(appModel);
+        if (currentUser == null) {
+            return false;
+        }
+
+        String title = sanitize(titleInput);
+        String content = sanitize(contentInput);
         if (title.isBlank() || content.isBlank()) {
             appModel.showErrorKey("status.save.text.missing");
-            return;
+            return false;
         }
 
         VaultItemFx item = new VaultItemFx();
@@ -225,21 +251,49 @@ public class VaultManager {
         item.setCreatedAt(LocalDateTime.now());
         item.setUpdatedAt(item.getCreatedAt());
 
-        saveItem(appModel, currentUser, item, "status.save.text.saved");
-        appModel.clearTextForm();
+        return saveNewItem(appModel, currentUser, item, "status.save.text.saved");
     }
 
-    public void saveImage(AppModel appModel) {
+    public boolean updateText(AppModel appModel, VaultItemFx existingItem, String titleInput, String contentInput) {
         UserSession currentUser = requireAuthenticatedUser(appModel);
         if (currentUser == null) {
-            return;
+            return false;
+        }
+        if (existingItem == null) {
+            appModel.showErrorKey("status.edit.select");
+            return false;
         }
 
-        String title = appModel.imageTitleInputProperty().get().trim();
-        String path = appModel.imagePathInputProperty().get().trim();
+        String title = sanitize(titleInput);
+        String content = sanitize(contentInput);
+        if (title.isBlank() || content.isBlank()) {
+            appModel.showErrorKey("status.save.text.missing");
+            return false;
+        }
+
+        VaultItemFx updatedItem = copyItem(existingItem);
+        updatedItem.setTitle(title);
+        updatedItem.setContent(content);
+        updatedItem.setAiContext(buildContext("TEXT", title, content));
+        updatedItem.setItemType(AppModel.TYPE_TEXT);
+        updatedItem.setTags(buildTags(AppModel.TYPE_TEXT, content));
+        updatedItem.setSourceUrl(null);
+        updatedItem.setUpdatedAt(LocalDateTime.now());
+
+        return updateExistingItem(appModel, currentUser, updatedItem, "status.edit.text.updated");
+    }
+
+    public boolean createImage(AppModel appModel, String titleInput, String pathInput) {
+        UserSession currentUser = requireAuthenticatedUser(appModel);
+        if (currentUser == null) {
+            return false;
+        }
+
+        String title = sanitize(titleInput);
+        String path = sanitize(pathInput);
         if (title.isBlank() || path.isBlank()) {
             appModel.showErrorKey("status.save.image.missing");
-            return;
+            return false;
         }
 
         VaultItemFx item = new VaultItemFx();
@@ -252,20 +306,48 @@ public class VaultManager {
         item.setCreatedAt(LocalDateTime.now());
         item.setUpdatedAt(item.getCreatedAt());
 
-        saveItem(appModel, currentUser, item, "status.save.image.saved");
-        appModel.clearImageForm();
+        return saveNewItem(appModel, currentUser, item, "status.save.image.saved");
     }
 
-    public void deleteSelected(AppModel appModel) {
+    public boolean updateImage(AppModel appModel, VaultItemFx existingItem, String titleInput, String pathInput) {
         UserSession currentUser = requireAuthenticatedUser(appModel);
         if (currentUser == null) {
-            return;
+            return false;
+        }
+        if (existingItem == null) {
+            appModel.showErrorKey("status.edit.select");
+            return false;
+        }
+
+        String title = sanitize(titleInput);
+        String path = sanitize(pathInput);
+        if (title.isBlank() || path.isBlank()) {
+            appModel.showErrorKey("status.save.image.missing");
+            return false;
+        }
+
+        VaultItemFx updatedItem = copyItem(existingItem);
+        updatedItem.setTitle(title);
+        updatedItem.setContent(path);
+        updatedItem.setAiContext(buildContext("IMAGE", title, path));
+        updatedItem.setItemType(AppModel.TYPE_IMAGE);
+        updatedItem.setTags(buildTags(AppModel.TYPE_IMAGE, title));
+        updatedItem.setSourceUrl(null);
+        updatedItem.setUpdatedAt(LocalDateTime.now());
+
+        return updateExistingItem(appModel, currentUser, updatedItem, "status.edit.image.updated");
+    }
+
+    public boolean deleteSelected(AppModel appModel) {
+        UserSession currentUser = requireAuthenticatedUser(appModel);
+        if (currentUser == null) {
+            return false;
         }
 
         VaultItemFx selectedItem = appModel.getSelectedItem();
         if (selectedItem == null) {
             appModel.showErrorKey("status.delete.select");
-            return;
+            return false;
         }
 
         appModel.setBusy(true);
@@ -273,25 +355,48 @@ public class VaultManager {
             boolean deleted = vaultItemDAO.deleteById(currentUser.id(), selectedItem.getId());
             if (!deleted) {
                 appModel.showErrorKey("status.delete.missing");
-                return;
+                return false;
             }
             appModel.removeItem(selectedItem.getId());
             appModel.showSuccessKey("status.delete.deleted", selectedItem.getId());
+            return true;
         } catch (SQLException exception) {
             appModel.showErrorKey("status.delete.error", safeMessage(exception));
+            return false;
         } finally {
             appModel.setBusy(false);
         }
     }
 
-    private void saveItem(AppModel appModel, UserSession currentUser, VaultItemFx item, String successKey) {
+    private boolean saveNewItem(AppModel appModel, UserSession currentUser, VaultItemFx item, String successKey) {
         appModel.setBusy(true);
         try {
             VaultItemFx savedItem = vaultItemDAO.insert(currentUser.id(), item);
             appModel.addItem(savedItem);
             appModel.showSuccessKey(successKey, savedItem.getId(), currentUser.id());
+            return true;
         } catch (SQLException exception) {
             appModel.showErrorKey("status.save.error", safeMessage(exception));
+            return false;
+        } finally {
+            appModel.setBusy(false);
+        }
+    }
+
+    private boolean updateExistingItem(AppModel appModel, UserSession currentUser, VaultItemFx item, String successKey) {
+        appModel.setBusy(true);
+        try {
+            boolean updated = vaultItemDAO.update(currentUser.id(), item);
+            if (!updated) {
+                appModel.showErrorKey("status.edit.missing");
+                return false;
+            }
+            appModel.updateItem(item);
+            appModel.showSuccessKey(successKey, item.getId());
+            return true;
+        } catch (SQLException exception) {
+            appModel.showErrorKey("status.edit.error", safeMessage(exception));
+            return false;
         } finally {
             appModel.setBusy(false);
         }
@@ -329,6 +434,10 @@ public class VaultManager {
         return value == null || value.isBlank() ? fallback : value.trim();
     }
 
+    private String sanitize(String value) {
+        return value == null ? "" : value.trim();
+    }
+
     private UserSession requireAuthenticatedUser(AppModel appModel) {
         UserSession currentUser = appModel.getCurrentUser();
         if (currentUser == null) {
@@ -352,6 +461,21 @@ public class VaultManager {
     private void resetVaultFilters(AppModel appModel) {
         appModel.searchTextProperty().set("");
         appModel.selectedTypeProperty().set(AppModel.TYPE_ALL);
+    }
+
+    private VaultItemFx copyItem(VaultItemFx source) {
+        VaultItemFx copy = new VaultItemFx();
+        copy.setId(source.getId());
+        copy.setOwnerId(source.getOwnerId());
+        copy.setTitle(source.getTitle());
+        copy.setContent(source.getContent());
+        copy.setAiContext(source.getAiContext());
+        copy.setItemType(source.getItemType());
+        copy.setTags(source.getTags());
+        copy.setSourceUrl(source.getSourceUrl());
+        copy.setCreatedAt(source.getCreatedAt());
+        copy.setUpdatedAt(source.getUpdatedAt());
+        return copy;
     }
 
     private String safeMessage(Exception exception) {

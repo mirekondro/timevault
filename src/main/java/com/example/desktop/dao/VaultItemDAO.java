@@ -14,5 +14,7 @@ public interface VaultItemDAO {
 
     VaultItemFx insert(long userId, VaultItemFx item) throws SQLException;
 
+    boolean update(long userId, VaultItemFx item) throws SQLException;
+
     boolean deleteById(long userId, long itemId) throws SQLException;
 }

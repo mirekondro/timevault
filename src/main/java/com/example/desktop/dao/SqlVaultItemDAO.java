@@ -84,6 +84,36 @@ public class SqlVaultItemDAO implements VaultItemDAO {
     }
 
     @Override
+    public boolean update(long userId, VaultItemFx item) throws SQLException {
+        String sql = """
+                UPDATE dbo.vault_items
+                SET title = ?, content = ?, ai_context = ?, item_type = ?, tags = ?, source_url = ?, updated_at = ?
+                WHERE id = ? AND user_id = ?
+                """;
+
+        LocalDateTime updatedAt = item.getUpdatedAt() == null ? LocalDateTime.now() : item.getUpdatedAt();
+        try (Connection connection = connectionManager.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, item.getTitle());
+            statement.setString(2, item.getContent());
+            statement.setString(3, item.getAiContext());
+            statement.setString(4, item.getItemType());
+            statement.setString(5, item.getTags());
+            statement.setString(6, item.getSourceUrl());
+            statement.setTimestamp(7, Timestamp.valueOf(updatedAt));
+            statement.setLong(8, item.getId());
+            statement.setLong(9, userId);
+
+            boolean updated = statement.executeUpdate() > 0;
+            if (updated) {
+                item.setOwnerId(userId);
+                item.setUpdatedAt(updatedAt);
+            }
+            return updated;
+        }
+    }
+
+    @Override
     public boolean deleteById(long userId, long itemId) throws SQLException {
         String sql = "DELETE FROM dbo.vault_items WHERE id = ? AND user_id = ?";
         try (Connection connection = connectionManager.getConnection();

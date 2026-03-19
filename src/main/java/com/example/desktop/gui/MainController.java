@@ -20,9 +20,6 @@ public class MainController {
     private TopBarController topBarViewController;
 
     @FXML
-    private SaveController saveViewController;
-
-    @FXML
     private TypeSidebarController typeSidebarViewController;
 
     @FXML
@@ -47,7 +44,6 @@ public class MainController {
 
         initializeChild(headerViewController, appModel, vaultManager, hostServices, stage, navigator);
         initializeChild(topBarViewController, appModel, vaultManager, hostServices, stage, navigator);
-        initializeChild(saveViewController, appModel, vaultManager, hostServices, stage, navigator);
         initializeChild(typeSidebarViewController, appModel, vaultManager, hostServices, stage, navigator);
         initializeChild(archiveViewController, appModel, vaultManager, hostServices, stage, navigator);
         initializeChild(detailViewController, appModel, vaultManager, hostServices, stage, navigator);
