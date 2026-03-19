@@ -401,6 +401,27 @@ public class AppModel {
         return text(option.labelKey());
     }
 
+    public LanguageOption getNextLanguageOption() {
+        for (LanguageOption option : readOnlyLanguageOptions) {
+            if (option.available() && !option.locale().equals(getLocale())) {
+                return option;
+            }
+        }
+        return null;
+    }
+
+    public String getLanguageSwitchLabel(LanguageOption option) {
+        if (option == null) {
+            return text("header.menu.language");
+        }
+
+        return switch (option.code()) {
+            case "en" -> text("header.menu.language.switch.english");
+            case "da" -> text("header.menu.language.switch.danish");
+            default -> text("header.menu.language.switch", getLanguageDisplayName(option));
+        };
+    }
+
     public boolean isLockedItemHidden(VaultItemFx item) {
         return item != null && item.isLocked() && !item.isUnlockedInSession();
     }

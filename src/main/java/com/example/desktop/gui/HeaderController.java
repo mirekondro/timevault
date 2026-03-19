@@ -13,12 +13,9 @@ import javafx.scene.control.ContextMenu;
 import javafx.scene.control.CustomMenuItem;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
-import javafx.scene.control.Menu;
 import javafx.scene.control.MenuItem;
-import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.TextField;
-import javafx.scene.control.ToggleGroup;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.util.StringConverter;
@@ -57,9 +54,8 @@ public class HeaderController implements AppContextAware {
     private Label menuEmailLabel;
     private Label menuSubtitleLabel;
     private MenuItem profileItem;
-    private Menu languageMenu;
+    private MenuItem languageSwitchItem;
     private MenuItem logoutItem;
-    private ToggleGroup languageToggleGroup;
 
     @Override
     public void setContext(AppModel appModel,
@@ -85,11 +81,11 @@ public class HeaderController implements AppContextAware {
         appModel.currentUserProperty().addListener((obs, oldUser, newUser) -> updateMenuIdentity());
         appModel.localeProperty().addListener((obs, oldLocale, newLocale) -> {
             updateMenuIdentity();
-            updateLanguageSelection();
+            updateLanguageAction();
             refreshSearchColumnLabels();
         });
         updateMenuIdentity();
-        updateLanguageSelection();
+        updateLanguageAction();
         refreshSearchColumnLabels();
     }
 
@@ -155,15 +151,14 @@ public class HeaderController implements AppContextAware {
         appModel.bindText(profileItem, "header.menu.profile");
         profileItem.setOnAction(event -> handleProfile());
 
-        languageMenu = new Menu();
-        appModel.bindText(languageMenu, "header.menu.language");
-        buildLanguageMenuItems();
+        languageSwitchItem = new MenuItem();
+        languageSwitchItem.setOnAction(event -> handleLanguageSwitch());
 
         logoutItem = new MenuItem();
         appModel.bindText(logoutItem, "header.menu.logout");
         logoutItem.setOnAction(event -> handleLogout());
 
-        userMenu = new ContextMenu(identityItem, new SeparatorMenuItem(), profileItem, languageMenu, logoutItem);
+        userMenu = new ContextMenu(identityItem, new SeparatorMenuItem(), profileItem, languageSwitchItem, logoutItem);
         userMenu.getStyleClass().add("user-menu-popup");
         userMenu.setAutoHide(true);
         userMenu.setHideOnEscape(true);
@@ -186,21 +181,11 @@ public class HeaderController implements AppContextAware {
         clearSearchButton.toFront();
     }
 
-    private void buildLanguageMenuItems() {
-        languageToggleGroup = new ToggleGroup();
-        languageMenu.getItems().clear();
-
-        for (LanguageOption option : appModel.getLanguageOptions()) {
-            RadioMenuItem languageItem = new RadioMenuItem();
-            appModel.bindText(languageItem, option.labelKey());
-            languageItem.setDisable(!option.available());
-            languageItem.setToggleGroup(languageToggleGroup);
-            languageItem.setOnAction(event -> handleLanguageSelection(option));
-            languageMenu.getItems().add(languageItem);
+    private void handleLanguageSwitch() {
+        LanguageOption option = appModel.getNextLanguageOption();
+        if (option == null) {
+            return;
         }
-    }
-
-    private void handleLanguageSelection(LanguageOption option) {
         if (!option.available()) {
             appModel.showInfoKey("status.language.unavailable", appModel.getLanguageDisplayName(option));
             return;
@@ -212,18 +197,18 @@ public class HeaderController implements AppContextAware {
         }
     }
 
-    private void updateLanguageSelection() {
-        if (languageMenu == null) {
+    private void updateLanguageAction() {
+        if (languageSwitchItem == null) {
             return;
         }
 
-        for (int index = 0; index < languageMenu.getItems().size(); index++) {
-            MenuItem item = languageMenu.getItems().get(index);
-            if (item instanceof RadioMenuItem radioMenuItem) {
-                LanguageOption option = appModel.getLanguageOptions().get(index);
-                radioMenuItem.setSelected(option.locale().equals(appModel.getLocale()));
-            }
+        LanguageOption nextLanguage = appModel.getNextLanguageOption();
+        languageSwitchItem.setDisable(nextLanguage == null);
+        if (nextLanguage == null) {
+            languageSwitchItem.setText(appModel.text("header.menu.language"));
+            return;
         }
+        languageSwitchItem.setText(appModel.getLanguageSwitchLabel(nextLanguage));
     }
 
     private void updateMenuIdentity() {

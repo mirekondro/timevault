@@ -5,6 +5,7 @@ import com.example.desktop.bll.VaultManager;
 import com.example.desktop.model.AppModel;
 import javafx.application.HostServices;
 import javafx.application.Platform;
+import javafx.beans.binding.Bindings;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.Hyperlink;
@@ -98,7 +99,10 @@ public class AuthController implements AppContextAware {
 
         appModel.bindText(authEyebrowLabel, "auth.eyebrow");
         appModel.bindText(authTitleLabel, "auth.title");
-        appModel.bindText(authCopyLabel, "auth.copy");
+        authCopyLabel.textProperty().bind(Bindings.createStringBinding(
+                () -> appModel.text(registerPane.isVisible() ? "auth.register.copy" : "auth.login.copy"),
+                appModel.localeProperty(),
+                registerPane.visibleProperty()));
         appModel.bindText(loginTitleLabel, "auth.login.title");
         appModel.bindPrompt(loginEmailField, "auth.login.email.prompt");
         appModel.bindPrompt(loginPasswordField, "auth.login.password.prompt");
