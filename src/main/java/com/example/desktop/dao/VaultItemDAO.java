@@ -20,5 +20,7 @@ public interface VaultItemDAO {
 
     boolean deleteById(long userId, long itemId) throws SQLException;
 
+    boolean restoreById(long userId, long itemId) throws SQLException;
+
     Optional<StoredImageRecord> findStoredImageByItemId(long userId, long itemId) throws SQLException;
 }

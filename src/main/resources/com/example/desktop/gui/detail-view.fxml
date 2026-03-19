@@ -20,6 +20,10 @@
     </padding>
     <Label fx:id="detailTitleLabel" styleClass="detail-title"/>
     <Label fx:id="detailMetaLabel" styleClass="muted-copy" wrapText="true"/>
+    <VBox fx:id="trashBox" spacing="10.0" styleClass="locked-detail-box" visible="false" managed="false">
+        <Label fx:id="trashTitleLabel" styleClass="section-title"/>
+        <Label fx:id="trashCopyLabel" styleClass="muted-copy" wrapText="true"/>
+    </VBox>
     <VBox fx:id="unlockBox" spacing="10.0" styleClass="locked-detail-box" visible="false" managed="false">
         <Label fx:id="unlockTitleLabel" styleClass="section-title"/>
         <Label fx:id="unlockCopyLabel" styleClass="muted-copy" wrapText="true"/>

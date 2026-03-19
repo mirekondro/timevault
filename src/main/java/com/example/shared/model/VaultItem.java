@@ -23,7 +23,8 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "vault_items", indexes = {
         @Index(name = "idx_vault_items_created_at", columnList = "created_at"),
-        @Index(name = "idx_vault_items_user_created_at", columnList = "user_id, created_at")
+        @Index(name = "idx_vault_items_user_created_at", columnList = "user_id, created_at"),
+        @Index(name = "idx_vault_items_user_deleted_created_at", columnList = "user_id, deleted_at, created_at")
 })
 public class VaultItem {
 
@@ -59,6 +60,9 @@ public class VaultItem {
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
 
     @Column(name = "user_id", nullable = false)
     private Long userId = 1L; // Default user ID for single-user application
@@ -116,6 +120,9 @@ public class VaultItem {
 
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+
+    public LocalDateTime getDeletedAt() { return deletedAt; }
+    public void setDeletedAt(LocalDateTime deletedAt) { this.deletedAt = deletedAt; }
 
     public Long getUserId() { return userId; }
     public void setUserId(Long userId) { this.userId = userId; }

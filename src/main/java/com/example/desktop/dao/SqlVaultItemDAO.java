@@ -30,7 +30,8 @@ public class SqlVaultItemDAO implements VaultItemDAO {
     public List<VaultItemFx> findAllByUserId(long userId) throws SQLException {
         String sql = """
                 SELECT i.id, i.user_id, i.title, i.content, i.ai_context, i.item_type, i.tags, i.source_url,
-                       i.is_locked, i.lock_password_hash, i.lock_salt, i.lock_payload, i.created_at, i.updated_at,
+                       i.is_locked, i.lock_password_hash, i.lock_salt, i.lock_payload,
+                       i.created_at, i.updated_at, i.deleted_at,
                        img.mime_type AS image_mime_type,
                        img.byte_count AS image_byte_count
                 FROM dbo.vault_items i
@@ -163,7 +164,26 @@ public class SqlVaultItemDAO implements VaultItemDAO {
 
     @Override
     public boolean deleteById(long userId, long itemId) throws SQLException {
-        String sql = "DELETE FROM dbo.vault_items WHERE id = ? AND user_id = ?";
+        String sql = """
+                UPDATE dbo.vault_items
+                SET deleted_at = SYSDATETIME(), updated_at = SYSDATETIME()
+                WHERE id = ? AND user_id = ? AND deleted_at IS NULL
+                """;
+        try (Connection connection = connectionManager.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setLong(1, itemId);
+            statement.setLong(2, userId);
+            return statement.executeUpdate() > 0;
+        }
+    }
+
+    @Override
+    public boolean restoreById(long userId, long itemId) throws SQLException {
+        String sql = """
+                UPDATE dbo.vault_items
+                SET deleted_at = NULL, updated_at = SYSDATETIME()
+                WHERE id = ? AND user_id = ? AND deleted_at IS NOT NULL
+                """;
         try (Connection connection = connectionManager.getConnection();
              PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setLong(1, itemId);
@@ -289,8 +309,10 @@ public class SqlVaultItemDAO implements VaultItemDAO {
 
         Timestamp createdAt = resultSet.getTimestamp("created_at");
         Timestamp updatedAt = resultSet.getTimestamp("updated_at");
+        Timestamp deletedAt = resultSet.getTimestamp("deleted_at");
         item.setCreatedAt(createdAt == null ? null : createdAt.toLocalDateTime());
         item.setUpdatedAt(updatedAt == null ? null : updatedAt.toLocalDateTime());
+        item.setDeletedAt(deletedAt == null ? null : deletedAt.toLocalDateTime());
         return item;
     }
 }

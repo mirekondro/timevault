@@ -52,6 +52,7 @@ public class AppModel {
     public static final String TYPE_URL = "URL";
     public static final String TYPE_TEXT = "TEXT";
     public static final String TYPE_IMAGE = "IMAGE";
+    public static final String TYPE_TRASH = "TRASH";
     public static final String SEARCH_COLUMN_ALL = "ALL";
     public static final String SEARCH_COLUMN_TITLE = "TITLE";
     public static final String SEARCH_COLUMN_TYPE = "TYPE";
@@ -62,7 +63,7 @@ public class AppModel {
     private static final Duration SEARCH_DEBOUNCE = Duration.millis(300);
 
     private final ObservableList<String> typeOptions = FXCollections.observableArrayList(
-            TYPE_ALL, TYPE_URL, TYPE_TEXT, TYPE_IMAGE);
+            TYPE_ALL, TYPE_URL, TYPE_TEXT, TYPE_IMAGE, TYPE_TRASH);
     private final ObservableList<String> searchColumnOptions = FXCollections.observableArrayList(
             SEARCH_COLUMN_ALL, SEARCH_COLUMN_TITLE, SEARCH_COLUMN_TYPE, SEARCH_COLUMN_CREATED, SEARCH_COLUMN_PREVIEW);
     private final ObservableList<String> readOnlySearchColumnOptions =
@@ -394,6 +395,7 @@ public class AppModel {
             case TYPE_URL -> text("type.url");
             case TYPE_TEXT -> text("type.text");
             case TYPE_IMAGE -> text("type.image");
+            case TYPE_TRASH -> text("type.trash");
             default -> typeCode == null ? "" : typeCode;
         };
     }
@@ -436,6 +438,14 @@ public class AppModel {
 
     public boolean isLockedItemHidden(VaultItemFx item) {
         return item != null && item.isLocked() && !item.isUnlockedInSession();
+    }
+
+    public boolean isDeletedItem(VaultItemFx item) {
+        return item != null && item.isDeleted();
+    }
+
+    public boolean isTrashSelected() {
+        return TYPE_TRASH.equals(normalizeTypeCode(selectedType.get()));
     }
 
     public String getResolvedTitle(VaultItemFx item) {
@@ -531,6 +541,19 @@ public class AppModel {
         boolean hasQuery = !query.isBlank();
         boolean hasSpecificColumn = !SEARCH_COLUMN_ALL.equals(searchColumn);
 
+        if (TYPE_TRASH.equals(typeCode)) {
+            if (hasQuery && hasSpecificColumn) {
+                return text("archive.summary.trash.column.query",
+                        count,
+                        getSearchColumnLabel(searchColumn),
+                        query);
+            }
+            if (hasQuery) {
+                return text("archive.summary.trash.query", count, query);
+            }
+            return text("archive.summary.trash", count);
+        }
+
         if (hasTypeFilter && hasQuery && hasSpecificColumn) {
             return text("archive.summary.type.column.query",
                     count,
@@ -619,7 +642,7 @@ public class AppModel {
         Set<Long> visibleItemIds = new HashSet<>();
 
         for (VaultItemFx item : allItems) {
-            if (!matchesType(item, type)) {
+            if (!matchesArchiveView(item, type)) {
                 continue;
             }
 
@@ -647,7 +670,18 @@ public class AppModel {
         searchDebounce.playFromStart();
     }
 
-    private boolean matchesType(VaultItemFx item, String type) {
+    private boolean matchesArchiveView(VaultItemFx item, String type) {
+        if (item == null) {
+            return false;
+        }
+
+        boolean deleted = item.isDeleted();
+        if (TYPE_TRASH.equals(type)) {
+            return deleted;
+        }
+        if (deleted) {
+            return false;
+        }
         return TYPE_ALL.equals(type) || type.equalsIgnoreCase(item.getItemType());
     }
 
@@ -754,7 +788,9 @@ public class AppModel {
             return scoreComparison;
         }
 
-        int createdComparison = safeCreatedAt(second).compareTo(safeCreatedAt(first));
+        LocalDateTime firstSortTime = isTrashSelected() ? safeDeletedAt(first) : safeCreatedAt(first);
+        LocalDateTime secondSortTime = isTrashSelected() ? safeDeletedAt(second) : safeCreatedAt(second);
+        int createdComparison = secondSortTime.compareTo(firstSortTime);
         if (createdComparison != 0) {
             return createdComparison;
         }
@@ -764,6 +800,10 @@ public class AppModel {
 
     private static LocalDateTime safeCreatedAt(VaultItemFx item) {
         return item == null || item.getCreatedAt() == null ? LocalDateTime.MIN : item.getCreatedAt();
+    }
+
+    private static LocalDateTime safeDeletedAt(VaultItemFx item) {
+        return item == null || item.getDeletedAt() == null ? LocalDateTime.MIN : item.getDeletedAt();
     }
 
     private List<String> tokenizeQuery(String query) {
@@ -793,10 +833,16 @@ public class AppModel {
     }
 
     private void updateCounts() {
-        totalCount.set(allItems.size());
-        urlCount.set((int) allItems.stream().filter(item -> TYPE_URL.equalsIgnoreCase(item.getItemType())).count());
-        textCount.set((int) allItems.stream().filter(item -> TYPE_TEXT.equalsIgnoreCase(item.getItemType())).count());
-        imageCount.set((int) allItems.stream().filter(item -> TYPE_IMAGE.equalsIgnoreCase(item.getItemType())).count());
+        totalCount.set((int) allItems.stream().filter(item -> !item.isDeleted()).count());
+        urlCount.set((int) allItems.stream()
+                .filter(item -> !item.isDeleted() && TYPE_URL.equalsIgnoreCase(item.getItemType()))
+                .count());
+        textCount.set((int) allItems.stream()
+                .filter(item -> !item.isDeleted() && TYPE_TEXT.equalsIgnoreCase(item.getItemType()))
+                .count());
+        imageCount.set((int) allItems.stream()
+                .filter(item -> !item.isDeleted() && TYPE_IMAGE.equalsIgnoreCase(item.getItemType()))
+                .count());
     }
 
     private void restoreSelection(Long selectedId) {

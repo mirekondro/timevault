@@ -39,6 +39,7 @@ public class SchemaInitializer {
             ensureVaultItemsTable(statement);
             ensureVaultItemsUserColumn(statement);
             ensureVaultItemsLockColumns(statement);
+            ensureVaultItemsDeletedColumn(statement);
             ensureVaultItemImagesTable(statement);
             migrateLegacyItems(connection);
             enforceUserOwnership(statement);
@@ -120,6 +121,7 @@ public class SchemaInitializer {
                         lock_payload NVARCHAR(MAX) NULL,
                         created_at DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
                         updated_at DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
+                        deleted_at DATETIME2 NULL,
                         CONSTRAINT fk_vault_items_user FOREIGN KEY (user_id) REFERENCES dbo.vault_users(id)
                     )
                 END
@@ -162,6 +164,15 @@ public class SchemaInitializer {
                 IF COL_LENGTH('dbo.vault_items', 'lock_payload') IS NULL
                 BEGIN
                     ALTER TABLE dbo.vault_items ADD lock_payload NVARCHAR(MAX) NULL
+                END
+                """);
+    }
+
+    private void ensureVaultItemsDeletedColumn(Statement statement) throws SQLException {
+        statement.executeUpdate("""
+                IF COL_LENGTH('dbo.vault_items', 'deleted_at') IS NULL
+                BEGIN
+                    ALTER TABLE dbo.vault_items ADD deleted_at DATETIME2 NULL
                 END
                 """);
     }
@@ -350,6 +361,17 @@ public class SchemaInitializer {
                       AND object_id = OBJECT_ID('dbo.vault_items')
                 )
                 CREATE INDEX idx_vault_items_user_created_at ON dbo.vault_items(user_id, created_at DESC)
+                """);
+
+        statement.executeUpdate("""
+                IF NOT EXISTS (
+                    SELECT 1
+                    FROM sys.indexes
+                    WHERE name = 'idx_vault_items_user_deleted_created_at'
+                      AND object_id = OBJECT_ID('dbo.vault_items')
+                )
+                CREATE INDEX idx_vault_items_user_deleted_created_at
+                    ON dbo.vault_items(user_id, deleted_at, created_at DESC)
                 """);
 
         statement.executeUpdate("""

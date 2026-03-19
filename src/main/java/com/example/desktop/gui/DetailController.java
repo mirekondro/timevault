@@ -35,6 +35,15 @@ public class DetailController implements AppContextAware {
     private Label detailMetaLabel;
 
     @FXML
+    private VBox trashBox;
+
+    @FXML
+    private Label trashTitleLabel;
+
+    @FXML
+    private Label trashCopyLabel;
+
+    @FXML
     private VBox unlockBox;
 
     @FXML
@@ -103,6 +112,8 @@ public class DetailController implements AppContextAware {
         appModel.bindText(tagsSectionLabel, "detail.section.tags");
         appModel.bindText(contentSectionLabel, "detail.section.content");
         appModel.bindText(imageSectionLabel, "detail.section.image");
+        appModel.bindText(trashTitleLabel, "detail.trash.title");
+        appModel.bindText(trashCopyLabel, "detail.trash.copy");
         appModel.bindText(unlockTitleLabel, "detail.locked.title");
         appModel.bindText(unlockCopyLabel, "detail.locked.copy");
         appModel.bindPrompt(unlockPasswordField, "detail.unlock.prompt");
@@ -110,12 +121,18 @@ public class DetailController implements AppContextAware {
 
         sourceLink.disableProperty().bind(Bindings.createBooleanBinding(() -> {
             VaultItemFx item = appModel.getSelectedItem();
-            return item == null || appModel.getResolvedSourceUrl(item).isBlank() || appModel.isLockedItemHidden(item);
+            return item == null
+                    || appModel.isDeletedItem(item)
+                    || appModel.getResolvedSourceUrl(item).isBlank()
+                    || appModel.isLockedItemHidden(item);
         }, appModel.selectedItemProperty()));
         unlockButton.disableProperty().bind(unlockPasswordField.textProperty().isEmpty()
                 .or(Bindings.createBooleanBinding(() -> {
                     VaultItemFx item = appModel.getSelectedItem();
-                    return item == null || !item.isLocked() || item.isUnlockedInSession();
+                    return item == null
+                            || appModel.isDeletedItem(item)
+                            || !item.isLocked()
+                            || item.isUnlockedInSession();
                 }, appModel.selectedItemProperty())));
 
         appModel.selectedItemProperty().addListener((obs, oldItem, newItem) -> updateDetails(newItem));
@@ -154,6 +171,8 @@ public class DetailController implements AppContextAware {
             clearImagePreview();
             contextArea.setText("");
             contentArea.setText("");
+            trashBox.setVisible(false);
+            trashBox.setManaged(false);
             unlockBox.setVisible(false);
             unlockBox.setManaged(false);
             detailContentBox.setVisible(true);
@@ -163,7 +182,26 @@ public class DetailController implements AppContextAware {
         }
 
         detailTitleLabel.setText(appModel.getItemTitle(item));
+        if (appModel.isDeletedItem(item)) {
+            detailMetaLabel.setText(appModel.text("detail.trash.meta", appModel.formatTimestamp(item.getDeletedAt())));
+            sourceLink.setText("");
+            sourceLink.setVisible(false);
+            sourceLink.setManaged(false);
+            clearImagePreview();
+            contextArea.setText("");
+            contentArea.setText("");
+            trashBox.setVisible(true);
+            trashBox.setManaged(true);
+            unlockBox.setVisible(false);
+            unlockBox.setManaged(false);
+            detailContentBox.setVisible(false);
+            detailContentBox.setManaged(false);
+            return;
+        }
+
         detailMetaLabel.setText(appModel.getItemDetailMeta(item));
+        trashBox.setVisible(false);
+        trashBox.setManaged(false);
         if (appModel.isLockedItemHidden(item)) {
             sourceLink.setText("");
             sourceLink.setVisible(false);

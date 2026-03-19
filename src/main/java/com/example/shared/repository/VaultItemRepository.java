@@ -1,12 +1,14 @@
 package com.example.shared.repository;
 
 import com.example.shared.model.VaultItem;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * SHARED REPOSITORY - Used by both Web and Desktop versions
@@ -17,22 +19,25 @@ import java.util.List;
 public interface VaultItemRepository extends JpaRepository<VaultItem, Long> {
 
     // Find by item type (URL, IMAGE, TEXT)
-    List<VaultItem> findByOwnerIdAndItemTypeOrderByCreatedAtDesc(Long userId, String itemType);
+    List<VaultItem> findByOwnerIdAndItemTypeAndDeletedAtIsNullOrderByCreatedAtDesc(Long userId, String itemType);
 
     // Find recent items ordered by creation date
-    List<VaultItem> findTop10ByOwnerIdOrderByCreatedAtDesc(Long userId);
+    List<VaultItem> findTop10ByOwnerIdAndDeletedAtIsNullOrderByCreatedAtDesc(Long userId);
 
     // Find all ordered by creation date
-    List<VaultItem> findAllByOwnerIdOrderByCreatedAtDesc(Long userId);
+    List<VaultItem> findAllByOwnerIdAndDeletedAtIsNullOrderByCreatedAtDesc(Long userId);
+
+    List<VaultItem> findAllByOwnerIdAndDeletedAtIsNotNullOrderByDeletedAtDescCreatedAtDesc(Long userId);
 
     // Search by title (case-insensitive)
-    List<VaultItem> findByOwnerIdAndTitleContainingIgnoreCaseOrderByCreatedAtDesc(Long userId, String keyword);
+    List<VaultItem> findByOwnerIdAndTitleContainingIgnoreCaseAndDeletedAtIsNullOrderByCreatedAtDesc(Long userId, String keyword);
 
     // Search by title or content
     @Query("""
             SELECT v
             FROM VaultItem v
             WHERE v.owner.id = :userId
+              AND v.deletedAt IS NULL
               AND (
                   LOWER(v.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
                   OR LOWER(COALESCE(v.content, '')) LIKE LOWER(CONCAT('%', :keyword, '%'))
@@ -45,15 +50,33 @@ public interface VaultItemRepository extends JpaRepository<VaultItem, Long> {
     List<VaultItem> searchByUserAndKeyword(@Param("userId") Long userId, @Param("keyword") String keyword);
 
     // Find by tags containing
-    List<VaultItem> findByOwnerIdAndTagsContainingIgnoreCaseOrderByCreatedAtDesc(Long userId, String tag);
+    List<VaultItem> findByOwnerIdAndTagsContainingIgnoreCaseAndDeletedAtIsNullOrderByCreatedAtDesc(Long userId, String tag);
 
     // Count by item type
-    long countByOwnerIdAndItemType(Long userId, String itemType);
+    long countByOwnerIdAndItemTypeAndDeletedAtIsNull(Long userId, String itemType);
 
-    long countByOwnerId(Long userId);
+    long countByOwnerIdAndDeletedAtIsNull(Long userId);
 
-    java.util.Optional<VaultItem> findByIdAndOwnerId(Long id, Long userId);
+    Optional<VaultItem> findByIdAndOwnerIdAndDeletedAtIsNull(Long id, Long userId);
 
-    long deleteByIdAndOwnerId(Long id, Long userId);
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+            UPDATE VaultItem v
+            SET v.deletedAt = CURRENT_TIMESTAMP
+            WHERE v.id = :id
+              AND v.owner.id = :userId
+              AND v.deletedAt IS NULL
+            """)
+    int softDeleteByIdAndOwnerId(@Param("id") Long id, @Param("userId") Long userId);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+            UPDATE VaultItem v
+            SET v.deletedAt = NULL
+            WHERE v.id = :id
+              AND v.owner.id = :userId
+              AND v.deletedAt IS NOT NULL
+            """)
+    int restoreByIdAndOwnerId(@Param("id") Long id, @Param("userId") Long userId);
 }
 

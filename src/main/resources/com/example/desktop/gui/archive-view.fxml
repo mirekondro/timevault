@@ -31,5 +31,7 @@
         <Button fx:id="addButton" mnemonicParsing="false" onAction="#handleAdd" styleClass="accent-button"/>
         <Button fx:id="editButton" mnemonicParsing="false" onAction="#handleEdit" styleClass="ghost-button"/>
         <Button fx:id="deleteButton" mnemonicParsing="false" onAction="#handleDelete" styleClass="danger-button"/>
+        <Button fx:id="restoreButton" mnemonicParsing="false" onAction="#handleRestore" styleClass="accent-button"
+                visible="false" managed="false"/>
     </HBox>
 </VBox>

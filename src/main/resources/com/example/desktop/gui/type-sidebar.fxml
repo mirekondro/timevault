@@ -22,5 +22,6 @@
         <ToggleButton fx:id="urlTypeButton" maxWidth="1.7976931348623157E308" styleClass="type-nav-button"/>
         <ToggleButton fx:id="textTypeButton" maxWidth="1.7976931348623157E308" styleClass="type-nav-button"/>
         <ToggleButton fx:id="imageTypeButton" maxWidth="1.7976931348623157E308" styleClass="type-nav-button"/>
+        <ToggleButton fx:id="trashTypeButton" maxWidth="1.7976931348623157E308" styleClass="type-nav-button"/>
     </VBox>
 </VBox>

@@ -26,6 +26,7 @@ public class VaultItemFx {
     private final StringProperty sourceUrl = new SimpleStringProperty("");
     private final ObjectProperty<LocalDateTime> createdAt = new SimpleObjectProperty<>();
     private final ObjectProperty<LocalDateTime> updatedAt = new SimpleObjectProperty<>();
+    private final ObjectProperty<LocalDateTime> deletedAt = new SimpleObjectProperty<>();
     private boolean locked;
     private String lockPasswordHash = "";
     private String lockSalt = "";
@@ -153,6 +154,22 @@ public class VaultItemFx {
 
     public ObjectProperty<LocalDateTime> updatedAtProperty() {
         return updatedAt;
+    }
+
+    public LocalDateTime getDeletedAt() {
+        return deletedAt.get();
+    }
+
+    public void setDeletedAt(LocalDateTime value) {
+        deletedAt.set(value);
+    }
+
+    public ObjectProperty<LocalDateTime> deletedAtProperty() {
+        return deletedAt;
+    }
+
+    public boolean isDeleted() {
+        return getDeletedAt() != null;
     }
 
     public boolean isLocked() {

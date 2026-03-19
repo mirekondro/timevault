@@ -35,6 +35,7 @@ public class VaultItemService {
 
     public VaultItem save(long userId, VaultItem item) {
         item.setOwner(requireUser(userId));
+        item.setDeletedAt(null);
         return repository.save(item);
     }
 
@@ -68,23 +69,27 @@ public class VaultItemService {
     // ============================================
 
     public List<VaultItem> findAll(long userId) {
-        return repository.findAllByOwnerIdOrderByCreatedAtDesc(userId);
+        return repository.findAllByOwnerIdAndDeletedAtIsNullOrderByCreatedAtDesc(userId);
     }
 
     public List<VaultItem> findRecent(long userId) {
-        return repository.findTop10ByOwnerIdOrderByCreatedAtDesc(userId);
+        return repository.findTop10ByOwnerIdAndDeletedAtIsNullOrderByCreatedAtDesc(userId);
     }
 
     public Optional<VaultItem> findById(long userId, Long id) {
-        return repository.findByIdAndOwnerId(id, userId);
+        return repository.findByIdAndOwnerIdAndDeletedAtIsNull(id, userId);
     }
 
     public List<VaultItem> findByType(long userId, String itemType) {
-        return repository.findByOwnerIdAndItemTypeOrderByCreatedAtDesc(userId, itemType);
+        return repository.findByOwnerIdAndItemTypeAndDeletedAtIsNullOrderByCreatedAtDesc(userId, itemType);
     }
 
     public List<VaultItem> search(long userId, String keyword) {
         return repository.searchByUserAndKeyword(userId, keyword);
+    }
+
+    public List<VaultItem> findDeleted(long userId) {
+        return repository.findAllByOwnerIdAndDeletedAtIsNotNullOrderByDeletedAtDescCreatedAtDesc(userId);
     }
 
     // ============================================
@@ -92,14 +97,18 @@ public class VaultItemService {
     // ============================================
 
     public boolean delete(long userId, Long id) {
-        return repository.deleteByIdAndOwnerId(id, userId) > 0;
+        return repository.softDeleteByIdAndOwnerId(id, userId) > 0;
+    }
+
+    public boolean restore(long userId, Long id) {
+        return repository.restoreByIdAndOwnerId(id, userId) > 0;
     }
 
     public void deleteAll(long userId) {
-        repository.findAllByOwnerIdOrderByCreatedAtDesc(userId)
+        repository.findAllByOwnerIdAndDeletedAtIsNullOrderByCreatedAtDesc(userId)
                 .stream()
                 .map(VaultItem::getId)
-                .forEach(itemId -> repository.deleteByIdAndOwnerId(itemId, userId));
+                .forEach(itemId -> repository.softDeleteByIdAndOwnerId(itemId, userId));
     }
 
     // ============================================
@@ -107,11 +116,11 @@ public class VaultItemService {
     // ============================================
 
     public long countByType(long userId, String itemType) {
-        return repository.countByOwnerIdAndItemType(userId, itemType);
+        return repository.countByOwnerIdAndItemTypeAndDeletedAtIsNull(userId, itemType);
     }
 
     public long countAll(long userId) {
-        return repository.countByOwnerId(userId);
+        return repository.countByOwnerIdAndDeletedAtIsNull(userId);
     }
 
     // ============================================

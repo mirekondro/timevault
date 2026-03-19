@@ -30,6 +30,9 @@ public class TypeSidebarController implements AppContextAware {
     @FXML
     private ToggleButton imageTypeButton;
 
+    @FXML
+    private ToggleButton trashTypeButton;
+
     private final ToggleGroup toggleGroup = new ToggleGroup();
     private AppModel appModel;
     private boolean updatingSelection;
@@ -47,6 +50,7 @@ public class TypeSidebarController implements AppContextAware {
         configureTypeButton(urlTypeButton, AppModel.TYPE_URL, "type.url");
         configureTypeButton(textTypeButton, AppModel.TYPE_TEXT, "type.text");
         configureTypeButton(imageTypeButton, AppModel.TYPE_IMAGE, "type.image");
+        configureTypeButton(trashTypeButton, AppModel.TYPE_TRASH, "type.trash");
 
         appModel.selectedTypeProperty().addListener((obs, oldValue, newValue) -> updateSelectedButton(newValue));
         updateSelectedButton(appModel.selectedTypeProperty().get());
@@ -71,6 +75,7 @@ public class TypeSidebarController implements AppContextAware {
                 case AppModel.TYPE_URL -> urlTypeButton;
                 case AppModel.TYPE_TEXT -> textTypeButton;
                 case AppModel.TYPE_IMAGE -> imageTypeButton;
+                case AppModel.TYPE_TRASH -> trashTypeButton;
                 case AppModel.TYPE_ALL -> allTypeButton;
                 default -> allTypeButton;
             };

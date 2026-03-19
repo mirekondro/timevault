@@ -6,6 +6,7 @@ import com.example.desktop.model.AppModel;
 import com.example.desktop.model.VaultItemFx;
 import javafx.application.HostServices;
 import javafx.beans.binding.Bindings;
+import javafx.beans.binding.BooleanBinding;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -30,6 +31,7 @@ public class ArchiveController implements AppContextAware {
 
     private static final DialogWindowSize FORM_DIALOG_SIZE = new DialogWindowSize(760, 620, 640, 520);
     private static final DialogWindowSize DELETE_DIALOG_SIZE = new DialogWindowSize(700, 340, 580, 300);
+    private static final DialogWindowSize RESTORE_DIALOG_SIZE = new DialogWindowSize(700, 340, 580, 300);
     private static final DialogWindowSize UNLOCK_DIALOG_SIZE = new DialogWindowSize(680, 320, 560, 280);
 
     @FXML
@@ -62,6 +64,9 @@ public class ArchiveController implements AppContextAware {
     @FXML
     private Button deleteButton;
 
+    @FXML
+    private Button restoreButton;
+
     private AppModel appModel;
     private VaultManager vaultManager;
     private HostServices hostServices;
@@ -89,6 +94,7 @@ public class ArchiveController implements AppContextAware {
         appModel.bindText(addButton, "archive.action.add");
         appModel.bindText(editButton, "archive.action.edit");
         appModel.bindText(deleteButton, "archive.action.delete");
+        appModel.bindText(restoreButton, "archive.action.restore");
 
         configureColumns();
         configurePlaceholder();
@@ -130,7 +136,7 @@ public class ArchiveController implements AppContextAware {
     @FXML
     private void handleAdd() {
         String selectedType = appModel.selectedTypeProperty().get();
-        if (AppModel.TYPE_ALL.equals(selectedType)) {
+        if (AppModel.TYPE_ALL.equals(selectedType) || AppModel.TYPE_TRASH.equals(selectedType)) {
             appModel.showInfoKey("status.archive.chooseType");
             return;
         }
@@ -202,6 +208,21 @@ public class ArchiveController implements AppContextAware {
                 controller -> controller.prepareForItem(selectedItem));
     }
 
+    @FXML
+    private void handleRestore() {
+        if (appModel.getSelectedItem() == null) {
+            appModel.showErrorKey("status.restore.select");
+            return;
+        }
+
+        VaultItemFx selectedItem = appModel.getSelectedItem();
+        openDialog(
+                "/com/example/desktop/gui/restore-item-dialog.fxml",
+                RESTORE_DIALOG_SIZE,
+                RestoreItemDialogController.class,
+                controller -> controller.prepareForItem(selectedItem));
+    }
+
     private void configureColumns() {
         itemsTableView.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         titleColumn.setCellValueFactory(cellData -> new ReadOnlyStringWrapper(
@@ -223,6 +244,10 @@ public class ArchiveController implements AppContextAware {
                         return appModel.text("archive.empty.unauth");
                     }
                     if (appModel.getFilteredItems().isEmpty()) {
+                        String searchText = appModel.searchTextProperty().get();
+                        if (appModel.isTrashSelected() && (searchText == null || searchText.isBlank())) {
+                            return appModel.text("archive.empty.trash");
+                        }
                         return appModel.text("archive.empty.filtered");
                     }
                     return "";
@@ -236,13 +261,34 @@ public class ArchiveController implements AppContextAware {
     }
 
     private void configureActions() {
-        addButton.disableProperty().bind(appModel.busyProperty().or(appModel.authenticatedProperty().not()));
+        BooleanBinding trashViewSelected = Bindings.createBooleanBinding(
+                appModel::isTrashSelected,
+                appModel.selectedTypeProperty());
+
+        addButton.disableProperty().bind(appModel.busyProperty()
+                .or(appModel.authenticatedProperty().not())
+                .or(trashViewSelected));
         editButton.disableProperty().bind(appModel.busyProperty()
                 .or(appModel.authenticatedProperty().not())
-                .or(appModel.selectedItemProperty().isNull()));
+                .or(appModel.selectedItemProperty().isNull())
+                .or(trashViewSelected));
         deleteButton.disableProperty().bind(appModel.busyProperty()
                 .or(appModel.authenticatedProperty().not())
-                .or(appModel.selectedItemProperty().isNull()));
+                .or(appModel.selectedItemProperty().isNull())
+                .or(trashViewSelected));
+        restoreButton.disableProperty().bind(appModel.busyProperty()
+                .or(appModel.authenticatedProperty().not())
+                .or(appModel.selectedItemProperty().isNull())
+                .or(trashViewSelected.not()));
+
+        addButton.visibleProperty().bind(trashViewSelected.not());
+        addButton.managedProperty().bind(addButton.visibleProperty());
+        editButton.visibleProperty().bind(trashViewSelected.not());
+        editButton.managedProperty().bind(editButton.visibleProperty());
+        deleteButton.visibleProperty().bind(trashViewSelected.not());
+        deleteButton.managedProperty().bind(deleteButton.visibleProperty());
+        restoreButton.visibleProperty().bind(trashViewSelected);
+        restoreButton.managedProperty().bind(restoreButton.visibleProperty());
     }
 
     private VaultItemFx requireUnlockedSelection(String promptHeaderKey) {

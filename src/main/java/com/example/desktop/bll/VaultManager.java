@@ -607,7 +607,11 @@ public class VaultManager {
                 appModel.showErrorKey("status.delete.missing");
                 return false;
             }
-            appModel.removeItem(selectedItem.getId());
+            VaultItemFx deletedItem = copyItem(selectedItem);
+            LocalDateTime now = LocalDateTime.now();
+            deletedItem.setDeletedAt(now);
+            deletedItem.setUpdatedAt(now);
+            appModel.updateItem(deletedItem);
             appModel.showSuccessKey("status.delete.deleted", selectedItem.getId());
             return true;
         } catch (SQLException exception) {
@@ -636,10 +640,47 @@ public class VaultManager {
             if (!deleted) {
                 return dialogFormError(appModel, "status.delete.missing");
             }
-            appModel.removeItem(item.getId());
+            VaultItemFx deletedItem = copyItem(item);
+            LocalDateTime now = LocalDateTime.now();
+            deletedItem.setDeletedAt(now);
+            deletedItem.setUpdatedAt(now);
+            appModel.updateItem(deletedItem);
             return DialogActionResult.successMainToast(appModel.text("status.delete.deleted", item.getId()));
         } catch (SQLException exception) {
             return dialogFormError(appModel, "status.delete.error", safeMessage(exception));
+        } finally {
+            appModel.setBusy(false);
+        }
+    }
+
+    public DialogActionResult restoreItem(AppModel appModel, VaultItemFx item) {
+        UserSession currentUser = currentDialogUser(appModel);
+        if (currentUser == null) {
+            return authRequiredDialogResult(appModel);
+        }
+        if (item == null) {
+            return dialogFormError(appModel, "status.restore.select");
+        }
+        if (!item.isDeleted()) {
+            return dialogFormError(appModel, "status.restore.missing");
+        }
+        if (item.isLocked() && !item.isUnlockedInSession()) {
+            return dialogFormError(appModel, "status.lock.unlock.required");
+        }
+
+        appModel.setBusy(true);
+        try {
+            boolean restored = vaultItemDAO.restoreById(currentUser.id(), item.getId());
+            if (!restored) {
+                return dialogFormError(appModel, "status.restore.missing");
+            }
+            VaultItemFx restoredItem = copyItem(item);
+            restoredItem.setUpdatedAt(LocalDateTime.now());
+            restoredItem.setDeletedAt(null);
+            appModel.updateItem(restoredItem);
+            return DialogActionResult.successMainToast(appModel.text("status.restore.restored", item.getId()));
+        } catch (SQLException exception) {
+            return dialogFormError(appModel, "status.restore.error", safeMessage(exception));
         } finally {
             appModel.setBusy(false);
         }
@@ -997,7 +1038,7 @@ public class VaultManager {
     private int loadCurrentUserItems(AppModel appModel, UserSession session) throws SQLException {
         List<VaultItemFx> items = vaultItemDAO.findAllByUserId(session.id());
         appModel.setItems(items);
-        return items.size();
+        return (int) items.stream().filter(item -> !item.isDeleted()).count();
     }
 
     private UserSession toSession(VaultUser user) {
@@ -1020,6 +1061,7 @@ public class VaultManager {
         copy.setSourceUrl(source.getSourceUrl());
         copy.setCreatedAt(source.getCreatedAt());
         copy.setUpdatedAt(source.getUpdatedAt());
+        copy.setDeletedAt(source.getDeletedAt());
         copy.setLocked(source.isLocked());
         copy.setLockPasswordHash(source.getLockPasswordHash());
         copy.setLockSalt(source.getLockSalt());
