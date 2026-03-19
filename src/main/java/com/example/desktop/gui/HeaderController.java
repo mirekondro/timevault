@@ -8,11 +8,9 @@ import javafx.application.HostServices;
 import javafx.beans.binding.Bindings;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
-import javafx.scene.control.ComboBox;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.CustomMenuItem;
 import javafx.scene.control.Label;
-import javafx.scene.control.ListCell;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.RadioMenuItem;
@@ -32,9 +30,6 @@ public class HeaderController implements AppContextAware {
 
     @FXML
     private TextField searchField;
-
-    @FXML
-    private ComboBox<String> typeFilterComboBox;
 
     @FXML
     private Button reloadButton;
@@ -68,10 +63,7 @@ public class HeaderController implements AppContextAware {
         this.navigator = navigator;
 
         searchField.textProperty().bindBidirectional(appModel.searchTextProperty());
-        typeFilterComboBox.setItems(appModel.getTypeOptions());
-        typeFilterComboBox.valueProperty().bindBidirectional(appModel.selectedTypeProperty());
         searchField.disableProperty().bind(appModel.authenticatedProperty().not());
-        typeFilterComboBox.disableProperty().bind(appModel.authenticatedProperty().not());
         reloadButton.disableProperty().bind(appModel.busyProperty().or(appModel.authenticatedProperty().not()));
         avatarLetterLabel.textProperty().bind(Bindings.createStringBinding(this::resolveCurrentUserInitial,
                 appModel.currentUserProperty(), appModel.localeProperty()));
@@ -80,8 +72,6 @@ public class HeaderController implements AppContextAware {
         appModel.bindText(brandLabel, "header.brand");
         appModel.bindPrompt(searchField, "header.search.prompt");
         appModel.bindText(reloadButton, "header.reload");
-
-        configureTypeFilterPresentation();
 
         buildUserMenu();
         appModel.currentUserProperty().addListener((obs, oldUser, newUser) -> updateMenuIdentity());
@@ -123,32 +113,6 @@ public class HeaderController implements AppContextAware {
         userMenu.hide();
         vaultManager.logout(appModel);
         navigator.showAuthScene();
-    }
-
-    private void configureTypeFilterPresentation() {
-        typeFilterComboBox.setVisibleRowCount(appModel.getTypeOptions().size());
-        typeFilterComboBox.setButtonCell(createTypeCell());
-        typeFilterComboBox.setCellFactory(listView -> createTypeCell());
-    }
-
-    private ListCell<String> createTypeCell() {
-        return new ListCell<>() {
-            {
-                itemProperty().addListener((obs, oldItem, newItem) -> refreshText());
-                emptyProperty().addListener((obs, wasEmpty, isNowEmpty) -> refreshText());
-                appModel.localeProperty().addListener((obs, oldLocale, newLocale) -> refreshText());
-            }
-
-            @Override
-            protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-                refreshText();
-            }
-
-            private void refreshText() {
-                setText(isEmpty() || getItem() == null ? null : appModel.getTypeLabel(getItem()));
-            }
-        };
     }
 
     private void buildUserMenu() {

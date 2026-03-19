@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ToggleButton?>
+<?import javafx.scene.layout.Priority?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.example.desktop.gui.TypeSidebarController"
+      maxWidth="118.0"
+      minWidth="118.0"
+      prefWidth="118.0"
+      spacing="14.0"
+      styleClass="type-sidebar-card">
+    <padding>
+        <Insets top="18.0" right="16.0" bottom="18.0" left="16.0"/>
+    </padding>
+    <Label fx:id="sidebarTitleLabel" styleClass="eyebrow"/>
+    <VBox spacing="10.0" VBox.vgrow="ALWAYS">
+        <ToggleButton fx:id="allTypeButton" maxWidth="1.7976931348623157E308" styleClass="type-nav-button"/>
+        <ToggleButton fx:id="urlTypeButton" maxWidth="1.7976931348623157E308" styleClass="type-nav-button"/>
+        <ToggleButton fx:id="textTypeButton" maxWidth="1.7976931348623157E308" styleClass="type-nav-button"/>
+        <ToggleButton fx:id="imageTypeButton" maxWidth="1.7976931348623157E308" styleClass="type-nav-button"/>
+    </VBox>
+</VBox>

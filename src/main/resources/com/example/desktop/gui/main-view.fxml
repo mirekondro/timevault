@@ -24,12 +24,15 @@
                     </padding>
                     <fx:include fx:id="topBarView" source="top-bar.fxml"/>
                     <fx:include fx:id="saveView" source="save-view.fxml"/>
-                    <SplitPane dividerPositions="0.42" prefHeight="560.0" styleClass="content-split">
-                        <items>
-                            <fx:include fx:id="archiveView" source="archive-view.fxml"/>
-                            <fx:include fx:id="detailView" source="detail-view.fxml"/>
-                        </items>
-                    </SplitPane>
+                    <HBox prefHeight="560.0" spacing="18.0" styleClass="workspace-shell" VBox.vgrow="ALWAYS">
+                        <fx:include fx:id="typeSidebarView" source="type-sidebar.fxml"/>
+                        <SplitPane dividerPositions="0.52" styleClass="content-split" HBox.hgrow="ALWAYS">
+                            <items>
+                                <fx:include fx:id="archiveView" source="archive-view.fxml"/>
+                                <fx:include fx:id="detailView" source="detail-view.fxml"/>
+                            </items>
+                        </SplitPane>
+                    </HBox>
                 </VBox>
             </content>
         </ScrollPane>

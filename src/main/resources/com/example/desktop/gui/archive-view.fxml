@@ -2,8 +2,9 @@
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Label?>
-<?import javafx.scene.control.ListView?>
 <?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
 <?import javafx.scene.layout.Priority?>
 <?import javafx.scene.layout.VBox?>
 
@@ -16,5 +17,12 @@
     <Label fx:id="archiveTitleLabel" styleClass="section-title"/>
     <Label fx:id="visibleCountLabel" styleClass="muted-copy"/>
     <Separator/>
-    <ListView fx:id="itemsListView" VBox.vgrow="ALWAYS"/>
+    <TableView fx:id="itemsTableView" VBox.vgrow="ALWAYS">
+        <columns>
+            <TableColumn fx:id="titleColumn" prefWidth="210.0"/>
+            <TableColumn fx:id="typeColumn" prefWidth="90.0"/>
+            <TableColumn fx:id="createdColumn" prefWidth="150.0"/>
+            <TableColumn fx:id="previewColumn" prefWidth="320.0"/>
+        </columns>
+    </TableView>
 </VBox>
