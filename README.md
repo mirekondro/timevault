@@ -1,9 +1,15 @@
 # My Application README
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 - [ ] TODO Replace or update this README with instructions relevant to your application
 =======
 TimeVault is a local-first web application for Hack Esbjerg 2026. It captures URLs, text, and images into a SQLite archive, writes a three-sentence AI context note, rescues dead links from the Wayback Machine, and stores Denmark Today vibe capsules from Danish news feeds.
+=======
+TimeVault is a local-first web application for Hack Esbjerg 2026. It captures URLs, text, and images into a SQLite archive, writes a three-sentence AI context note, rescues dead links from the Wayback Machine, and stores Denmark Today vibe capsules from Danish news feeds.
+
+Built with **Spring Boot** and **Vaadin** for a modern web experience.
+>>>>>>> Stashed changes
 
 Built with **Spring Boot** and **Vaadin** for a modern web experience.
 >>>>>>> Stashed changes
@@ -13,6 +19,7 @@ You can also start the application from the command line by running:
 
 ```bash
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 ./mvnw
 ```
 
@@ -21,6 +28,11 @@ To build the application in production mode, run:
 ./mvnw spring-boot:run
 ```
 
+=======
+./mvnw spring-boot:run
+```
+
+>>>>>>> Stashed changes
 Then open your browser to: **http://localhost:8080**
 
 ## Build
@@ -31,8 +43,11 @@ Then open your browser to: **http://localhost:8080**
 ```
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 To build a Docker image, run:
 =======
+=======
+>>>>>>> Stashed changes
 Run the built jar:
 ```bash
 java -jar target/timevault-1.0-SNAPSHOT.jar

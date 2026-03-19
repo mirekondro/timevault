@@ -11,13 +11,19 @@
         <java.version>21</java.version>
         <vaadin.version>25.0.7</vaadin.version>
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
     </properties>
     
 =======
+=======
+>>>>>>> Stashed changes
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <jackson.version>2.18.3</jackson.version>
     </properties>
 
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
     <parent>
         <groupId>org.springframework.boot</groupId>
@@ -26,6 +32,10 @@
         <relativePath/>
     </parent>
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes
 =======
 
 >>>>>>> Stashed changes
@@ -41,11 +51,18 @@
         </dependencies>
     </dependencyManagement>
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
     
     <dependencies>
         <dependency>
             <groupId>com.vaadin</groupId>
             <!-- Replace artifactId with vaadin-core to use only free components -->
+=======
+
+    <dependencies>
+        <dependency>
+            <groupId>com.vaadin</groupId>
+>>>>>>> Stashed changes
 =======
 
     <dependencies>
@@ -63,12 +80,15 @@
             <groupId>com.vaadin</groupId>
             <artifactId>vaadin-spring-boot-starter</artifactId>
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
 =======
+=======
+>>>>>>> Stashed changes
         </dependency>
         <!-- Spring Data JPA -->
         <dependency>
@@ -95,6 +115,9 @@
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
             <version>${jackson.version}</version>
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
         </dependency>
     </dependencies>
@@ -114,7 +137,11 @@
                     <execution>
                         <goals>
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
                             <goal>build-frontend</goal>
+=======
+                            <goal>prepare-frontend</goal>
+>>>>>>> Stashed changes
 =======
                             <goal>prepare-frontend</goal>
 >>>>>>> Stashed changes

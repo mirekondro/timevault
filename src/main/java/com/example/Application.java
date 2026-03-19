@@ -1,6 +1,10 @@
 package com.example;
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+=======
+import com.vaadin.flow.component.page.AppShellConfigurator;
+>>>>>>> Stashed changes
 =======
 import com.vaadin.flow.component.page.AppShellConfigurator;
 >>>>>>> Stashed changes
@@ -10,6 +14,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 import com.vaadin.flow.component.dependency.StyleSheet;
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 import com.vaadin.flow.component.page.AppShellConfigurator;
 
 @SpringBootApplication
@@ -17,11 +22,16 @@ import com.vaadin.flow.component.page.AppShellConfigurator;
 @StyleSheet(Lumo.UTILITY_STYLESHEET)
 @StyleSheet("styles.css") // Your custom styles
 =======
+=======
+>>>>>>> Stashed changes
 
 @SpringBootApplication
 @StyleSheet(Lumo.STYLESHEET)
 @StyleSheet(Lumo.UTILITY_STYLESHEET)
 @StyleSheet("styles.css")
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 public class Application implements AppShellConfigurator {
 
