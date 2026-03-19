@@ -33,6 +33,10 @@ public class MainView extends VerticalLayout {
 
     private final VaultItemService vaultItemService;
     private final Div itemsGrid = new Div();
+    private final Div currentView = new Div();
+
+    // Navigation state
+    private String currentViewState = "home"; // "home" or "vault"
 
     @Autowired
     public MainView(VaultItemService vaultItemService) {
@@ -46,6 +50,7 @@ public class MainView extends VerticalLayout {
 
         itemsGrid.addClassName("vault-grid");
         itemsGrid.setWidthFull();
+        currentView.setSizeFull();
 
         // Create main container with proper centering
         VerticalLayout main = new VerticalLayout();
@@ -60,10 +65,10 @@ public class MainView extends VerticalLayout {
         main.add(header);
         main.setHorizontalComponentAlignment(Alignment.STRETCH, header);
 
-        // Hero section centered
-        Component hero = createHeroSection();
-        main.add(hero);
-        main.setHorizontalComponentAlignment(Alignment.CENTER, hero);
+        // Navigation tabs
+        Component navTabs = createNavigationTabs();
+        main.add(navTabs);
+        main.setHorizontalComponentAlignment(Alignment.CENTER, navTabs);
 
         // Content wrapper with max width and centered
         VerticalLayout contentWrapper = new VerticalLayout();
@@ -73,10 +78,11 @@ public class MainView extends VerticalLayout {
         contentWrapper.setMargin(false);
         contentWrapper.setSpacing(true);
 
-        contentWrapper.add(
-                createContentSection(),
-                createRecentItemsSection()
-        );
+        // Add current view container
+        contentWrapper.add(currentView);
+
+        // Initialize with home view
+        showHomeView();
 
         main.add(contentWrapper);
         main.setHorizontalComponentAlignment(Alignment.CENTER, contentWrapper);
@@ -126,6 +132,88 @@ public class MainView extends VerticalLayout {
 
         header.add(logoArea, searchField);
         return header;
+    }
+
+    private Component createNavigationTabs() {
+        Tab homeTab = new Tab(VaadinIcon.HOME.create(), new Span("Home"));
+        Tab vaultTab = new Tab(VaadinIcon.ARCHIVES.create(), new Span("Your Vault"));
+
+        Tabs navTabs = new Tabs(homeTab, vaultTab);
+        navTabs.addClassName("nav-tabs");
+        navTabs.addThemeVariants(TabsVariant.LUMO_CENTERED);
+
+        navTabs.addSelectedChangeListener(event -> {
+            Tab selectedTab = navTabs.getSelectedTab();
+            if (selectedTab == homeTab) {
+                showHomeView();
+            } else if (selectedTab == vaultTab) {
+                showVaultView();
+            }
+        });
+
+        return navTabs;
+    }
+
+    private void showHomeView() {
+        currentViewState = "home";
+        currentView.removeAll();
+
+        VerticalLayout homeContent = new VerticalLayout();
+        homeContent.setSpacing(true);
+        homeContent.setPadding(false);
+        homeContent.setAlignItems(Alignment.CENTER);
+
+        // Add hero section
+        homeContent.add(createHeroSection());
+
+        // Add input section
+        homeContent.add(createContentSection());
+
+        // Add recent items (limited to 3)
+        homeContent.add(createRecentItemsPreview());
+
+        currentView.add(homeContent);
+    }
+
+    private void showVaultView() {
+        currentViewState = "vault";
+        currentView.removeAll();
+
+        VerticalLayout vaultContent = new VerticalLayout();
+        vaultContent.setSpacing(true);
+        vaultContent.setPadding(false);
+
+        // Add vault header
+        H2 vaultTitle = new H2("Your Digital Vault");
+        vaultTitle.addClassName("section-title");
+        vaultContent.add(vaultTitle);
+
+        // Add search functionality specific to vault
+        TextField vaultSearch = new TextField();
+        vaultSearch.setPlaceholder("Search your vault...");
+        vaultSearch.setPrefixComponent(VaadinIcon.SEARCH.create());
+        vaultSearch.addClassName("vault-search");
+        vaultSearch.setWidthFull();
+        vaultSearch.setMaxWidth("600px");
+        vaultSearch.setClearButtonVisible(true);
+
+        vaultSearch.addValueChangeListener(e -> {
+            if (e.getValue() != null && !e.getValue().trim().isEmpty()) {
+                updateItemsList(vaultItemService.searchComprehensive(e.getValue().trim()));
+            } else {
+                loadAllItems();
+            }
+        });
+
+        vaultContent.add(vaultSearch);
+        vaultContent.setHorizontalComponentAlignment(Alignment.CENTER, vaultSearch);
+
+        // Add all items grid
+        itemsGrid.removeAll();
+        loadAllItems();
+        vaultContent.add(itemsGrid);
+
+        currentView.add(vaultContent);
     }
 
     private String fetchWebpageContent(String url) {
@@ -354,11 +442,76 @@ public class MainView extends VerticalLayout {
         return section;
     }
 
-    private void loadRecentItems() {
+    private Component createRecentItemsPreview() {
+        VerticalLayout section = new VerticalLayout();
+        section.setSpacing(false);
+        section.setPadding(false);
+        section.setMaxWidth("1000px");
+        section.setWidthFull();
+
+        HorizontalLayout headerLayout = new HorizontalLayout();
+        headerLayout.setWidthFull();
+        headerLayout.setJustifyContentMode(FlexComponent.JustifyContentMode.BETWEEN);
+        headerLayout.setAlignItems(FlexComponent.Alignment.CENTER);
+
+        H3 title = new H3("Recent Memories");
+        title.addClassName("section-title");
+        title.getStyle().set("color", "white");
+        title.getStyle().set("font-weight", "800");
+        title.getStyle().set("margin", "0");
+
+        Button viewAllButton = new Button("View All", VaadinIcon.ARROW_RIGHT.create());
+        viewAllButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
+        viewAllButton.getStyle().set("color", "#A78BFA");
+        viewAllButton.addClickListener(e -> showVaultView());
+
+        headerLayout.add(title, viewAllButton);
+        section.add(headerLayout);
+
+        // Create preview grid for 3 recent items
+        Div previewGrid = new Div();
+        previewGrid.addClassName("vault-grid-preview");
+
         try {
-            updateItemsList(vaultItemService.findRecent());
+            List<VaultItem> recentItems = vaultItemService.findTop3Recent();
+            if (recentItems.isEmpty()) {
+                Div emptyState = new Div();
+                emptyState.addClassName("empty-state-preview");
+                emptyState.add(new H4("No memories yet..."));
+                emptyState.add(new Paragraph("Start saving URLs, images, and notes above to build your digital vault."));
+                previewGrid.add(emptyState);
+            } else {
+                for (VaultItem item : recentItems) {
+                    previewGrid.add(createVaultItemCard(item));
+                }
+            }
+        } catch (Exception e) {
+            showNeonNotification("Error loading recent items: " + e.getMessage(), false);
+        }
+
+        section.add(previewGrid);
+        return section;
+    }
+
+    private void loadAllItems() {
+        try {
+            updateItemsList(vaultItemService.findAll());
         } catch (Exception e) {
             showNeonNotification("Error loading items: " + e.getMessage(), false);
+        }
+    }
+
+    private void loadRecentItems() {
+        if (currentViewState.equals("home")) {
+            // Refresh the home view
+            showHomeView();
+        } else {
+            // Refresh the vault view
+            try {
+                updateItemsList(vaultItemService.findRecent());
+            } catch (Exception e) {
+                showNeonNotification("Error loading items: " + e.getMessage(), false);
+            }
         }
     }
 

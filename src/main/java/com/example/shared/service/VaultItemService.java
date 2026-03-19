@@ -143,6 +143,10 @@ public class VaultItemService {
         return repository.findTop10ByOrderByCreatedAtDesc();
     }
 
+    public List<VaultItem> findTop3Recent() {
+        return repository.findTop3ByOrderByCreatedAtDesc();
+    }
+
     public Optional<VaultItem> findById(Long id) {
         return repository.findById(id);
     }

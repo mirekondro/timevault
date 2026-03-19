@@ -582,3 +582,90 @@ input, textarea {
   color: rgba(255, 255, 255, 0.6) !important;
 }
 
+/* Navigation Tabs Styling */
+.nav-tabs {
+  margin: 20px 0;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-lg);
+  padding: 8px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.nav-tabs vaadin-tab {
+  background: transparent;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-weight: 600;
+  transition: all 0.3s ease;
+  padding: 12px 24px;
+  margin: 0 4px;
+}
+
+.nav-tabs vaadin-tab[selected] {
+  background: var(--ai-gradient);
+  color: white;
+  box-shadow: 0 4px 12px rgba(167, 139, 250, 0.3);
+}
+
+.nav-tabs vaadin-tab:hover:not([selected]) {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+/* Vault Grid Preview (for home page) */
+.vault-grid-preview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  width: 100%;
+  margin-top: 16px;
+}
+
+/* Empty State Preview */
+.empty-state-preview {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-secondary);
+  background: rgba(255,255,255,0.02);
+  border: 2px dashed rgba(255,255,255,0.1);
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(10px);
+}
+
+.empty-state-preview h4 {
+  color: var(--text-primary);
+  font-size: 18px;
+  margin-bottom: 8px;
+}
+
+.empty-state-preview p {
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin: 0;
+}
+
+/* Vault Search Styling */
+.vault-search {
+  background: rgba(0,0,0,0.2) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--radius-md) !important;
+  margin-bottom: 20px;
+}
+
+.vault-search::part(input-field) {
+  background: transparent !important;
+  color: white !important;
+  border: none !important;
+}
+
+.vault-search::part(input-field) input {
+  color: white !important;
+  background: transparent !important;
+}
+
+.vault-search::part(input-field) input::placeholder {
+  color: var(--text-muted) !important;
+}
+
