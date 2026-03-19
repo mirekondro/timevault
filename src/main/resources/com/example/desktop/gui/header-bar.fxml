@@ -2,24 +2,41 @@
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
-<?import javafx.scene.layout.Region?>
 
-<HBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
-      fx:controller="com.example.desktop.gui.HeaderController"
-      alignment="CENTER_LEFT"
-      maxHeight="60.0"
-      minHeight="60.0"
-      prefHeight="60.0"
-      spacing="14.0"
-      styleClass="app-header">
+<BorderPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.example.desktop.gui.HeaderController"
+            maxHeight="60.0"
+            minHeight="60.0"
+            prefHeight="60.0"
+            styleClass="app-header">
     <padding>
         <Insets top="0.0" right="22.0" bottom="0.0" left="22.0"/>
     </padding>
-    <Label styleClass="header-brand" text="TimeVault"/>
-    <Region HBox.hgrow="ALWAYS"/>
-    <Label fx:id="currentUserLabel" styleClass="header-user" text="No user"/>
-    <Button fx:id="logoutButton" mnemonicParsing="false" onAction="#handleLogout"
-            styleClass="ghost-button compact-button" text="Log Out"/>
-</HBox>
+
+    <left>
+        <Label styleClass="header-brand" text="TimeVault" BorderPane.alignment="CENTER_LEFT"/>
+    </left>
+
+    <center>
+        <HBox alignment="CENTER" spacing="10.0" styleClass="header-controls">
+            <TextField fx:id="searchField" prefWidth="270.0" promptText="Search your vault"
+                       styleClass="search-field header-search-field"/>
+            <ComboBox fx:id="typeFilterComboBox" prefWidth="120.0" styleClass="combo-box header-filter"/>
+            <Button fx:id="reloadButton" mnemonicParsing="false" onAction="#handleReload"
+                    styleClass="ghost-button compact-button" text="Reload"/>
+        </HBox>
+    </center>
+
+    <right>
+        <HBox alignment="CENTER_RIGHT" spacing="12.0" styleClass="header-actions">
+            <Label fx:id="currentUserLabel" styleClass="header-user" text="No user"/>
+            <Button fx:id="logoutButton" mnemonicParsing="false" onAction="#handleLogout"
+                    styleClass="ghost-button compact-button" text="Log Out"/>
+        </HBox>
+    </right>
+</BorderPane>

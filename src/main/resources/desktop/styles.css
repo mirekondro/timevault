@@ -55,10 +55,26 @@
     -fx-font-weight: 800;
 }
 
+.header-controls {
+    -fx-padding: 0 18px;
+}
+
+.header-actions {
+    -fx-min-width: 220px;
+}
+
 .header-user {
     -fx-text-fill: -color-muted;
     -fx-font-size: 13px;
     -fx-font-weight: 600;
+}
+
+.header-search-field {
+    -fx-padding: 9px 14px;
+}
+
+.header-filter {
+    -fx-padding: 6px 10px;
 }
 
 .footer-credit {
