@@ -10,10 +10,10 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 /**
  * Web entry point for the Vaadin version of TimeVault.
  *
- * The repository is organized around one shared backend package used by both frontends:
- * `com.example.shared` contains the data model, repositories, and services.
- * `com.example.web` contains the Vaadin UI.
- * `com.example.desktop` contains the JavaFX UI.
+ * The repository is organized around a shared backend package plus separate UI projects:
+ * `com.example.shared` contains the data model, repositories, and services used by the web app.
+ * `com.example.web` contains the Vaadin UI in this root project.
+ * The JavaFX desktop UI now lives in the separate `desktop-app` module.
  */
 @SpringBootApplication(scanBasePackages = "com.example")
 @EntityScan("com.example.shared.model")

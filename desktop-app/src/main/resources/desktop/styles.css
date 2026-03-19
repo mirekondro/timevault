@@ -599,6 +599,10 @@
 }
 
 .lock-toggle .mark {
+    -fx-background-color: transparent;
+}
+
+.lock-toggle:selected .mark {
     -fx-background-color: white;
 }
 

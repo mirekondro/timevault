@@ -36,18 +36,6 @@
     </dependencyManagement>
 
     <dependencies>
-        <!-- JavaFX desktop -->
-        <dependency>
-            <groupId>org.openjfx</groupId>
-            <artifactId>javafx-controls</artifactId>
-            <version>21.0.4</version>
-        </dependency>
-        <dependency>
-            <groupId>org.openjfx</groupId>
-            <artifactId>javafx-fxml</artifactId>
-            <version>21.0.4</version>
-        </dependency>
-
         <!-- Vaadin -->
         <dependency>
             <groupId>com.vaadin</groupId>
@@ -112,14 +100,6 @@
                         </goals>
                     </execution>
                 </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.openjfx</groupId>
-                <artifactId>javafx-maven-plugin</artifactId>
-                <version>0.0.8</version>
-                <configuration>
-                    <mainClass>com.example.desktop.DesktopApp</mainClass>
-                </configuration>
             </plugin>
         </plugins>
     </build>

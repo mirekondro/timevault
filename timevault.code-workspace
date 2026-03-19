@@ -1,0 +1,31 @@
+{
+    "folders": [
+        {
+            "path": "."
+        },
+        {
+            "path": "desktop-app"
+        }
+    ],
+    "settings": {
+        "java.configuration.updateBuildConfiguration": "automatic"
+    },
+    "launch": {
+        "configurations": [
+            {
+                "type": "java",
+                "name": "Run Web App",
+                "request": "launch",
+                "mainClass": "com.example.Application",
+                "projectName": "timevault"
+            },
+            {
+                "type": "java",
+                "name": "Run Desktop App",
+                "request": "launch",
+                "mainClass": "com.example.desktop.DesktopLauncher",
+                "projectName": "timevault-desktop"
+            }
+        ]
+    }
+}

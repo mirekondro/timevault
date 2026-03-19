@@ -2,48 +2,34 @@
 
 TimeVault currently contains two UI directions in the same repository:
 
-- a Vaadin web app that still uses the Spring/JPA shared backend
-- a desktop-first JavaFX app that now uses a classic layered structure with `dao`, `bll`, `gui`, and an observable `AppModel`
+- the root project is the Vaadin web app plus the shared backend code under `com.example.shared`
+- the desktop JavaFX app now lives in its own `desktop-app/` project
 
-## Desktop Structure
-
-```text
-src/main/java/com/example/desktop/
-|-- DesktopApp.java                  # JavaFX bootstrap
-|-- DesktopLauncher.java             # IDE-friendly launcher
-|-- bll/
-|   `-- VaultManager.java            # Business logic
-|-- dao/
-|   |-- DatabaseConfig.java          # Loads db.properties
-|   |-- ConnectionManager.java       # SQL Server connections
-|   |-- SchemaInitializer.java       # Ensures table exists
-|   |-- VaultItemDAO.java            # DAO contract
-|   `-- SqlVaultItemDAO.java         # SQL Server DAO implementation
-|-- gui/
-|   |-- MainController.java
-|   |-- TopBarController.java
-|   |-- SaveController.java
-|   |-- ArchiveController.java
-|   |-- DetailController.java
-|   |-- VaultItemCell.java
-|   `-- AppContextAware.java
-`-- model/
-    |-- AppModel.java                # Shared observable application state
-    `-- VaultItemFx.java             # Observable item model
-```
-
-## Desktop FXML
+## Desktop Project
 
 ```text
-src/main/resources/com/example/desktop/gui/
-|-- main-view.fxml
-|-- top-bar.fxml
-|-- save-view.fxml
-|-- archive-view.fxml
-`-- detail-view.fxml
+desktop-app/
+|-- pom.xml
+`-- src/
+    `-- main/
+        |-- java/com/example/desktop/
+        `-- resources/
+            |-- application.properties
+            |-- db.example.properties
+            |-- db.properties
+            |-- com/example/desktop/gui/
+            |-- desktop/styles.css
+            `-- i18n/
 ```
 
-Controllers do not talk to each other directly. They only:
+The desktop app still follows the layered structure inside its own module:
+
+- `dao` for SQL Server access and schema setup
+- `bll` for application workflows
+- `gui` for JavaFX controllers
+- `model` for observable UI state
+
+Controllers do not talk to each other directly. They:
 
 - bind to `AppModel`
 - call `VaultManager`
@@ -56,39 +42,43 @@ Controllers do not talk to each other directly. They only:
 3. `DesktopApp` loads `main-view.fxml`
 4. `MainController` injects the shared context into child controllers
 5. `VaultManager` initializes the schema and loads the first data set
-6. All GUI updates then happen through observable properties in `AppModel`
+6. GUI updates happen through observable properties in `AppModel`
 
-## Database Configuration
+## Desktop Configuration
 
-Desktop database settings come from:
+Desktop database settings now live in:
 
-- `src/main/resources/db.properties` for your real local credentials
-- `src/main/resources/db.example.properties` as the safe template
+- `desktop-app/src/main/resources/db.properties` for real local credentials
+- `desktop-app/src/main/resources/db.example.properties` as the safe template
 
-The desktop app uses Microsoft SQL Server through the Microsoft JDBC driver and creates `dbo.vault_items` if it does not already exist. If `db.resetOnStart=true`, the table is recreated on startup.
+Desktop Gemini settings live in:
+
+- `desktop-app/src/main/resources/application.properties`
+
+The desktop app uses Microsoft SQL Server through JDBC and creates `dbo.vault_items` if it does not already exist. If `db.resetOnStart=true`, the desktop tables are dropped, recreated, and reseeded on startup.
 
 ## Run The Desktop App
 
 From Maven:
 
 ```bash
-./mvnw javafx:run
+./mvnw -f desktop-app/pom.xml javafx:run
 ```
 
 From an IDE:
 
+- import/open the `desktop-app` Maven project
 - run `com.example.desktop.DesktopLauncher`
 
 ## Web App
 
-The web app is still present under `src/main/java/com/example/web` and uses the Spring/JPA path from `com.example.shared`. I did not remove it, but the new architectural work in this pass is focused on the desktop app.
+The root project still contains the web app under `src/main/java/com/example/web` and uses the shared Spring/JPA backend from `src/main/java/com/example/shared`.
 
 ## Tech Stack
 
 - Java 21
-- JavaFX 21
-- FXML
+- JavaFX 21 in `desktop-app`
+- Spring Boot 4.0.3 and Vaadin 25.0.7 in the root web app
 - Microsoft SQL Server
-- Java JDBC DAO layer
-- JavaFX observable AppModel
-- Spring Boot 4.0.3 and Vaadin 25.0.7 for the separate web side
+- JDBC for the desktop data path
+- Spring Data JPA for the web data path
