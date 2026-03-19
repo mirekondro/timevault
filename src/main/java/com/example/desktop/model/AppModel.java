@@ -48,7 +48,7 @@ public class AppModel {
             TYPE_ALL, TYPE_URL, TYPE_TEXT, TYPE_IMAGE);
     private final ObservableList<LanguageOption> languageOptions = FXCollections.observableArrayList(
             new LanguageOption("en", Locale.ENGLISH, "language.english", true),
-            new LanguageOption("da", Locale.forLanguageTag("da"), "language.danish", false)
+            new LanguageOption("da", Locale.forLanguageTag("da"), "language.danish", true)
     );
     private final ObservableList<LanguageOption> readOnlyLanguageOptions =
             FXCollections.unmodifiableObservableList(languageOptions);
