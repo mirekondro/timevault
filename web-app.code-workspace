@@ -1,0 +1,21 @@
+{
+    "folders": [
+        {
+            "path": "."
+        }
+    ],
+    "settings": {
+        "java.configuration.updateBuildConfiguration": "automatic"
+    },
+    "launch": {
+        "configurations": [
+            {
+                "type": "java",
+                "name": "Run Web App",
+                "request": "launch",
+                "mainClass": "com.example.Application",
+                "projectName": "timevault-web"
+            }
+        ]
+    }
+}

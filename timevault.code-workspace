@@ -2,9 +2,6 @@
     "folders": [
         {
             "path": "."
-        },
-        {
-            "path": "desktop-app"
         }
     ],
     "settings": {
@@ -17,7 +14,7 @@
                 "name": "Run Web App",
                 "request": "launch",
                 "mainClass": "com.example.Application",
-                "projectName": "timevault"
+                "projectName": "timevault-web"
             },
             {
                 "type": "java",
