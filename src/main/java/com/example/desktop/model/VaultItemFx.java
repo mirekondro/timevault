@@ -18,6 +18,7 @@ public class VaultItemFx {
     private static final DateTimeFormatter DISPLAY_FORMAT = DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm");
 
     private final LongProperty id = new SimpleLongProperty();
+    private final LongProperty ownerId = new SimpleLongProperty();
     private final StringProperty title = new SimpleStringProperty("");
     private final StringProperty content = new SimpleStringProperty("");
     private final StringProperty aiContext = new SimpleStringProperty("");
@@ -37,6 +38,18 @@ public class VaultItemFx {
 
     public LongProperty idProperty() {
         return id;
+    }
+
+    public long getOwnerId() {
+        return ownerId.get();
+    }
+
+    public void setOwnerId(long value) {
+        ownerId.set(value);
+    }
+
+    public LongProperty ownerIdProperty() {
+        return ownerId;
     }
 
     public String getTitle() {

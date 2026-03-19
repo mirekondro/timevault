@@ -24,30 +24,33 @@ public class SqlVaultItemDAO implements VaultItemDAO {
     }
 
     @Override
-    public List<VaultItemFx> findAll() throws SQLException {
+    public List<VaultItemFx> findAllByUserId(long userId) throws SQLException {
         String sql = """
-                SELECT id, title, content, ai_context, item_type, tags, source_url, created_at, updated_at
+                SELECT id, user_id, title, content, ai_context, item_type, tags, source_url, created_at, updated_at
                 FROM dbo.vault_items
+                WHERE user_id = ?
                 ORDER BY created_at DESC, id DESC
                 """;
 
         List<VaultItemFx> items = new ArrayList<>();
         try (Connection connection = connectionManager.getConnection();
-             PreparedStatement statement = connection.prepareStatement(sql);
-             ResultSet resultSet = statement.executeQuery()) {
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setLong(1, userId);
 
-            while (resultSet.next()) {
-                items.add(mapRow(resultSet));
+            try (ResultSet resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    items.add(mapRow(resultSet));
+                }
             }
         }
         return items;
     }
 
     @Override
-    public VaultItemFx insert(VaultItemFx item) throws SQLException {
+    public VaultItemFx insert(long userId, VaultItemFx item) throws SQLException {
         String sql = """
-                INSERT INTO dbo.vault_items (title, content, ai_context, item_type, tags, source_url, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO dbo.vault_items (user_id, title, content, ai_context, item_type, tags, source_url, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """;
 
         LocalDateTime createdAt = item.getCreatedAt() == null ? LocalDateTime.now() : item.getCreatedAt();
@@ -56,14 +59,15 @@ public class SqlVaultItemDAO implements VaultItemDAO {
         try (Connection connection = connectionManager.getConnection();
              PreparedStatement statement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
-            statement.setString(1, item.getTitle());
-            statement.setString(2, item.getContent());
-            statement.setString(3, item.getAiContext());
-            statement.setString(4, item.getItemType());
-            statement.setString(5, item.getTags());
-            statement.setString(6, item.getSourceUrl());
-            statement.setTimestamp(7, Timestamp.valueOf(createdAt));
-            statement.setTimestamp(8, Timestamp.valueOf(updatedAt));
+            statement.setLong(1, userId);
+            statement.setString(2, item.getTitle());
+            statement.setString(3, item.getContent());
+            statement.setString(4, item.getAiContext());
+            statement.setString(5, item.getItemType());
+            statement.setString(6, item.getTags());
+            statement.setString(7, item.getSourceUrl());
+            statement.setTimestamp(8, Timestamp.valueOf(createdAt));
+            statement.setTimestamp(9, Timestamp.valueOf(updatedAt));
             statement.executeUpdate();
 
             try (ResultSet generatedKeys = statement.getGeneratedKeys()) {
@@ -73,24 +77,27 @@ public class SqlVaultItemDAO implements VaultItemDAO {
             }
         }
 
+        item.setOwnerId(userId);
         item.setCreatedAt(createdAt);
         item.setUpdatedAt(updatedAt);
         return item;
     }
 
     @Override
-    public void deleteById(long itemId) throws SQLException {
-        String sql = "DELETE FROM dbo.vault_items WHERE id = ?";
+    public boolean deleteById(long userId, long itemId) throws SQLException {
+        String sql = "DELETE FROM dbo.vault_items WHERE id = ? AND user_id = ?";
         try (Connection connection = connectionManager.getConnection();
              PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setLong(1, itemId);
-            statement.executeUpdate();
+            statement.setLong(2, userId);
+            return statement.executeUpdate() > 0;
         }
     }
 
     private VaultItemFx mapRow(ResultSet resultSet) throws SQLException {
         VaultItemFx item = new VaultItemFx();
         item.setId(resultSet.getLong("id"));
+        item.setOwnerId(resultSet.getLong("user_id"));
         item.setTitle(resultSet.getString("title"));
         item.setContent(resultSet.getString("content"));
         item.setAiContext(resultSet.getString("ai_context"));

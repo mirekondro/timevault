@@ -1,6 +1,18 @@
 package com.example.shared.model;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.ForeignKey;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Index;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 
 /**
@@ -9,35 +21,43 @@ import java.time.LocalDateTime;
  * Represents a saved item in the TimeVault (URL, Image, or Text)
  */
 @Entity
-@Table(name = "vault_items")
+@Table(name = "vault_items", indexes = {
+        @Index(name = "idx_vault_items_created_at", columnList = "created_at"),
+        @Index(name = "idx_vault_items_user_created_at", columnList = "user_id, created_at")
+})
 public class VaultItem {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
     private Long id;
 
-    @Column(nullable = false, length = 500)
+    @ManyToOne(fetch = FetchType.EAGER, optional = false)
+    @JoinColumn(name = "user_id", nullable = false, foreignKey = @ForeignKey(name = "fk_vault_items_user"))
+    private VaultUser owner;
+
+    @Column(name = "title", nullable = false, length = 500)
     private String title;
 
-    @Column(columnDefinition = "NVARCHAR(MAX)")
+    @Column(name = "content", columnDefinition = "NVARCHAR(MAX)")
     private String content;
 
-    @Column(columnDefinition = "NVARCHAR(MAX)")
+    @Column(name = "ai_context", columnDefinition = "NVARCHAR(MAX)")
     private String aiContext;
 
-    @Column(length = 50)
+    @Column(name = "item_type", length = 50)
     private String itemType; // URL, IMAGE, TEXT
 
-    @Column(length = 500)
+    @Column(name = "tags", length = 500)
     private String tags;
 
-    @Column(length = 1000)
+    @Column(name = "source_url", length = 1000)
     private String sourceUrl;
 
-    @Column
+    @Column(name = "created_at")
     private LocalDateTime createdAt;
 
-    @Column
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
     @PrePersist
@@ -63,6 +83,9 @@ public class VaultItem {
     // Getters and Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
+
+    public VaultUser getOwner() { return owner; }
+    public void setOwner(VaultUser owner) { this.owner = owner; }
 
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
@@ -92,6 +115,7 @@ public class VaultItem {
     public String toString() {
         return "VaultItem{" +
                 "id=" + id +
+                ", ownerId=" + (owner == null ? null : owner.getId()) +
                 ", title='" + title + '\'' +
                 ", itemType='" + itemType + '\'' +
                 ", createdAt=" + createdAt +

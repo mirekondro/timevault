@@ -17,25 +17,43 @@ import java.util.List;
 public interface VaultItemRepository extends JpaRepository<VaultItem, Long> {
 
     // Find by item type (URL, IMAGE, TEXT)
-    List<VaultItem> findByItemType(String itemType);
+    List<VaultItem> findByOwnerIdAndItemTypeOrderByCreatedAtDesc(Long userId, String itemType);
 
     // Find recent items ordered by creation date
-    List<VaultItem> findTop10ByOrderByCreatedAtDesc();
+    List<VaultItem> findTop10ByOwnerIdOrderByCreatedAtDesc(Long userId);
 
     // Find all ordered by creation date
-    List<VaultItem> findAllByOrderByCreatedAtDesc();
+    List<VaultItem> findAllByOwnerIdOrderByCreatedAtDesc(Long userId);
 
     // Search by title (case-insensitive)
-    List<VaultItem> findByTitleContainingIgnoreCase(String keyword);
+    List<VaultItem> findByOwnerIdAndTitleContainingIgnoreCaseOrderByCreatedAtDesc(Long userId, String keyword);
 
     // Search by title or content
-    @Query("SELECT v FROM VaultItem v WHERE LOWER(v.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(v.content) LIKE LOWER(CONCAT('%', :keyword, '%'))")
-    List<VaultItem> searchByKeyword(@Param("keyword") String keyword);
+    @Query("""
+            SELECT v
+            FROM VaultItem v
+            WHERE v.owner.id = :userId
+              AND (
+                  LOWER(v.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                  OR LOWER(COALESCE(v.content, '')) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                  OR LOWER(COALESCE(v.aiContext, '')) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                  OR LOWER(COALESCE(v.tags, '')) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                  OR LOWER(COALESCE(v.sourceUrl, '')) LIKE LOWER(CONCAT('%', :keyword, '%'))
+              )
+            ORDER BY v.createdAt DESC
+            """)
+    List<VaultItem> searchByUserAndKeyword(@Param("userId") Long userId, @Param("keyword") String keyword);
 
     // Find by tags containing
-    List<VaultItem> findByTagsContainingIgnoreCase(String tag);
+    List<VaultItem> findByOwnerIdAndTagsContainingIgnoreCaseOrderByCreatedAtDesc(Long userId, String tag);
 
     // Count by item type
-    long countByItemType(String itemType);
+    long countByOwnerIdAndItemType(Long userId, String itemType);
+
+    long countByOwnerId(Long userId);
+
+    java.util.Optional<VaultItem> findByIdAndOwnerId(Long id, Long userId);
+
+    long deleteByIdAndOwnerId(Long id, Long userId);
 }
 

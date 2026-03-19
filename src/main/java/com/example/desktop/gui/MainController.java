@@ -16,6 +16,9 @@ public class MainController {
     private TopBarController topBarViewController;
 
     @FXML
+    private AuthController authViewController;
+
+    @FXML
     private SaveController saveViewController;
 
     @FXML
@@ -31,6 +34,7 @@ public class MainController {
         statusLabel.textProperty().bind(appModel.statusMessageProperty());
 
         initializeChild(topBarViewController, appModel, vaultManager, hostServices, stage);
+        initializeChild(authViewController, appModel, vaultManager, hostServices, stage);
         initializeChild(saveViewController, appModel, vaultManager, hostServices, stage);
         initializeChild(archiveViewController, appModel, vaultManager, hostServices, stage);
         initializeChild(detailViewController, appModel, vaultManager, hostServices, stage);

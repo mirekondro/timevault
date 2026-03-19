@@ -58,6 +58,7 @@ public class DetailController implements AppContextAware {
         }, appModel.selectedItemProperty()));
 
         appModel.selectedItemProperty().addListener((obs, oldItem, newItem) -> updateDetails(newItem));
+        appModel.currentUserProperty().addListener((obs, oldUser, newUser) -> updateDetails(appModel.getSelectedItem()));
         updateDetails(appModel.getSelectedItem());
     }
 
@@ -79,7 +80,7 @@ public class DetailController implements AppContextAware {
 
         if (item == null) {
             detailTitleLabel.setText("Select an item");
-            detailMetaLabel.setText("Search or save an item to see its details.");
+            detailMetaLabel.setText(vaultManager.getEmptyDetailMessage(appModel));
             sourceLink.setText("");
             sourceLink.setVisible(false);
             sourceLink.setManaged(false);
@@ -90,7 +91,7 @@ public class DetailController implements AppContextAware {
         }
 
         detailTitleLabel.setText(item.getTitle().isBlank() ? "Untitled item" : item.getTitle());
-        detailMetaLabel.setText(item.getItemType() + " | " + item.getFormattedCreatedAt());
+        detailMetaLabel.setText(item.getItemType() + " | Account #" + item.getOwnerId() + " | " + item.getFormattedCreatedAt());
         sourceLink.setText(item.getSourceUrl());
         sourceLink.setVisible(item.getSourceUrl() != null && !item.getSourceUrl().isBlank());
         sourceLink.setManaged(sourceLink.isVisible());

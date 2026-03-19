@@ -31,8 +31,9 @@ public class ArchiveController implements AppContextAware {
         itemsListView.setCellFactory(listView -> new VaultItemCell());
 
         visibleCountLabel.textProperty().bind(Bindings.createStringBinding(
-                () -> appModel.getFilteredItems().size() + " visible item(s)",
-                appModel.getFilteredItems()));
+                () -> vaultManager.getArchiveSummary(appModel),
+                appModel.getFilteredItems(),
+                appModel.authenticatedProperty()));
 
         itemsListView.getSelectionModel().selectedItemProperty().addListener((obs, oldItem, newItem) -> {
             if (newItem != appModel.getSelectedItem()) {

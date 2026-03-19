@@ -10,9 +10,9 @@ import java.util.List;
  */
 public interface VaultItemDAO {
 
-    List<VaultItemFx> findAll() throws SQLException;
+    List<VaultItemFx> findAllByUserId(long userId) throws SQLException;
 
-    VaultItemFx insert(VaultItemFx item) throws SQLException;
+    VaultItemFx insert(long userId, VaultItemFx item) throws SQLException;
 
-    void deleteById(long itemId) throws SQLException;
+    boolean deleteById(long userId, long itemId) throws SQLException;
 }

@@ -1,5 +1,6 @@
 package com.example.desktop.model;
 
+import com.example.shared.model.UserSession;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
@@ -27,15 +28,23 @@ public class AppModel {
     private final FilteredList<VaultItemFx> filteredItems = new FilteredList<>(allItems);
 
     private final ObjectProperty<VaultItemFx> selectedItem = new SimpleObjectProperty<>();
+    private final ObjectProperty<UserSession> currentUser = new SimpleObjectProperty<>();
     private final StringProperty searchText = new SimpleStringProperty("");
     private final StringProperty selectedType = new SimpleStringProperty("ALL");
-    private final StringProperty statusMessage = new SimpleStringProperty("Ready");
+    private final StringProperty statusMessage = new SimpleStringProperty("Register or log in to open your vault.");
     private final BooleanProperty busy = new SimpleBooleanProperty(false);
+    private final BooleanProperty authenticated = new SimpleBooleanProperty(false);
 
     private final IntegerProperty totalCount = new SimpleIntegerProperty();
     private final IntegerProperty urlCount = new SimpleIntegerProperty();
     private final IntegerProperty textCount = new SimpleIntegerProperty();
     private final IntegerProperty imageCount = new SimpleIntegerProperty();
+
+    private final StringProperty loginEmailInput = new SimpleStringProperty("");
+    private final StringProperty loginPasswordInput = new SimpleStringProperty("");
+    private final StringProperty registerEmailInput = new SimpleStringProperty("");
+    private final StringProperty registerPasswordInput = new SimpleStringProperty("");
+    private final StringProperty registerConfirmPasswordInput = new SimpleStringProperty("");
 
     private final StringProperty urlInput = new SimpleStringProperty("");
     private final StringProperty urlTitleInput = new SimpleStringProperty("");
@@ -49,6 +58,7 @@ public class AppModel {
         searchText.addListener((obs, oldValue, newValue) -> updateFilter());
         selectedType.addListener((obs, oldValue, newValue) -> updateFilter());
         allItems.addListener((ListChangeListener<VaultItemFx>) change -> updateCounts());
+        currentUser.addListener((obs, oldUser, newUser) -> authenticated.set(newUser != null));
 
         updateFilter();
         updateCounts();
@@ -96,6 +106,18 @@ public class AppModel {
         selectedItem.set(item);
     }
 
+    public ObjectProperty<UserSession> currentUserProperty() {
+        return currentUser;
+    }
+
+    public UserSession getCurrentUser() {
+        return currentUser.get();
+    }
+
+    public void setCurrentUser(UserSession user) {
+        currentUser.set(user);
+    }
+
     public StringProperty searchTextProperty() {
         return searchText;
     }
@@ -120,6 +142,14 @@ public class AppModel {
         busy.set(value);
     }
 
+    public BooleanProperty authenticatedProperty() {
+        return authenticated;
+    }
+
+    public boolean isAuthenticated() {
+        return authenticated.get();
+    }
+
     public IntegerProperty totalCountProperty() {
         return totalCount;
     }
@@ -138,6 +168,26 @@ public class AppModel {
 
     public StringProperty urlInputProperty() {
         return urlInput;
+    }
+
+    public StringProperty loginEmailInputProperty() {
+        return loginEmailInput;
+    }
+
+    public StringProperty loginPasswordInputProperty() {
+        return loginPasswordInput;
+    }
+
+    public StringProperty registerEmailInputProperty() {
+        return registerEmailInput;
+    }
+
+    public StringProperty registerPasswordInputProperty() {
+        return registerPasswordInput;
+    }
+
+    public StringProperty registerConfirmPasswordInputProperty() {
+        return registerConfirmPasswordInput;
     }
 
     public StringProperty urlTitleInputProperty() {
@@ -164,6 +214,17 @@ public class AppModel {
         return imagePathInput;
     }
 
+    public void clearLoginForm() {
+        loginEmailInput.set("");
+        loginPasswordInput.set("");
+    }
+
+    public void clearRegisterForm() {
+        registerEmailInput.set("");
+        registerPasswordInput.set("");
+        registerConfirmPasswordInput.set("");
+    }
+
     public void clearUrlForm() {
         urlInput.set("");
         urlTitleInput.set("");
@@ -178,6 +239,13 @@ public class AppModel {
     public void clearImageForm() {
         imageTitleInput.set("");
         imagePathInput.set("");
+    }
+
+    public void clearVault() {
+        allItems.clear();
+        selectedItem.set(null);
+        updateCounts();
+        updateFilter();
     }
 
     private void updateFilter() {

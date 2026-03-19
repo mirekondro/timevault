@@ -3,8 +3,11 @@ package com.example.desktop.gui;
 import com.example.desktop.bll.VaultManager;
 import com.example.desktop.model.AppModel;
 import javafx.application.HostServices;
+import javafx.beans.binding.Bindings;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.TabPane;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.stage.FileChooser;
@@ -16,6 +19,12 @@ import java.io.File;
  * Controller for the save tabs.
  */
 public class SaveController implements AppContextAware {
+
+    @FXML
+    private Label authHintLabel;
+
+    @FXML
+    private TabPane saveTabPane;
 
     @FXML
     private TextField urlField;
@@ -67,9 +76,18 @@ public class SaveController implements AppContextAware {
         imageTitleField.textProperty().bindBidirectional(appModel.imageTitleInputProperty());
         imagePathField.textProperty().bindBidirectional(appModel.imagePathInputProperty());
 
-        saveUrlButton.disableProperty().bind(appModel.busyProperty());
-        saveTextButton.disableProperty().bind(appModel.busyProperty());
-        saveImageButton.disableProperty().bind(appModel.busyProperty());
+        authHintLabel.visibleProperty().bind(appModel.authenticatedProperty().not());
+        authHintLabel.managedProperty().bind(authHintLabel.visibleProperty());
+        authHintLabel.textProperty().bind(Bindings.createStringBinding(
+                () -> appModel.isAuthenticated()
+                        ? ""
+                        : "Log in to save URLs, notes, and images into your own account.",
+                appModel.authenticatedProperty()));
+
+        saveTabPane.disableProperty().bind(appModel.busyProperty().or(appModel.authenticatedProperty().not()));
+        saveUrlButton.disableProperty().bind(appModel.busyProperty().or(appModel.authenticatedProperty().not()));
+        saveTextButton.disableProperty().bind(appModel.busyProperty().or(appModel.authenticatedProperty().not()));
+        saveImageButton.disableProperty().bind(appModel.busyProperty().or(appModel.authenticatedProperty().not()));
     }
 
     @FXML

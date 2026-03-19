@@ -1,7 +1,9 @@
 package com.example.shared.service;
 
 import com.example.shared.model.VaultItem;
+import com.example.shared.model.VaultUser;
 import com.example.shared.repository.VaultItemRepository;
+import com.example.shared.repository.VaultUserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,37 +21,43 @@ import java.util.Optional;
 public class VaultItemService {
 
     private final VaultItemRepository repository;
+    private final VaultUserRepository userRepository;
 
     @Autowired
-    public VaultItemService(VaultItemRepository repository) {
+    public VaultItemService(VaultItemRepository repository, VaultUserRepository userRepository) {
         this.repository = repository;
+        this.userRepository = userRepository;
     }
 
     // ============================================
     // SAVE OPERATIONS
     // ============================================
 
-    public VaultItem save(VaultItem item) {
+    public VaultItem save(long userId, VaultItem item) {
+        item.setOwner(requireUser(userId));
         return repository.save(item);
     }
 
-    public VaultItem saveUrl(String url, String title, String content, String aiContext) {
+    public VaultItem saveUrl(long userId, String url, String title, String content, String aiContext) {
         VaultItem item = new VaultItem(title, content, "URL");
+        item.setOwner(requireUser(userId));
         item.setSourceUrl(url);
         item.setAiContext(aiContext);
         item.setTags(generateTags("URL", url));
         return repository.save(item);
     }
 
-    public VaultItem saveText(String title, String content, String aiContext) {
+    public VaultItem saveText(long userId, String title, String content, String aiContext) {
         VaultItem item = new VaultItem(title, content, "TEXT");
+        item.setOwner(requireUser(userId));
         item.setAiContext(aiContext);
         item.setTags(generateTags("TEXT", content));
         return repository.save(item);
     }
 
-    public VaultItem saveImage(String title, String imagePath, String aiContext) {
+    public VaultItem saveImage(long userId, String title, String imagePath, String aiContext) {
         VaultItem item = new VaultItem(title, imagePath, "IMAGE");
+        item.setOwner(requireUser(userId));
         item.setAiContext(aiContext);
         item.setTags(generateTags("IMAGE", title));
         return repository.save(item);
@@ -59,48 +67,51 @@ public class VaultItemService {
     // READ OPERATIONS
     // ============================================
 
-    public List<VaultItem> findAll() {
-        return repository.findAllByOrderByCreatedAtDesc();
+    public List<VaultItem> findAll(long userId) {
+        return repository.findAllByOwnerIdOrderByCreatedAtDesc(userId);
     }
 
-    public List<VaultItem> findRecent() {
-        return repository.findTop10ByOrderByCreatedAtDesc();
+    public List<VaultItem> findRecent(long userId) {
+        return repository.findTop10ByOwnerIdOrderByCreatedAtDesc(userId);
     }
 
-    public Optional<VaultItem> findById(Long id) {
-        return repository.findById(id);
+    public Optional<VaultItem> findById(long userId, Long id) {
+        return repository.findByIdAndOwnerId(id, userId);
     }
 
-    public List<VaultItem> findByType(String itemType) {
-        return repository.findByItemType(itemType);
+    public List<VaultItem> findByType(long userId, String itemType) {
+        return repository.findByOwnerIdAndItemTypeOrderByCreatedAtDesc(userId, itemType);
     }
 
-    public List<VaultItem> search(String keyword) {
-        return repository.searchByKeyword(keyword);
+    public List<VaultItem> search(long userId, String keyword) {
+        return repository.searchByUserAndKeyword(userId, keyword);
     }
 
     // ============================================
     // DELETE OPERATIONS
     // ============================================
 
-    public void delete(Long id) {
-        repository.deleteById(id);
+    public boolean delete(long userId, Long id) {
+        return repository.deleteByIdAndOwnerId(id, userId) > 0;
     }
 
-    public void deleteAll() {
-        repository.deleteAll();
+    public void deleteAll(long userId) {
+        repository.findAllByOwnerIdOrderByCreatedAtDesc(userId)
+                .stream()
+                .map(VaultItem::getId)
+                .forEach(itemId -> repository.deleteByIdAndOwnerId(itemId, userId));
     }
 
     // ============================================
     // COUNT OPERATIONS
     // ============================================
 
-    public long countByType(String itemType) {
-        return repository.countByItemType(itemType);
+    public long countByType(long userId, String itemType) {
+        return repository.countByOwnerIdAndItemType(userId, itemType);
     }
 
-    public long countAll() {
-        return repository.count();
+    public long countAll(long userId) {
+        return repository.countByOwnerId(userId);
     }
 
     // ============================================
@@ -124,6 +135,11 @@ public class VaultItemService {
         }
 
         return tags.toString();
+    }
+
+    private VaultUser requireUser(long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("No user exists with id " + userId + "."));
     }
 }
 

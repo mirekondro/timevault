@@ -9,13 +9,14 @@
 
 <BorderPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.example.desktop.gui.MainController"
-            prefHeight="920.0" prefWidth="1380.0" styleClass="app-root">
+            prefHeight="820.0" prefWidth="1200.0" styleClass="app-root">
     <padding>
         <Insets top="22.0" right="22.0" bottom="22.0" left="22.0"/>
     </padding>
     <top>
         <VBox spacing="18.0">
             <fx:include fx:id="topBarView" source="top-bar.fxml"/>
+            <fx:include fx:id="authView" source="auth-view.fxml"/>
             <fx:include fx:id="saveView" source="save-view.fxml"/>
         </VBox>
     </top>

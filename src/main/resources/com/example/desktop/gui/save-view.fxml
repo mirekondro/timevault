@@ -19,8 +19,11 @@
     </padding>
     <Label styleClass="section-title" text="Capture Into The Vault"/>
     <Label styleClass="muted-copy" text="Each save action goes through the business layer and updates the shared AppModel." wrapText="true"/>
+    <Label fx:id="authHintLabel" styleClass="muted-copy"
+           text="Log in to save URLs, notes, and images into your own account."
+           wrapText="true"/>
 
-    <TabPane tabClosingPolicy="UNAVAILABLE">
+    <TabPane fx:id="saveTabPane" tabClosingPolicy="UNAVAILABLE">
         <tabs>
             <Tab text="URL">
                 <content>

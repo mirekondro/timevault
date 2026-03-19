@@ -86,6 +86,35 @@ body {
     margin: 0 auto;
 }
 
+.auth-section {
+    padding: 24px;
+    margin: 0 auto;
+}
+
+.auth-card {
+    background: var(--tv-surface);
+    border: 1px solid var(--tv-border);
+    border-radius: 12px;
+    box-shadow: 0 4px 6px var(--tv-shadow);
+    overflow: hidden;
+}
+
+.auth-panel {
+    padding: 24px;
+}
+
+.auth-summary {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--tv-text);
+}
+
+.auth-meta {
+    margin: 0;
+    color: var(--tv-text-secondary);
+    line-height: 1.6;
+}
+
 .input-tabs {
     background: var(--tv-surface);
     border-radius: 12px 12px 0 0;
@@ -265,6 +294,10 @@ body {
     }
 
     .input-panel {
+        padding: 20px;
+    }
+
+    .auth-panel {
         padding: 20px;
     }
 
