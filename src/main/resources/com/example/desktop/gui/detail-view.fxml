@@ -5,46 +5,56 @@
 <?import javafx.scene.control.Hyperlink?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.PasswordField?>
+<?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.Separator?>
 <?import javafx.scene.control.TextArea?>
+<?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.FlowPane?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
-<?import javafx.scene.image.ImageView?>
 
 <VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.example.desktop.gui.DetailController"
+      minHeight="0.0"
+      minWidth="320.0"
       spacing="14.0" styleClass="vault-card">
     <padding>
         <Insets top="18.0" right="18.0" bottom="18.0" left="18.0"/>
     </padding>
     <Label fx:id="detailTitleLabel" styleClass="detail-title"/>
     <Label fx:id="detailMetaLabel" styleClass="muted-copy" wrapText="true"/>
-    <VBox fx:id="trashBox" spacing="10.0" styleClass="locked-detail-box" visible="false" managed="false">
-        <Label fx:id="trashTitleLabel" styleClass="section-title"/>
-        <Label fx:id="trashCopyLabel" styleClass="muted-copy" wrapText="true"/>
-    </VBox>
-    <VBox fx:id="unlockBox" spacing="10.0" styleClass="locked-detail-box" visible="false" managed="false">
-        <Label fx:id="unlockTitleLabel" styleClass="section-title"/>
-        <Label fx:id="unlockCopyLabel" styleClass="muted-copy" wrapText="true"/>
-        <PasswordField fx:id="unlockPasswordField" styleClass="password-field"/>
-        <Button fx:id="unlockButton" mnemonicParsing="false" onAction="#handleUnlock" styleClass="accent-button"/>
-    </VBox>
-    <VBox fx:id="detailContentBox" spacing="14.0">
-        <Hyperlink fx:id="sourceLink" onAction="#handleOpenSource" text="" visible="false" managed="false"/>
-        <VBox fx:id="imageBox" spacing="8.0" visible="false" managed="false">
-            <Label fx:id="imageSectionLabel" styleClass="section-title"/>
-            <StackPane styleClass="image-preview-shell">
-                <ImageView fx:id="detailImageView" fitWidth="340.0" fitHeight="240.0" preserveRatio="true"/>
-            </StackPane>
-            <Label fx:id="imageMetaLabel" styleClass="muted-copy" wrapText="true"/>
-        </VBox>
-        <Separator/>
-        <Label fx:id="contextSectionLabel" styleClass="section-title"/>
-        <TextArea fx:id="contextArea" editable="false" prefRowCount="5" styleClass="context-box" wrapText="true"/>
-        <Label fx:id="tagsSectionLabel" styleClass="section-title"/>
-        <FlowPane fx:id="tagsPane" hgap="8.0" vgap="8.0"/>
-        <Label fx:id="contentSectionLabel" styleClass="section-title"/>
-        <TextArea fx:id="contentArea" editable="false" prefRowCount="10" styleClass="readonly-area" wrapText="true"/>
-    </VBox>
+    <ScrollPane fitToHeight="true" fitToWidth="true" hbarPolicy="NEVER" styleClass="page-scroll" vbarPolicy="AS_NEEDED"
+                VBox.vgrow="ALWAYS">
+        <content>
+            <VBox spacing="14.0">
+                <VBox fx:id="trashBox" spacing="10.0" styleClass="locked-detail-box" visible="false" managed="false">
+                    <Label fx:id="trashTitleLabel" styleClass="section-title"/>
+                    <Label fx:id="trashCopyLabel" styleClass="muted-copy" wrapText="true"/>
+                </VBox>
+                <VBox fx:id="unlockBox" spacing="10.0" styleClass="locked-detail-box" visible="false" managed="false">
+                    <Label fx:id="unlockTitleLabel" styleClass="section-title"/>
+                    <Label fx:id="unlockCopyLabel" styleClass="muted-copy" wrapText="true"/>
+                    <PasswordField fx:id="unlockPasswordField" styleClass="password-field"/>
+                    <Button fx:id="unlockButton" mnemonicParsing="false" onAction="#handleUnlock" styleClass="accent-button"/>
+                </VBox>
+                <VBox fx:id="detailContentBox" spacing="14.0">
+                    <Hyperlink fx:id="sourceLink" onAction="#handleOpenSource" text="" visible="false" managed="false"/>
+                    <VBox fx:id="imageBox" spacing="8.0" visible="false" managed="false">
+                        <Label fx:id="imageSectionLabel" styleClass="section-title"/>
+                        <StackPane styleClass="image-preview-shell">
+                            <ImageView fx:id="detailImageView" fitWidth="320.0" fitHeight="220.0" preserveRatio="true"/>
+                        </StackPane>
+                        <Label fx:id="imageMetaLabel" styleClass="muted-copy" wrapText="true"/>
+                    </VBox>
+                    <Separator/>
+                    <Label fx:id="contextSectionLabel" styleClass="section-title"/>
+                    <TextArea fx:id="contextArea" editable="false" prefRowCount="4" styleClass="context-box" wrapText="true"/>
+                    <Label fx:id="tagsSectionLabel" styleClass="section-title"/>
+                    <FlowPane fx:id="tagsPane" hgap="8.0" vgap="8.0"/>
+                    <Label fx:id="contentSectionLabel" styleClass="section-title"/>
+                    <TextArea fx:id="contentArea" editable="false" prefRowCount="8" styleClass="readonly-area" wrapText="true"/>
+                </VBox>
+            </VBox>
+        </content>
+    </ScrollPane>
 </VBox>

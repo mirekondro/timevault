@@ -2,10 +2,10 @@
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Label?>
-<?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.SplitPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
@@ -17,32 +17,29 @@
             <fx:include fx:id="headerView" source="header-bar.fxml"/>
         </top>
         <center>
-            <ScrollPane fitToWidth="true" hbarPolicy="NEVER" styleClass="page-scroll">
-                <content>
-                    <VBox spacing="18.0" styleClass="content-shell">
-                        <padding>
-                            <Insets top="22.0" right="22.0" bottom="22.0" left="22.0"/>
-                        </padding>
-                        <fx:include fx:id="topBarView" source="top-bar.fxml"/>
-                        <HBox prefHeight="560.0" spacing="18.0" styleClass="workspace-shell" VBox.vgrow="ALWAYS">
-                            <fx:include fx:id="typeSidebarView" source="type-sidebar.fxml"/>
-                            <SplitPane dividerPositions="0.52" styleClass="content-split" HBox.hgrow="ALWAYS">
-                                <items>
-                                    <fx:include fx:id="archiveView" source="archive-view.fxml"/>
-                                    <fx:include fx:id="detailView" source="detail-view.fxml"/>
-                                </items>
-                            </SplitPane>
-                        </HBox>
-                    </VBox>
-                </content>
-            </ScrollPane>
+            <VBox fillWidth="true" spacing="16.0" styleClass="content-shell">
+                <padding>
+                    <Insets top="18.0" right="18.0" bottom="18.0" left="18.0"/>
+                </padding>
+                <fx:include fx:id="topBarView" source="top-bar.fxml"/>
+                <HBox minHeight="0.0" spacing="18.0" styleClass="workspace-shell" VBox.vgrow="ALWAYS">
+                    <fx:include fx:id="typeSidebarView" source="type-sidebar.fxml"/>
+                    <SplitPane dividerPositions="0.52" minHeight="0.0" styleClass="content-split" HBox.hgrow="ALWAYS">
+                        <items>
+                            <fx:include fx:id="archiveView" source="archive-view.fxml"/>
+                            <fx:include fx:id="detailView" source="detail-view.fxml"/>
+                        </items>
+                    </SplitPane>
+                </HBox>
+            </VBox>
         </center>
         <bottom>
-            <HBox alignment="CENTER" maxHeight="60.0" minHeight="60.0" prefHeight="60.0"
+            <HBox alignment="CENTER_RIGHT" maxHeight="60.0" minHeight="60.0" prefHeight="60.0"
                   spacing="12.0" styleClass="app-footer">
                 <padding>
                     <Insets top="0.0" right="22.0" bottom="0.0" left="22.0"/>
                 </padding>
+                <Region HBox.hgrow="ALWAYS"/>
                 <Label fx:id="footerCreditLabel" styleClass="footer-credit"/>
             </HBox>
         </bottom>

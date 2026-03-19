@@ -49,7 +49,7 @@ public class DesktopApp extends Application {
         double authMinHeight = Math.min(680, visualBounds.getHeight());
         double mainWidth = Math.min(1380, Math.max(1100, visualBounds.getWidth() - 40));
         double mainHeight = Math.min(920, Math.max(760, visualBounds.getHeight() - 40));
-        double mainMinWidth = Math.min(980, visualBounds.getWidth());
+        double mainMinWidth = Math.min(900, visualBounds.getWidth());
         double mainMinHeight = Math.min(720, visualBounds.getHeight());
 
         vaultManager.initialize(appModel);

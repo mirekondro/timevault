@@ -2,26 +2,32 @@
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.ToggleButton?>
-<?import javafx.scene.layout.Priority?>
 <?import javafx.scene.layout.VBox?>
 
 <VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.example.desktop.gui.TypeSidebarController"
-      maxWidth="118.0"
-      minWidth="118.0"
-      prefWidth="118.0"
-      spacing="14.0"
+      maxWidth="110.0"
+      minHeight="0.0"
+      minWidth="110.0"
+      prefWidth="110.0"
+      spacing="12.0"
       styleClass="type-sidebar-card">
     <padding>
-        <Insets top="18.0" right="16.0" bottom="18.0" left="16.0"/>
+        <Insets top="16.0" right="14.0" bottom="16.0" left="14.0"/>
     </padding>
     <Label fx:id="sidebarTitleLabel" styleClass="eyebrow"/>
-    <VBox spacing="10.0" VBox.vgrow="ALWAYS">
-        <ToggleButton fx:id="allTypeButton" maxWidth="1.7976931348623157E308" styleClass="type-nav-button"/>
-        <ToggleButton fx:id="urlTypeButton" maxWidth="1.7976931348623157E308" styleClass="type-nav-button"/>
-        <ToggleButton fx:id="textTypeButton" maxWidth="1.7976931348623157E308" styleClass="type-nav-button"/>
-        <ToggleButton fx:id="imageTypeButton" maxWidth="1.7976931348623157E308" styleClass="type-nav-button"/>
-        <ToggleButton fx:id="trashTypeButton" maxWidth="1.7976931348623157E308" styleClass="type-nav-button"/>
-    </VBox>
+    <ScrollPane fitToHeight="true" fitToWidth="true" hbarPolicy="NEVER" styleClass="page-scroll" vbarPolicy="AS_NEEDED"
+                VBox.vgrow="ALWAYS">
+        <content>
+            <VBox fillWidth="true" spacing="10.0">
+                <ToggleButton fx:id="allTypeButton" maxWidth="1.7976931348623157E308" styleClass="type-nav-button"/>
+                <ToggleButton fx:id="urlTypeButton" maxWidth="1.7976931348623157E308" styleClass="type-nav-button"/>
+                <ToggleButton fx:id="textTypeButton" maxWidth="1.7976931348623157E308" styleClass="type-nav-button"/>
+                <ToggleButton fx:id="imageTypeButton" maxWidth="1.7976931348623157E308" styleClass="type-nav-button"/>
+                <ToggleButton fx:id="trashTypeButton" maxWidth="1.7976931348623157E308" styleClass="type-nav-button"/>
+            </VBox>
+        </content>
+    </ScrollPane>
 </VBox>

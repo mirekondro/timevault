@@ -356,12 +356,12 @@
 }
 
 .stats-scroll {
-    -fx-padding: 0 0 6px 0;
+    -fx-padding: 0 0 2px 0;
 }
 
 .stats-row {
     -fx-alignment: center-left;
-    -fx-padding: 0 2px 10px 0;
+    -fx-padding: 0 0 4px 0;
 }
 
 .workspace-shell {
@@ -369,7 +369,7 @@
 }
 
 .type-sidebar-card {
-    -fx-min-height: 560px;
+    -fx-min-height: 0;
 }
 
 .type-nav-button {
@@ -631,13 +631,13 @@
 
 .stat-value {
     -fx-text-fill: white;
-    -fx-font-size: 28px;
+    -fx-font-size: 22px;
     -fx-font-weight: 800;
 }
 
 .card-copy {
     -fx-text-fill: #e4ecf5;
-    -fx-font-size: 13px;
+    -fx-font-size: 11px;
 }
 
 .context-box {
