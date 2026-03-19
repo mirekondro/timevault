@@ -1,0 +1,257 @@
+.root,
+.app-root {
+    -color-bg: #0f0f0f;
+    -color-surface: #1a1a1a;
+    -color-surface-alt: #232326;
+    -color-accent: #6c63ff;
+    -color-accent-soft: #8f88ff;
+    -color-text: #f5f5f7;
+    -color-muted: #a7a7b3;
+    -color-border: rgba(255, 255, 255, 0.08);
+    -fx-background-color: linear-gradient(to bottom right, #101012, #15151a 38%, #111116 100%);
+    -fx-font-family: "Inter", "Segoe UI", "Arial", sans-serif;
+    -fx-text-fill: -color-text;
+}
+
+.sidebar {
+    -fx-background-color: linear-gradient(to bottom, #15151a, #0f1015);
+    -fx-border-color: transparent rgba(255, 255, 255, 0.05) transparent transparent;
+    -fx-border-width: 0 1 0 0;
+}
+
+.sidebar-title {
+    -fx-text-fill: white;
+    -fx-font-size: 30px;
+    -fx-font-weight: 800;
+}
+
+.sidebar-subtitle {
+    -fx-text-fill: -color-muted;
+    -fx-font-size: 13px;
+}
+
+.top-bar,
+.status-bar {
+    -fx-background-color: transparent;
+}
+
+.section-title {
+    -fx-text-fill: white;
+    -fx-font-size: 22px;
+    -fx-font-weight: 700;
+}
+
+.hero-title {
+    -fx-text-fill: white;
+    -fx-font-size: 34px;
+    -fx-font-weight: 800;
+}
+
+.detail-title,
+.card-title {
+    -fx-text-fill: white;
+    -fx-font-size: 18px;
+    -fx-font-weight: 700;
+}
+
+.eyebrow {
+    -fx-text-fill: -color-accent-soft;
+    -fx-font-size: 11px;
+    -fx-font-weight: 800;
+    -fx-letter-spacing: 1.2px;
+}
+
+.muted-copy {
+    -fx-text-fill: -color-muted;
+    -fx-font-size: 13px;
+}
+
+.status-label {
+    -fx-text-fill: white;
+    -fx-font-size: 13px;
+}
+
+.vault-card {
+    -fx-background-color: linear-gradient(to bottom right, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+    -fx-background-radius: 16px;
+    -fx-border-color: -color-border;
+    -fx-border-radius: 16px;
+    -fx-border-width: 1px;
+    -fx-padding: 18px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.26), 26, 0.2, 0, 10);
+}
+
+.pill-button,
+.combo-box,
+.search-field,
+.text-field,
+.text-area,
+.button {
+    -fx-background-radius: 50px;
+    -fx-border-radius: 50px;
+}
+
+.pill-button,
+.button {
+    -fx-background-color: -color-surface-alt;
+    -fx-text-fill: white;
+    -fx-font-weight: 700;
+    -fx-padding: 11px 18px;
+    -fx-border-color: transparent;
+}
+
+.pill-button:hover,
+.button:hover,
+.nav-button:hover {
+    -fx-background-color: #2b2b35;
+}
+
+.accent-button {
+    -fx-background-color: linear-gradient(to right, -color-accent, #8b6cff);
+    -fx-text-fill: white;
+}
+
+.accent-button:hover {
+    -fx-background-color: linear-gradient(to right, #7a72ff, #977cff);
+}
+
+.ghost-button {
+    -fx-background-color: rgba(255, 255, 255, 0.04);
+    -fx-border-color: rgba(255, 255, 255, 0.08);
+    -fx-border-width: 1px;
+}
+
+.nav-button {
+    -fx-alignment: CENTER_LEFT;
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-text-fill: #d6d6df;
+    -fx-padding: 13px 18px;
+}
+
+.nav-button-active {
+    -fx-background-color: rgba(108, 99, 255, 0.18);
+    -fx-border-color: rgba(108, 99, 255, 0.4);
+    -fx-border-width: 1px;
+    -fx-text-fill: white;
+}
+
+.search-field,
+.text-field,
+.combo-box,
+.text-area {
+    -fx-background-color: rgba(255, 255, 255, 0.05);
+    -fx-text-fill: white;
+    -fx-prompt-text-fill: rgba(255, 255, 255, 0.45);
+    -fx-border-color: rgba(255, 255, 255, 0.07);
+    -fx-border-width: 1px;
+    -fx-padding: 12px 16px;
+}
+
+.combo-box .list-cell {
+    -fx-text-fill: white;
+}
+
+.combo-box-popup .list-view {
+    -fx-background-color: #1a1a1a;
+}
+
+.combo-box-popup .list-cell {
+    -fx-background-color: #1a1a1a;
+}
+
+.combo-box-popup .list-cell:hover {
+    -fx-background-color: #262630;
+}
+
+.text-area {
+    -fx-background-radius: 20px;
+    -fx-border-radius: 20px;
+}
+
+.text-area .content {
+    -fx-background-color: transparent;
+    -fx-background-radius: 20px;
+}
+
+.readonly-area {
+    -fx-font-size: 13px;
+}
+
+.page-scroll,
+.page-scroll .viewport,
+.split-pane {
+    -fx-background-color: transparent;
+}
+
+.split-pane-divider {
+    -fx-background-color: rgba(255, 255, 255, 0.06);
+}
+
+.stat-value {
+    -fx-text-fill: white;
+    -fx-font-size: 28px;
+    -fx-font-weight: 800;
+}
+
+.card-copy {
+    -fx-text-fill: #ececf2;
+    -fx-font-size: 13px;
+}
+
+.context-box {
+    -fx-background-color: rgba(108, 99, 255, 0.14);
+    -fx-background-radius: 16px;
+    -fx-padding: 14px;
+    -fx-text-fill: #f4f3ff;
+    -fx-border-color: rgba(108, 99, 255, 0.35);
+    -fx-border-width: 1px;
+    -fx-border-radius: 16px;
+}
+
+.tag-chip {
+    -fx-background-color: rgba(255, 255, 255, 0.06);
+    -fx-background-radius: 999px;
+    -fx-padding: 7px 12px;
+    -fx-text-fill: white;
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+}
+
+.separator .line {
+    -fx-border-color: rgba(255, 255, 255, 0.06);
+    -fx-border-width: 1px;
+}
+
+.tab-pane .tab-header-area .tab-header-background {
+    -fx-background-color: transparent;
+}
+
+.tab-pane .tab {
+    -fx-background-color: rgba(255, 255, 255, 0.04);
+    -fx-background-radius: 999px;
+    -fx-padding: 8px 12px;
+}
+
+.tab-pane .tab:selected {
+    -fx-background-color: rgba(108, 99, 255, 0.16);
+}
+
+.tab-pane .tab-label {
+    -fx-text-fill: white;
+    -fx-font-weight: 700;
+}
+
+.progress-indicator {
+    -fx-progress-color: -color-accent;
+}
+
+.scroll-bar:vertical,
+.scroll-bar:horizontal {
+    -fx-background-color: transparent;
+}
+
+.scroll-bar .thumb {
+    -fx-background-color: rgba(255, 255, 255, 0.18);
+    -fx-background-radius: 999px;
+}

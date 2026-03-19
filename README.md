@@ -1,34 +1,46 @@
-# My Application README
+# TimeVault
 
-- [ ] TODO Replace or update this README with instructions relevant to your application
+TimeVault is a local-first Java desktop app for Hack Esbjerg 2026. It captures URLs, text, and images into a SQLite archive, writes a three-sentence AI context note, rescues dead links from the Wayback Machine, and stores Denmark Today vibe capsules from Danish news feeds.
 
-To start the application in development mode, import it into your IDE and run the `Application` class. 
-You can also start the application from the command line by running: 
+## Run
 
 ```bash
-./mvnw
+./mvnw javafx:run
 ```
 
-To build the application in production mode, run:
+## Build
 
 ```bash
 ./mvnw package
 ```
 
-To build a Docker image, run:
+## AI Providers
+
+TimeVault works without an API key by falling back to a local context generator. To use a real model, set one of these environment variables before launching:
 
 ```bash
-docker build -t my-application:latest .
+GEMINI_API_KEY=...
 ```
 
-If you use commercial components, pass the license key as a build secret:
+or
 
 ```bash
-docker build --secret id=proKey,src=$HOME/.vaadin/proKey .
+ANTHROPIC_API_KEY=...
 ```
 
-## Getting Started
+Optional:
 
-The [Quick Start](https://vaadin.com/docs/v25/getting-started/quick-start) tutorial helps you get started with Vaadin in 
-around 10 minutes. This tutorial walks you through building a simple application, introducing the core concepts along 
-the way.
+```bash
+TIMEVAULT_AI_PROVIDER=gemini
+TIMEVAULT_AI_PROVIDER=anthropic
+```
+
+## Storage
+
+All local data is stored in:
+
+```text
+~/.timevault
+```
+
+That folder contains the SQLite database, rescued HTML snapshots, copied images, and exported archive files.
