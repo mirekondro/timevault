@@ -19,10 +19,12 @@ public class SchemaInitializer {
 
     private final ConnectionManager connectionManager;
     private final DatabaseConfig databaseConfig;
+    private final DemoDataSeeder demoDataSeeder;
 
     public SchemaInitializer(ConnectionManager connectionManager, DatabaseConfig databaseConfig) {
         this.connectionManager = connectionManager;
         this.databaseConfig = databaseConfig;
+        this.demoDataSeeder = new DemoDataSeeder();
     }
 
     public void initializeSchema() throws SQLException {
@@ -39,6 +41,10 @@ public class SchemaInitializer {
             migrateLegacyItems(connection);
             enforceUserOwnership(statement);
             ensureIndexes(statement);
+
+            if (databaseConfig.resetOnStart()) {
+                demoDataSeeder.seed(connection);
+            }
         }
     }
 
