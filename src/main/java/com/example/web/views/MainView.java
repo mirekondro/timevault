@@ -312,22 +312,14 @@ public class MainView extends VerticalLayout {
         panel.setAlignItems(FlexComponent.Alignment.CENTER);
         panel.setDefaultHorizontalComponentAlignment(FlexComponent.Alignment.CENTER);
 
-        // Force white text and gradient background on panel
+        // Only force white text color, let CSS handle background
         panel.getStyle().set("color", "#ffffff");
-        panel.getStyle().set("background", "linear-gradient(135deg, #60A5FA 0%, #A78BFA 50%, #F472B6 100%)");
-        panel.getStyle().set("border-radius", "12px");
-        panel.getStyle().set("padding", "20px");
-        panel.getStyle().set("position", "relative");
 
         TextField urlField = new TextField();
         urlField.setPlaceholder("Paste any link (e.g. https://github.com/...)");
         urlField.setPrefixComponent(VaadinIcon.LINK.create());
         urlField.setWidthFull();
         urlField.addClassName("modern-input");
-
-        // Force input field styling
-        urlField.getStyle().set("background", "rgba(255, 255, 255, 0.1)");
-        urlField.getStyle().set("color", "#ffffff");
 
         Button saveButton = new Button("Extract & Save to Vault", VaadinIcon.MAGIC.create());
         saveButton.addClassName("modern-button");
@@ -362,17 +354,12 @@ public class MainView extends VerticalLayout {
 
         Paragraph description = new Paragraph("AI will automatically fetch the webpage, read the content, and generate a contextual summary.");
         description.getStyle().set("color", "#ffffff");
-        description.getStyle().set("text-align", "center");
-        description.getStyle().set("margin", "0 0 20px 0");
 
         panel.add(description, urlField, saveButton);
 
         // Force white text on all components
         panel.getChildren().forEach(component -> {
             component.getElement().getStyle().set("color", "#ffffff");
-            if (component instanceof Paragraph) {
-                component.getElement().getStyle().set("color", "#ffffff");
-            }
         });
 
         return panel;
@@ -385,12 +372,8 @@ public class MainView extends VerticalLayout {
         panel.setAlignItems(FlexComponent.Alignment.CENTER);
         panel.setDefaultHorizontalComponentAlignment(FlexComponent.Alignment.CENTER);
 
-        // Force white text and gradient background on panel
+        // Only force white text color, let CSS handle background
         panel.getStyle().set("color", "#ffffff");
-        panel.getStyle().set("background", "linear-gradient(135deg, #60A5FA 0%, #A78BFA 50%, #F472B6 100%)");
-        panel.getStyle().set("border-radius", "12px");
-        panel.getStyle().set("padding", "20px");
-        panel.getStyle().set("position", "relative");
 
         MemoryBuffer buffer = new MemoryBuffer();
         Upload upload = new Upload(buffer);
@@ -412,17 +395,12 @@ public class MainView extends VerticalLayout {
 
         Paragraph description = new Paragraph("Upload an image. The AI Vision model will deeply analyze its contents and context.");
         description.getStyle().set("color", "#ffffff");
-        description.getStyle().set("text-align", "center");
-        description.getStyle().set("margin", "0 0 20px 0");
 
         panel.add(description, upload);
 
         // Force white text on all components
         panel.getChildren().forEach(component -> {
             component.getElement().getStyle().set("color", "#ffffff");
-            if (component instanceof Paragraph) {
-                component.getElement().getStyle().set("color", "#ffffff");
-            }
         });
 
         return panel;
@@ -435,22 +413,14 @@ public class MainView extends VerticalLayout {
         panel.setAlignItems(FlexComponent.Alignment.CENTER);
         panel.setDefaultHorizontalComponentAlignment(FlexComponent.Alignment.CENTER);
 
-        // Force white text and gradient background on panel
+        // Only force white text color, let CSS handle background
         panel.getStyle().set("color", "#ffffff");
-        panel.getStyle().set("background", "linear-gradient(135deg, #60A5FA 0%, #A78BFA 50%, #F472B6 100%)");
-        panel.getStyle().set("border-radius", "12px");
-        panel.getStyle().set("padding", "20px");
-        panel.getStyle().set("position", "relative");
 
         TextArea textArea = new TextArea();
         textArea.setPlaceholder("Dump your thoughts, meeting notes, or raw text here...");
         textArea.setWidthFull();
         textArea.setMinHeight("150px");
         textArea.addClassName("modern-input");
-
-        // Force text area styling
-        textArea.getStyle().set("background", "rgba(255, 255, 255, 0.1)");
-        textArea.getStyle().set("color", "#ffffff");
 
         Button saveButton = new Button("Synthesize Note", VaadinIcon.MAGIC.create());
         saveButton.addClassName("modern-button");
@@ -474,17 +444,12 @@ public class MainView extends VerticalLayout {
 
         Paragraph description = new Paragraph("AI will extract key points, generate tags, and create a permanent memory of your text.");
         description.getStyle().set("color", "#ffffff");
-        description.getStyle().set("text-align", "center");
-        description.getStyle().set("margin", "0 0 20px 0");
 
         panel.add(description, textArea, saveButton);
 
         // Force white text on all components
         panel.getChildren().forEach(component -> {
             component.getElement().getStyle().set("color", "#ffffff");
-            if (component instanceof Paragraph) {
-                component.getElement().getStyle().set("color", "#ffffff");
-            }
         });
 
         return panel;
@@ -673,16 +638,139 @@ public class MainView extends VerticalLayout {
         HorizontalLayout cardFooter = new HorizontalLayout();
         cardFooter.addClassName("card-footer");
         cardFooter.setWidthFull();
+        cardFooter.setJustifyContentMode(FlexComponent.JustifyContentMode.BETWEEN);
+        cardFooter.setAlignItems(FlexComponent.Alignment.CENTER);
 
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM dd, yyyy");
         String dateString = vaultItem.getCreatedAt() != null ? vaultItem.getCreatedAt().format(formatter) : "Unknown Date";
         Span dateStr = new Span(dateString);
         dateStr.addClassName("card-date");
 
-        cardFooter.add(dateStr);
+        // Speak button for text-to-speech
+        Button speakBtn = new Button(VaadinIcon.VOLUME_UP.create());
+        speakBtn.addClassName("speak-btn");
+        speakBtn.setTooltipText("Listen to AI summary");
+        speakBtn.getStyle().set("color", "#A78BFA");
+        speakBtn.getStyle().set("background", "transparent");
+        speakBtn.getStyle().set("border", "none");
+        speakBtn.getStyle().set("cursor", "pointer");
+        speakBtn.getStyle().set("padding", "8px");
+        speakBtn.getStyle().set("border-radius", "50%");
+        speakBtn.getStyle().set("transition", "all 0.3s ease");
+
+        // Add hover effect
+        speakBtn.addClickListener(e -> {
+            speakText(safeContext);
+        });
+
+        // Button group for actions
+        HorizontalLayout buttonGroup = new HorizontalLayout(speakBtn);
+        buttonGroup.setSpacing(false);
+        buttonGroup.setAlignItems(FlexComponent.Alignment.CENTER);
+
+        cardFooter.add(dateStr, buttonGroup);
 
         card.add(cardHeader, title, contextWrapper, cardFooter);
         return card;
+    }
+
+    /**
+     * Use ElevenLabs to speak the AI summary text
+     */
+    private void speakText(String text) {
+        if (text == null || text.trim().isEmpty() || "Awaiting AI analysis...".equals(text)) {
+            showNeonNotification("No AI summary available to read", false);
+            return;
+        }
+
+        // Add JavaScript to call the speech API and play audio
+        getElement().executeJs("""
+            async function speakText(text) {
+                try {
+                    // Show loading notification
+                    const notification = document.createElement('div');
+                    notification.style.cssText = `
+                        position: fixed;
+                        top: 20px;
+                        right: 20px;
+                        background: linear-gradient(135deg, #60A5FA 0%, #A78BFA 50%, #F472B6 100%);
+                        color: white;
+                        padding: 15px 20px;
+                        border-radius: 12px;
+                        z-index: 10000;
+                        font-family: 'Plus Jakarta Sans', sans-serif;
+                        font-weight: 600;
+                        box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+                    `;
+                    notification.textContent = '🗣️ Generating speech...';
+                    document.body.appendChild(notification);
+
+                    const response = await fetch('/api/speech/synthesize', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ text: text })
+                    });
+
+                    const result = await response.json();
+                    
+                    // Remove loading notification
+                    document.body.removeChild(notification);
+
+                    if (result.success) {
+                        // Create and play audio
+                        const audio = new Audio(result.audio);
+                        
+                        // Show playing notification
+                        const playNotification = document.createElement('div');
+                        playNotification.style.cssText = notification.style.cssText;
+                        playNotification.textContent = '🔊 Playing AI summary...';
+                        document.body.appendChild(playNotification);
+                        
+                        audio.onended = () => {
+                            document.body.removeChild(playNotification);
+                        };
+                        
+                        audio.onerror = () => {
+                            document.body.removeChild(playNotification);
+                            const errorNotification = document.createElement('div');
+                            errorNotification.style.cssText = notification.style.cssText.replace('60A5FA 0%, #A78BFA 50%, #F472B6', 'EF4444 0%, #DC2626 50%, #B91C1C');
+                            errorNotification.textContent = '❌ Audio playback failed';
+                            document.body.appendChild(errorNotification);
+                            setTimeout(() => document.body.removeChild(errorNotification), 3000);
+                        };
+                        
+                        await audio.play();
+                    } else {
+                        throw new Error(result.error || 'Speech synthesis failed');
+                    }
+                } catch (error) {
+                    console.error('Speech error:', error);
+                    
+                    // Show error notification
+                    const errorNotification = document.createElement('div');
+                    errorNotification.style.cssText = `
+                        position: fixed;
+                        top: 20px;
+                        right: 20px;
+                        background: linear-gradient(135deg, #EF4444 0%, #DC2626 50%, #B91C1C 100%);
+                        color: white;
+                        padding: 15px 20px;
+                        border-radius: 12px;
+                        z-index: 10000;
+                        font-family: 'Plus Jakarta Sans', sans-serif;
+                        font-weight: 600;
+                        box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+                    `;
+                    errorNotification.textContent = '❌ Speech generation failed: ' + error.message;
+                    document.body.appendChild(errorNotification);
+                    setTimeout(() => document.body.removeChild(errorNotification), 5000);
+                }
+            }
+            
+            speakText($0);
+            """, text);
     }
 
     private void showNeonNotification(String text, boolean success) {
