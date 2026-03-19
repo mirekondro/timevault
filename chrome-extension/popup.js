@@ -181,6 +181,15 @@ class TimeVaultExtension {
             }
         }
 
+        // Analyze images on the page
+        const imageAnalysis = this.analyzeImages();
+
+        // Analyze text content
+        const textAnalysis = this.analyzeTextContent(content);
+
+        // Analyze page structure
+        const structureAnalysis = this.analyzePageStructure();
+
         // Get meta description as fallback
         const metaDescription = document.querySelector('meta[name="description"]');
         if (!description && metaDescription) {
@@ -196,9 +205,160 @@ class TimeVaultExtension {
             content,
             description,
             contentType,
+            imageAnalysis,
+            textAnalysis,
+            structureAnalysis,
             timestamp: new Date().toISOString()
         };
     }
+
+    // Analyze images on the page
+    analyzeImages() {
+        const images = document.querySelectorAll('img[src]');
+        const analysis = {
+            count: 0,
+            types: [],
+            descriptions: [],
+            notable: []
+        };
+
+        images.forEach((img, index) => {
+            if (index < 10 && img.naturalWidth > 50 && img.naturalHeight > 50) {
+                analysis.count++;
+
+                // Analyze image type by src and alt text
+                const src = img.src.toLowerCase();
+                const alt = img.alt || '';
+                const title = img.title || '';
+
+                // Determine image type
+                let imageType = 'photo';
+                if (src.includes('logo') || alt.includes('logo') || title.includes('logo')) {
+                    imageType = 'logo';
+                } else if (src.includes('icon') || alt.includes('icon') || img.width < 100 || img.height < 100) {
+                    imageType = 'icon';
+                } else if (src.includes('chart') || src.includes('graph') || alt.includes('chart') || alt.includes('graph')) {
+                    imageType = 'chart';
+                } else if (src.includes('screenshot') || alt.includes('screenshot') || alt.includes('interface')) {
+                    imageType = 'screenshot';
+                } else if (src.includes('diagram') || alt.includes('diagram') || alt.includes('illustration')) {
+                    imageType = 'diagram';
+                }
+
+                analysis.types.push(imageType);
+
+                // Create description
+                let description = '';
+                if (alt) {
+                    description = alt;
+                } else if (title) {
+                    description = title;
+                } else {
+                    description = `${imageType} (${img.width}x${img.height})`;
+                }
+
+                analysis.descriptions.push(description);
+
+                // Mark as notable if large or has descriptive alt text
+                if ((img.width > 300 && img.height > 200) || alt.length > 20) {
+                    analysis.notable.push({
+                        type: imageType,
+                        description: description,
+                        size: `${img.width}x${img.height}`
+                    });
+                }
+            }
+        });
+
+        return analysis;
+    }
+
+    // Analyze text content structure
+    analyzeTextContent(content) {
+        const analysis = {
+            wordCount: 0,
+            readingTime: 0,
+            headings: [],
+            keyTopics: [],
+            tone: 'neutral'
+        };
+
+        if (!content) return analysis;
+
+        // Word count and reading time
+        const words = content.trim().split(/\s+/).filter(word => word.length > 0);
+        analysis.wordCount = words.length;
+        analysis.readingTime = Math.ceil(words.length / 200); // Average reading speed
+
+        // Extract headings
+        const headings = document.querySelectorAll('h1, h2, h3, h4, h5, h6');
+        headings.forEach((heading, index) => {
+            if (index < 10) {
+                analysis.headings.push({
+                    level: parseInt(heading.tagName[1]),
+                    text: heading.innerText.trim().substring(0, 100)
+                });
+            }
+        });
+
+        // Basic tone analysis
+        const contentLower = content.toLowerCase();
+        if (contentLower.match(/(breaking|urgent|alert|warning|crisis)/)) {
+            analysis.tone = 'urgent';
+        } else if (contentLower.match(/(tutorial|learn|guide|how.?to|step)/)) {
+            analysis.tone = 'instructional';
+        } else if (contentLower.match(/(research|study|analysis|findings|data)/)) {
+            analysis.tone = 'analytical';
+        } else if (contentLower.match(/(opinion|think|believe|should|must)/)) {
+            analysis.tone = 'opinion';
+        }
+
+        // Extract key topics (simple keyword extraction)
+        const sentences = content.match(/[^\.!?]+[\.!?]+/g) || [];
+        if (sentences.length > 0) {
+            // Take first sentence and extract meaningful words
+            const firstSentence = sentences[0].replace(/[^\w\s]/g, '').toLowerCase();
+            const commonWords = ['the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'is', 'are', 'was', 'were', 'be', 'been', 'have', 'has', 'had', 'will', 'would', 'could', 'should', 'may', 'might', 'can', 'this', 'that', 'these', 'those', 'a', 'an'];
+            const words = firstSentence.split(/\s+/)
+                .filter(word => word.length > 3 && !commonWords.includes(word))
+                .slice(0, 5);
+            analysis.keyTopics = words;
+        }
+
+        return analysis;
+    }
+
+    // Analyze page structure
+    analyzePageStructure() {
+        const analysis = {
+            hasVideo: false,
+            hasAudio: false,
+            hasCode: false,
+            hasTable: false,
+            hasList: false,
+            hasForm: false,
+            interactive: false
+        };
+
+        // Check for media elements
+        analysis.hasVideo = document.querySelectorAll('video, iframe[src*="youtube"], iframe[src*="vimeo"]').length > 0;
+        analysis.hasAudio = document.querySelectorAll('audio').length > 0;
+
+        // Check for code content
+        analysis.hasCode = document.querySelectorAll('code, pre, .highlight, .code-block').length > 0;
+
+        // Check for data structures
+        analysis.hasTable = document.querySelectorAll('table').length > 0;
+        analysis.hasList = document.querySelectorAll('ul, ol').length > 3; // More than just nav lists
+
+        // Check for interactive elements
+        analysis.hasForm = document.querySelectorAll('form, input, textarea, select').length > 0;
+        analysis.interactive = document.querySelectorAll('button, [onclick], [data-toggle]').length > 5;
+
+        return analysis;
+    }
+
+    // ...existing code...
 
     // Helper function to detect what type of content this is
     detectContentType(title, content, url) {
@@ -255,29 +415,10 @@ class TimeVaultExtension {
         this.pageTitle.textContent = this.pageData.title;
         this.pageUrl.textContent = this.pageData.url;
 
-        // Show actual content preview instead of generic description
+        // Create rich content description
         let preview = '';
 
-        if (this.pageData.content && this.pageData.content.length > 50) {
-            // Take first meaningful sentences from the content
-            const sentences = this.pageData.content.match(/[^\.!?]+[\.!?]+/g);
-            if (sentences && sentences.length > 0) {
-                // Show first 2-3 sentences as preview
-                preview = sentences.slice(0, 2).join(' ');
-                if (preview.length > 200) {
-                    preview = preview.substring(0, 200) + '...';
-                }
-            } else {
-                // Fallback to first part of content
-                preview = this.pageData.content.substring(0, 200) + '...';
-            }
-        } else if (this.pageData.description) {
-            preview = this.pageData.description;
-        } else {
-            preview = 'No content preview available - will analyze page structure';
-        }
-
-        // Add content type indicator
+        // Add content type indicator with more details
         if (this.pageData.contentType) {
             const typeMap = {
                 'news': '📰 News',
@@ -288,7 +429,100 @@ class TimeVaultExtension {
                 'product': '🛍️ Product'
             };
             const typeLabel = typeMap[this.pageData.contentType] || '📄 Article';
-            preview = `${typeLabel}: ${preview}`;
+            preview += `${typeLabel}\n\n`;
+        }
+
+        // Add detailed content analysis
+        if (this.pageData.textAnalysis) {
+            const text = this.pageData.textAnalysis;
+            if (text.wordCount > 0) {
+                preview += `📝 ${text.wordCount} words • ${text.readingTime} min read\n`;
+            }
+            if (text.headings && text.headings.length > 0) {
+                preview += `📋 ${text.headings.length} sections`;
+                if (text.tone !== 'neutral') {
+                    preview += ` • ${text.tone} tone`;
+                }
+                preview += '\n';
+            }
+        }
+
+        // Add image analysis
+        if (this.pageData.imageAnalysis && this.pageData.imageAnalysis.count > 0) {
+            const img = this.pageData.imageAnalysis;
+            preview += `🖼️ ${img.count} images`;
+
+            // Describe image types
+            const typeCounts = {};
+            img.types.forEach(type => {
+                typeCounts[type] = (typeCounts[type] || 0) + 1;
+            });
+
+            const typeDescriptions = [];
+            Object.entries(typeCounts).forEach(([type, count]) => {
+                if (count > 1) {
+                    typeDescriptions.push(`${count} ${type}s`);
+                } else {
+                    typeDescriptions.push(`${count} ${type}`);
+                }
+            });
+
+            if (typeDescriptions.length > 0) {
+                preview += ` (${typeDescriptions.slice(0, 3).join(', ')})`;
+            }
+
+            // Add notable images
+            if (img.notable && img.notable.length > 0) {
+                preview += `\n   Notable: ${img.notable[0].description}`;
+                if (img.notable.length > 1) {
+                    preview += ` and ${img.notable.length - 1} more`;
+                }
+            }
+            preview += '\n';
+        }
+
+        // Add interactive elements analysis
+        if (this.pageData.structureAnalysis) {
+            const struct = this.pageData.structureAnalysis;
+            const features = [];
+
+            if (struct.hasVideo) features.push('🎥 video');
+            if (struct.hasAudio) features.push('🔊 audio');
+            if (struct.hasCode) features.push('💻 code');
+            if (struct.hasTable) features.push('📊 tables');
+            if (struct.hasList) features.push('📝 lists');
+            if (struct.hasForm) features.push('📋 forms');
+            if (struct.interactive) features.push('⚡ interactive');
+
+            if (features.length > 0) {
+                preview += `✨ Contains: ${features.slice(0, 4).join(', ')}\n`;
+            }
+        }
+
+        // Add actual content preview
+        if (this.pageData.content && this.pageData.content.length > 50) {
+            preview += '\n📖 Content:\n';
+
+            // Show main topics if available
+            if (this.pageData.textAnalysis && this.pageData.textAnalysis.keyTopics.length > 0) {
+                preview += `Topics: ${this.pageData.textAnalysis.keyTopics.slice(0, 3).join(', ')}\n`;
+            }
+
+            // Show first meaningful sentences
+            const sentences = this.pageData.content.match(/[^\.!?]+[\.!?]+/g);
+            if (sentences && sentences.length > 0) {
+                let contentPreview = sentences.slice(0, 2).join(' ');
+                if (contentPreview.length > 150) {
+                    contentPreview = contentPreview.substring(0, 150) + '...';
+                }
+                preview += `"${contentPreview}"`;
+            } else {
+                preview += this.pageData.content.substring(0, 150) + '...';
+            }
+        } else if (this.pageData.description) {
+            preview += '\n📖 ' + this.pageData.description;
+        } else {
+            preview += '\n📖 No text content detected - page may be primarily visual or interactive';
         }
 
         this.pageDescription.textContent = preview;
@@ -354,28 +588,41 @@ class TimeVaultExtension {
         this.showProgress('Analyzing content...', 10);
 
         try {
-            // Prepare enhanced data for saving with content type
+            // Prepare enhanced data for saving with detailed analysis
             const saveData = {
                 url: this.pageData.url,
                 title: this.pageData.title,
                 content: this.includeContent.checked ? (this.pageData.content || '') : '',
                 description: this.pageData.description || '',
                 contentType: this.pageData.contentType || 'general',
+                imageAnalysis: this.pageData.imageAnalysis,
+                textAnalysis: this.pageData.textAnalysis,
+                structureAnalysis: this.pageData.structureAnalysis,
                 source: 'chrome-extension'
             };
 
-            // Show different progress messages based on content type
-            const contentTypeMessages = {
-                'news': 'Summarizing news content...',
-                'tutorial': 'Extracting tutorial steps...',
-                'documentation': 'Analyzing documentation...',
-                'research': 'Processing research content...',
-                'blog': 'Summarizing blog post...',
-                'product': 'Analyzing product details...',
-                'general': 'Processing content with AI...'
-            };
+            // Show different progress messages based on content type and analysis
+            let progressMessage = 'Processing content with AI...';
 
-            const progressMessage = contentTypeMessages[this.pageData.contentType] || 'Processing with AI...';
+            if (this.pageData.imageAnalysis && this.pageData.imageAnalysis.count > 5) {
+                progressMessage = 'Analyzing images and content...';
+            } else if (this.pageData.structureAnalysis && this.pageData.structureAnalysis.hasVideo) {
+                progressMessage = 'Analyzing multimedia content...';
+            } else if (this.pageData.textAnalysis && this.pageData.textAnalysis.wordCount > 1000) {
+                progressMessage = 'Processing long-form content...';
+            } else {
+                const contentTypeMessages = {
+                    'news': 'Summarizing news content...',
+                    'tutorial': 'Extracting tutorial steps...',
+                    'documentation': 'Analyzing documentation...',
+                    'research': 'Processing research content...',
+                    'blog': 'Summarizing blog post...',
+                    'product': 'Analyzing product details...',
+                    'general': 'Processing content with AI...'
+                };
+                progressMessage = contentTypeMessages[this.pageData.contentType] || 'Processing with AI...';
+            }
+
             this.showProgress(progressMessage, 30);
 
             // Send to TimeVault API

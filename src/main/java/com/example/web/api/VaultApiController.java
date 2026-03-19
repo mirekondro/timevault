@@ -218,7 +218,7 @@ public class VaultApiController {
     }
 
     /**
-     * Request DTO for Chrome extension
+     * Request DTO for Chrome extension with detailed page analysis
      */
     public static class ChromeExtensionRequest {
         private String url;
@@ -227,6 +227,9 @@ public class VaultApiController {
         private String description;
         private String source;
         private String contentType;
+        private Object imageAnalysis;
+        private Object textAnalysis;
+        private Object structureAnalysis;
 
         // Constructors
         public ChromeExtensionRequest() {}
@@ -249,5 +252,14 @@ public class VaultApiController {
 
         public String getContentType() { return contentType; }
         public void setContentType(String contentType) { this.contentType = contentType; }
+
+        public Object getImageAnalysis() { return imageAnalysis; }
+        public void setImageAnalysis(Object imageAnalysis) { this.imageAnalysis = imageAnalysis; }
+
+        public Object getTextAnalysis() { return textAnalysis; }
+        public void setTextAnalysis(Object textAnalysis) { this.textAnalysis = textAnalysis; }
+
+        public Object getStructureAnalysis() { return structureAnalysis; }
+        public void setStructureAnalysis(Object structureAnalysis) { this.structureAnalysis = structureAnalysis; }
     }
 }

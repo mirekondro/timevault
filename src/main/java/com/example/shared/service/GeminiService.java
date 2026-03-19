@@ -82,33 +82,72 @@ public class GeminiService {
 
         try {
             String prompt = """
-                Read this webpage content and create a clear, informative summary. Provide your response in this EXACT format:
+                Analyze this webpage content thoroughly and create a rich, detailed summary. Provide your response in this EXACT format:
                 
                 TITLE: [Generate a clear, descriptive title - NO URLs, just describe what it is]
-                DESCRIPTION: [Provide exactly 3 sentences that summarize the actual CONTENT/INFORMATION, not the page itself]
+                DESCRIPTION: [Provide exactly 3 sentences that describe the ACTUAL CONTENT, what you see, what it contains, and what information it provides]
                 
-                Focus on WHAT THE CONTENT SAYS, not what type of page it is:
+                Focus on describing WHAT IS ACTUALLY ON THE PAGE:
+                - What does the text say? (main points, key information, specific facts)
+                - What kind of images are there? (photos, diagrams, screenshots, charts, logos)
+                - What type of content structure? (has videos, code examples, forms, interactive elements)
+                - What specific information does it contain? (data, instructions, news events, research findings)
                 
-                For NEWS: Summarize the main story, key facts, and important details
-                For TUTORIALS: Explain what you'll learn and the main steps/concepts covered
-                For ARTICLES: Summarize the main arguments, insights, or information presented
-                For DOCUMENTATION: Explain the key features, functions, or concepts documented
-                For RESEARCH: Summarize the findings, methodology, or conclusions
-                For PRODUCTS: Describe what the product does, key features, and benefits
+                Examples of what I want:
+                - Instead of: "This is a news article about Apple"
+                - Write: "Apple announced iPhone 15 with titanium design, USB-C port, and 48MP camera, with pricing starting at $799 and availability from September 22nd in multiple color options"
                 
-                Write as if you're telling someone what you just read, not describing the webpage.
+                - Instead of: "This page contains tutorial information"  
+                - Write: "Step-by-step React tutorial showing how to build a todo app with useState hooks, featuring 5 code examples, 3 screenshot diagrams of component structure, and interactive demos for testing functionality"
                 
-                Examples:
-                - Instead of: "This news article discusses Apple's latest announcement"
-                - Write: "Apple announced new iPhone 15 models featuring titanium bodies, improved cameras with 5x optical zoom, and USB-C connectivity replacing Lightning ports"
+                - Instead of: "This documentation explains API usage"
+                - Write: "REST API documentation for payments processing, containing 12 endpoint examples with JSON request/response samples, authentication guide with API key setup, and rate limiting information of 1000 calls per hour"
                 
-                - Instead of: "This tutorial covers React development"
-                - Write: "Learn to build React components using hooks, manage application state with useState and useEffect, and create interactive user interfaces with event handling"
+                Be specific about numbers, features, visual elements, and actual information content.
                 
                 URL: %s
                 Content:
                 %s
                 """.formatted(url, truncate(pageContent, 3000));
+
+            String response = callGemini(prompt, null);
+            return parseUrlSummaryResponse(response, url, pageContent);
+        } catch (Exception e) {
+            return createFallbackUrlSummary(url, pageContent);
+        }
+    }
+
+    /**
+     * Generate enhanced URL summary with detailed page analysis from Chrome extension
+     */
+    public VaultItem generateEnhancedUrlSummary(String url, String pageContent, String pageAnalysisJson) {
+        if (!isConfigured()) {
+            return createFallbackUrlSummary(url, pageContent);
+        }
+
+        try {
+            String analysisInfo = "";
+            if (pageAnalysisJson != null && !pageAnalysisJson.trim().isEmpty()) {
+                analysisInfo = "\n\nPage Analysis: " + pageAnalysisJson;
+            }
+
+            String prompt = """
+                Analyze this webpage content and create a rich, detailed summary using the provided page analysis. Provide your response in this EXACT format:
+                
+                TITLE: [Generate a clear, descriptive title - NO URLs, just describe what it is]
+                DESCRIPTION: [Provide exactly 3 sentences that describe the ACTUAL CONTENT, what you see, what it contains, and what information it provides]
+                
+                Use the page analysis to provide specific details about:
+                - What images are present (types, descriptions, count)
+                - Text structure (word count, headings, topics)
+                - Interactive elements (videos, forms, code, tables)
+                - Specific content details and information
+                
+                Be very specific about what the page contains and what information it provides.
+                
+                URL: %s
+                Content: %s%s
+                """.formatted(url, truncate(pageContent, 2500), analysisInfo);
 
             String response = callGemini(prompt, null);
             return parseUrlSummaryResponse(response, url, pageContent);
