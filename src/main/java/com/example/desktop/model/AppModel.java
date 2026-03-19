@@ -18,6 +18,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
+import javafx.collections.transformation.SortedList;
 import javafx.scene.control.Labeled;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.Tab;
@@ -26,13 +27,17 @@ import javafx.scene.control.TextInputControl;
 import java.text.MessageFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.MissingResourceException;
 import java.util.ResourceBundle;
+import java.util.Set;
 import java.util.function.Supplier;
 
 import javafx.util.Duration;
@@ -54,6 +59,7 @@ public class AppModel {
     public static final String SEARCH_COLUMN_PREVIEW = "PREVIEW";
 
     private static final String BUNDLE_BASE_NAME = "i18n.i18n";
+    private static final Duration SEARCH_DEBOUNCE = Duration.millis(300);
 
     private final ObservableList<String> typeOptions = FXCollections.observableArrayList(
             TYPE_ALL, TYPE_URL, TYPE_TEXT, TYPE_IMAGE);
@@ -72,8 +78,10 @@ public class AppModel {
             FXCollections.unmodifiableObservableList(notifications);
 
     private final ObservableList<VaultItemFx> allItems = FXCollections.observableArrayList();
-    private final FilteredList<VaultItemFx> filteredItems = new FilteredList<>(allItems);
+    private final FilteredList<VaultItemFx> matchingItems = new FilteredList<>(allItems);
+    private final SortedList<VaultItemFx> filteredItems = new SortedList<>(matchingItems);
     private final Map<String, SearchState> searchStateByType = new LinkedHashMap<>();
+    private final Map<Long, Integer> searchScoreByItemId = new HashMap<>();
 
     private final ObjectProperty<VaultItemFx> selectedItem = new SimpleObjectProperty<>();
     private final ObjectProperty<UserSession> currentUser = new SimpleObjectProperty<>();
@@ -97,33 +105,35 @@ public class AppModel {
 
     private long nextNotificationId = 1L;
     private boolean syncingSearchState;
+    private final PauseTransition searchDebounce = new PauseTransition(SEARCH_DEBOUNCE);
 
     public AppModel() {
+        searchDebounce.setOnFinished(event -> updateFilter());
         initializeSearchStates();
         searchText.addListener((obs, oldValue, newValue) -> {
             if (syncingSearchState) {
                 return;
             }
             getSearchState(selectedType.get()).searchTextProperty().set(newValue == null ? "" : newValue);
-            updateFilter();
+            scheduleArchiveSearchRefresh();
         });
         selectedSearchColumn.addListener((obs, oldValue, newValue) -> {
             if (syncingSearchState) {
                 return;
             }
             getSearchState(selectedType.get()).searchColumnProperty().set(normalizeSearchColumn(newValue));
-            updateFilter();
+            applyArchiveFilterNow();
         });
         selectedType.addListener((obs, oldValue, newValue) -> {
             loadSearchState(newValue);
-            updateFilter();
+            applyArchiveFilterNow();
         });
-        locale.addListener((obs, oldValue, newValue) -> updateFilter());
+        locale.addListener((obs, oldValue, newValue) -> applyArchiveFilterNow());
         allItems.addListener((ListChangeListener<VaultItemFx>) change -> updateCounts());
         currentUser.addListener((obs, oldUser, newUser) -> authenticated.set(newUser != null));
 
         loadSearchState(TYPE_ALL);
-        updateFilter();
+        applyArchiveFilterNow();
         updateCounts();
     }
 
@@ -150,6 +160,7 @@ public class AppModel {
     public void setItems(Collection<VaultItemFx> items) {
         Long selectedId = selectedItem.get() == null ? null : selectedItem.get().getId();
         allItems.setAll(items);
+        applyArchiveFilterNow();
         restoreSelection(selectedId);
     }
 
@@ -157,7 +168,7 @@ public class AppModel {
         allItems.add(0, item);
         selectedItem.set(item);
         updateCounts();
-        updateFilter();
+        applyArchiveFilterNow();
     }
 
     public void updateItem(VaultItemFx updatedItem) {
@@ -173,7 +184,7 @@ public class AppModel {
             }
         }
         updateCounts();
-        updateFilter();
+        applyArchiveFilterNow();
         restoreSelection(selectedId);
     }
 
@@ -183,7 +194,7 @@ public class AppModel {
             selectedItem.set(filteredItems.isEmpty() ? null : filteredItems.getFirst());
         }
         updateCounts();
-        updateFilter();
+        applyArchiveFilterNow();
     }
 
     public ObjectProperty<VaultItemFx> selectedItemProperty() {
@@ -315,13 +326,18 @@ public class AppModel {
         allItems.clear();
         selectedItem.set(null);
         updateCounts();
-        updateFilter();
+        applyArchiveFilterNow();
     }
 
     public void resetArchiveFilters() {
         initializeSearchStates();
         selectedType.set(TYPE_ALL);
         loadSearchState(TYPE_ALL);
+        applyArchiveFilterNow();
+    }
+
+    public void applyArchiveFilterNow() {
+        searchDebounce.stop();
         updateFilter();
     }
 
@@ -565,8 +581,27 @@ public class AppModel {
         String query = searchText.get() == null ? "" : searchText.get().trim().toLowerCase(Locale.ROOT);
         String type = normalizeTypeCode(selectedType.get());
         String searchColumn = normalizeSearchColumn(selectedSearchColumn.get());
+        List<String> queryTokens = tokenizeQuery(query);
+        Map<Long, Integer> nextScores = new HashMap<>();
+        Set<Long> visibleItemIds = new HashSet<>();
 
-        filteredItems.setPredicate(item -> matchesType(item, type) && matchesQuery(item, query, searchColumn));
+        for (VaultItemFx item : allItems) {
+            if (!matchesType(item, type)) {
+                continue;
+            }
+
+            int score = queryTokens.isEmpty() ? 0 : calculateSearchScore(item, queryTokens, searchColumn);
+            nextScores.put(item.getId(), score);
+            if (queryTokens.isEmpty() || score > 0) {
+                visibleItemIds.add(item.getId());
+            }
+        }
+
+        searchScoreByItemId.clear();
+        searchScoreByItemId.putAll(nextScores);
+
+        matchingItems.setPredicate(item -> visibleItemIds.contains(item.getId()));
+        filteredItems.setComparator((first, second) -> compareSearchResults(first, second));
 
         if (selectedItem.get() != null && !filteredItems.contains(selectedItem.get())) {
             selectedItem.set(filteredItems.isEmpty() ? null : filteredItems.getFirst());
@@ -575,47 +610,153 @@ public class AppModel {
         }
     }
 
+    private void scheduleArchiveSearchRefresh() {
+        searchDebounce.playFromStart();
+    }
+
     private boolean matchesType(VaultItemFx item, String type) {
         return TYPE_ALL.equals(type) || type.equalsIgnoreCase(item.getItemType());
     }
 
-    private boolean matchesQuery(VaultItemFx item, String query, String searchColumn) {
-        if (query.isBlank()) {
-            return true;
+    private int calculateSearchScore(VaultItemFx item, List<String> queryTokens, String searchColumn) {
+        if (item == null || queryTokens.isEmpty()) {
+            return 0;
         }
-        return getSearchValues(item, searchColumn).stream()
-                .filter(value -> value != null)
-                .map(value -> value.toLowerCase(Locale.ROOT))
-                .anyMatch(value -> value.contains(query));
+
+        List<WeightedSearchValue> searchValues = getWeightedSearchValues(item, searchColumn);
+        int totalScore = 0;
+        int matchedTokenCount = 0;
+
+        for (String queryToken : queryTokens) {
+            int tokenScore = 0;
+            for (WeightedSearchValue searchValue : searchValues) {
+                tokenScore += scoreTokenAgainstValue(queryToken, searchValue);
+            }
+            if (tokenScore > 0) {
+                matchedTokenCount++;
+                totalScore += tokenScore;
+            }
+        }
+
+        if (matchedTokenCount == 0) {
+            return 0;
+        }
+
+        totalScore += matchedTokenCount * 2;
+        if (matchedTokenCount == queryTokens.size() && queryTokens.size() > 1) {
+            totalScore += queryTokens.size();
+        }
+        return totalScore;
     }
 
-    private List<String> getSearchValues(VaultItemFx item, String searchColumn) {
+    private List<WeightedSearchValue> getWeightedSearchValues(VaultItemFx item, String searchColumn) {
+        SearchWeights titleWeights = new SearchWeights(8, 5, 2);
+        SearchWeights previewWeights = new SearchWeights(5, 3, 1);
+        SearchWeights typeWeights = new SearchWeights(4, 2, 1);
+        SearchWeights createdWeights = new SearchWeights(2, 1, 1);
+
         if (isLockedItemHidden(item)) {
             return switch (normalizeSearchColumn(searchColumn)) {
-                case SEARCH_COLUMN_TITLE -> List.of(text("item.locked"));
-                case SEARCH_COLUMN_TYPE -> List.of(getTypeLabel(item == null ? null : item.getItemType()));
-                case SEARCH_COLUMN_CREATED -> List.of(formatTimestamp(item == null ? null : item.getCreatedAt()));
-                case SEARCH_COLUMN_PREVIEW -> List.of(text("item.locked"));
+                case SEARCH_COLUMN_TITLE -> List.of(weightedValue(text("item.locked"), titleWeights));
+                case SEARCH_COLUMN_TYPE -> List.of(weightedValue(getTypeLabel(item == null ? null : item.getItemType()), typeWeights));
+                case SEARCH_COLUMN_CREATED -> List.of(weightedValue(formatTimestamp(item == null ? null : item.getCreatedAt()), createdWeights));
+                case SEARCH_COLUMN_PREVIEW -> List.of(weightedValue(text("item.locked"), previewWeights));
                 case SEARCH_COLUMN_ALL -> List.of(
-                        text("item.locked"),
-                        getTypeLabel(item == null ? null : item.getItemType()),
-                        formatTimestamp(item == null ? null : item.getCreatedAt()));
+                        weightedValue(text("item.locked"), titleWeights),
+                        weightedValue(getTypeLabel(item == null ? null : item.getItemType()), typeWeights),
+                        weightedValue(formatTimestamp(item == null ? null : item.getCreatedAt()), createdWeights));
                 default -> List.of();
             };
         }
 
         return switch (normalizeSearchColumn(searchColumn)) {
-            case SEARCH_COLUMN_TITLE -> List.of(getItemTitle(item));
-            case SEARCH_COLUMN_TYPE -> List.of(getTypeLabel(item == null ? null : item.getItemType()));
-            case SEARCH_COLUMN_CREATED -> List.of(formatTimestamp(item == null ? null : item.getCreatedAt()));
-            case SEARCH_COLUMN_PREVIEW -> List.of(getSearchablePreview(item));
+            case SEARCH_COLUMN_TITLE -> List.of(weightedValue(getItemTitle(item), titleWeights));
+            case SEARCH_COLUMN_TYPE -> List.of(weightedValue(getTypeLabel(item == null ? null : item.getItemType()), typeWeights));
+            case SEARCH_COLUMN_CREATED -> List.of(weightedValue(formatTimestamp(item == null ? null : item.getCreatedAt()), createdWeights));
+            case SEARCH_COLUMN_PREVIEW -> List.of(weightedValue(getSearchablePreview(item), previewWeights));
             case SEARCH_COLUMN_ALL -> List.of(
-                    getItemTitle(item),
-                    getTypeLabel(item == null ? null : item.getItemType()),
-                    formatTimestamp(item == null ? null : item.getCreatedAt()),
-                    getSearchablePreview(item));
+                    weightedValue(getItemTitle(item), titleWeights),
+                    weightedValue(getTypeLabel(item == null ? null : item.getItemType()), typeWeights),
+                    weightedValue(formatTimestamp(item == null ? null : item.getCreatedAt()), createdWeights),
+                    weightedValue(getSearchablePreview(item), previewWeights));
             default -> List.of();
         };
+    }
+
+    private int scoreTokenAgainstValue(String queryToken, WeightedSearchValue searchValue) {
+        if (searchValue == null || searchValue.text() == null || searchValue.text().isBlank()) {
+            return 0;
+        }
+
+        String normalizedValue = searchValue.text().toLowerCase(Locale.ROOT);
+        List<String> words = tokenizeWords(normalizedValue);
+        if (words.isEmpty()) {
+            return normalizedValue.contains(queryToken) ? searchValue.weights().containsText() : 0;
+        }
+
+        boolean exactMatch = words.stream().anyMatch(word -> word.equals(queryToken));
+        if (exactMatch) {
+            return searchValue.weights().exactWord();
+        }
+
+        boolean prefixMatch = words.stream().anyMatch(word -> word.startsWith(queryToken));
+        if (prefixMatch) {
+            return searchValue.weights().prefixWord();
+        }
+
+        boolean containsMatch = words.stream().anyMatch(word -> word.contains(queryToken))
+                || normalizedValue.contains(queryToken);
+        if (containsMatch) {
+            return searchValue.weights().containsText();
+        }
+        return 0;
+    }
+
+    private int compareSearchResults(VaultItemFx first, VaultItemFx second) {
+        int firstScore = searchScoreByItemId.getOrDefault(first.getId(), 0);
+        int secondScore = searchScoreByItemId.getOrDefault(second.getId(), 0);
+
+        int scoreComparison = Integer.compare(secondScore, firstScore);
+        if (scoreComparison != 0) {
+            return scoreComparison;
+        }
+
+        int createdComparison = safeCreatedAt(second).compareTo(safeCreatedAt(first));
+        if (createdComparison != 0) {
+            return createdComparison;
+        }
+
+        return Long.compare(second.getId(), first.getId());
+    }
+
+    private static LocalDateTime safeCreatedAt(VaultItemFx item) {
+        return item == null || item.getCreatedAt() == null ? LocalDateTime.MIN : item.getCreatedAt();
+    }
+
+    private List<String> tokenizeQuery(String query) {
+        if (query == null || query.isBlank()) {
+            return List.of();
+        }
+        return tokenizeWords(query.toLowerCase(Locale.ROOT));
+    }
+
+    private List<String> tokenizeWords(String value) {
+        if (value == null || value.isBlank()) {
+            return List.of();
+        }
+
+        String[] rawTokens = value.split("[^\\p{L}\\p{N}]+");
+        List<String> tokens = new ArrayList<>(rawTokens.length);
+        for (String rawToken : rawTokens) {
+            if (rawToken != null && !rawToken.isBlank()) {
+                tokens.add(rawToken);
+            }
+        }
+        return tokens;
+    }
+
+    private WeightedSearchValue weightedValue(String text, SearchWeights weights) {
+        return new WeightedSearchValue(text == null ? "" : text, weights);
     }
 
     private void updateCounts() {
@@ -718,6 +859,17 @@ public class AppModel {
             }
         }
         return "";
+    }
+
+    private record SearchWeights(
+            int exactWord,
+            int prefixWord,
+            int containsText) {
+    }
+
+    private record WeightedSearchValue(
+            String text,
+            SearchWeights weights) {
     }
 
     private static final class SearchState {

@@ -101,6 +101,7 @@ public class HeaderController implements AppContextAware {
     @FXML
     private void handleClearSearch() {
         appModel.searchTextProperty().set("");
+        appModel.applyArchiveFilterNow();
     }
 
     @FXML
@@ -172,15 +173,17 @@ public class HeaderController implements AppContextAware {
     private void configureSearchControls() {
         searchField.textProperty().bindBidirectional(appModel.searchTextProperty());
         searchField.disableProperty().bind(appModel.authenticatedProperty().not());
+        searchField.setOnAction(event -> appModel.applyArchiveFilterNow());
 
         searchColumnComboBox.setItems(appModel.getSearchColumnOptions());
         searchColumnComboBox.valueProperty().bindBidirectional(appModel.selectedSearchColumnProperty());
         searchColumnComboBox.disableProperty().bind(searchField.disableProperty());
 
-        clearSearchButton.disableProperty().bind(searchField.disableProperty());
+        clearSearchButton.disableProperty().bind(searchField.disableProperty().or(searchField.textProperty().isEmpty()));
         clearSearchButton.visibleProperty().bind(searchField.textProperty().isNotEmpty());
         clearSearchButton.managedProperty().bind(clearSearchButton.visibleProperty());
         clearSearchButton.setFocusTraversable(false);
+        clearSearchButton.toFront();
     }
 
     private void buildLanguageMenuItems() {

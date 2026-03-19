@@ -103,12 +103,40 @@
     -fx-font-weight: 800;
 }
 
-.header-search-field {
-    -fx-padding: 8px 42px 8px 12px;
+.header-search-shell > .text-field.header-search-field {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-background-radius: 0;
+    -fx-border-radius: 0;
+    -fx-background-insets: 0;
+    -fx-padding: 0 10px 0 14px;
+    -fx-text-fill: white;
+    -fx-prompt-text-fill: rgba(255, 255, 255, 0.42);
+    -fx-font-size: 13px;
+    -fx-font-weight: 600;
+    -fx-min-height: 40px;
+    -fx-pref-height: 40px;
+    -fx-max-height: 40px;
 }
 
 .header-search-shell {
+    -fx-alignment: center-left;
+    -fx-background-color: linear-gradient(to right, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.03));
+    -fx-border-color: rgba(255, 255, 255, 0.09);
+    -fx-border-width: 1px;
+    -fx-background-radius: 50px;
+    -fx-border-radius: 50px;
+    -fx-padding: 0;
     -fx-pref-height: 42px;
+    -fx-min-height: 42px;
+    -fx-max-height: 42px;
+}
+
+.header-search-shell > .text-field.header-search-field:focused,
+.header-search-shell > .text-field.header-search-field:hover {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-background-insets: 0;
 }
 
 .header-filter {
@@ -136,27 +164,39 @@
 }
 
 .header-clear-button {
-    -fx-background-color: rgba(255, 255, 255, 0.08);
-    -fx-border-color: rgba(255, 255, 255, 0.12);
-    -fx-border-width: 1px;
-    -fx-background-radius: 999px;
-    -fx-border-radius: 999px;
-    -fx-text-fill: -color-muted;
-    -fx-font-size: 11px;
+    -fx-background-color: rgba(255, 255, 255, 0.06);
+    -fx-border-color: rgba(255, 255, 255, 0.08);
+    -fx-border-width: 0 0 0 1px;
+    -fx-background-insets: 0;
+    -fx-background-radius: 0 50px 50px 0;
+    -fx-border-radius: 0 50px 50px 0;
+    -fx-text-fill: white;
+    -fx-font-size: 12px;
     -fx-font-weight: 800;
-    -fx-padding: 0;
-    -fx-min-width: 24px;
-    -fx-min-height: 24px;
-    -fx-pref-width: 24px;
-    -fx-pref-height: 24px;
-    -fx-max-width: 24px;
-    -fx-max-height: 24px;
-    -fx-translate-x: -10px;
+    -fx-padding: 0 10px 0 9px;
+    -fx-min-width: 30px;
+    -fx-min-height: 42px;
+    -fx-pref-width: 30px;
+    -fx-pref-height: 42px;
+    -fx-max-width: 30px;
+    -fx-max-height: 42px;
+    -fx-cursor: hand;
+    -fx-opacity: 0.82;
 }
 
 .header-clear-button:hover {
-    -fx-background-color: rgba(255, 255, 255, 0.14);
-    -fx-text-fill: white;
+    -fx-background-color: rgba(255, 255, 255, 0.1);
+    -fx-opacity: 1;
+}
+
+.header-clear-icon {
+    -fx-text-fill: rgba(255, 255, 255, 0.88);
+    -fx-font-size: 13px;
+    -fx-font-weight: 900;
+}
+
+.header-clear-button:disabled {
+    -fx-opacity: 0.45;
 }
 
 .footer-credit {
