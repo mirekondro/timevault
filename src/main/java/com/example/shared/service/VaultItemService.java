@@ -49,6 +49,7 @@ public class VaultItemService {
     public VaultItem saveUrl(String url, String title, String pageContent) {
         VaultItem item = new VaultItem(title, pageContent, "URL");
         item.setSourceUrl(url);
+        item.setUserId(1L); // Set default user ID
 
         // Generate AI context using Gemini
         String aiContext = geminiService.generateUrlContext(url, pageContent);
@@ -65,6 +66,7 @@ public class VaultItemService {
      */
     public VaultItem saveText(String title, String content) {
         VaultItem item = new VaultItem(title, content, "TEXT");
+        item.setUserId(1L); // Set default user ID
 
         // Generate AI context using Gemini
         String aiContext = geminiService.generateTextContext(content);
@@ -85,6 +87,7 @@ public class VaultItemService {
             String storedPath = fileStorageService.store(imageData, originalFilename);
 
             VaultItem item = new VaultItem(title, storedPath, "IMAGE");
+            item.setUserId(1L); // Set default user ID
 
             // Analyze image with Gemini Vision
             String aiContext = geminiService.analyzeImage(imageData, mimeType, originalFilename);
@@ -97,6 +100,7 @@ public class VaultItemService {
         } catch (Exception e) {
             // Fallback: save without storing file
             VaultItem item = new VaultItem(title, originalFilename, "IMAGE");
+            item.setUserId(1L); // Set default user ID
             item.setAiContext("Image saved. Analysis unavailable: " + e.getMessage());
             item.setTags(generateTags("IMAGE", originalFilename));
             return repository.save(item);
