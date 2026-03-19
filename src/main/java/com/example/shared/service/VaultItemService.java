@@ -1,7 +1,7 @@
-package com.example.service;
+package com.example.shared.service;
 
-import com.example.model.VaultItem;
-import com.example.repository.VaultItemRepository;
+import com.example.shared.model.VaultItem;
+import com.example.shared.repository.VaultItemRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -9,6 +9,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * SHARED SERVICE - Used by both Web and Desktop versions
+ *
+ * Business logic for managing VaultItems
+ */
 @Service
 @Transactional
 public class VaultItemService {
@@ -20,12 +25,14 @@ public class VaultItemService {
         this.repository = repository;
     }
 
-    // Save a new vault item
+    // ============================================
+    // SAVE OPERATIONS
+    // ============================================
+
     public VaultItem save(VaultItem item) {
         return repository.save(item);
     }
 
-    // Save URL item
     public VaultItem saveUrl(String url, String title, String content, String aiContext) {
         VaultItem item = new VaultItem(title, content, "URL");
         item.setSourceUrl(url);
@@ -34,7 +41,6 @@ public class VaultItemService {
         return repository.save(item);
     }
 
-    // Save text item
     public VaultItem saveText(String title, String content, String aiContext) {
         VaultItem item = new VaultItem(title, content, "TEXT");
         item.setAiContext(aiContext);
@@ -42,7 +48,6 @@ public class VaultItemService {
         return repository.save(item);
     }
 
-    // Save image item
     public VaultItem saveImage(String title, String imagePath, String aiContext) {
         VaultItem item = new VaultItem(title, imagePath, "IMAGE");
         item.setAiContext(aiContext);
@@ -50,52 +55,63 @@ public class VaultItemService {
         return repository.save(item);
     }
 
-    // Get all items
+    // ============================================
+    // READ OPERATIONS
+    // ============================================
+
     public List<VaultItem> findAll() {
         return repository.findAllByOrderByCreatedAtDesc();
     }
 
-    // Get recent items
     public List<VaultItem> findRecent() {
         return repository.findTop10ByOrderByCreatedAtDesc();
     }
 
-    // Get by ID
     public Optional<VaultItem> findById(Long id) {
         return repository.findById(id);
     }
 
-    // Get by type
     public List<VaultItem> findByType(String itemType) {
         return repository.findByItemType(itemType);
     }
 
-    // Search
     public List<VaultItem> search(String keyword) {
         return repository.searchByKeyword(keyword);
     }
 
-    // Delete
+    // ============================================
+    // DELETE OPERATIONS
+    // ============================================
+
     public void delete(Long id) {
         repository.deleteById(id);
     }
 
-    // Count by type
+    public void deleteAll() {
+        repository.deleteAll();
+    }
+
+    // ============================================
+    // COUNT OPERATIONS
+    // ============================================
+
     public long countByType(String itemType) {
         return repository.countByItemType(itemType);
     }
 
-    // Count all
     public long countAll() {
         return repository.count();
     }
 
-    // Generate auto-tags based on content
+    // ============================================
+    // HELPER METHODS
+    // ============================================
+
     private String generateTags(String type, String content) {
         StringBuilder tags = new StringBuilder(type);
 
         // Add date tag
-        tags.append(", ").append(java.time.LocalDate.now().toString());
+        tags.append(", ").append(java.time.LocalDate.now());
 
         // Add platform tag for URLs
         if (type.equals("URL") && content != null) {

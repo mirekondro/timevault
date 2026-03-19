@@ -1,54 +1,112 @@
 # TimeVault
 
-TimeVault is a local-first Java desktop app for Hack Esbjerg 2026. It captures URLs, text, and images into a Microsoft SQL Server archive, writes a three-sentence AI context note, rescues dead links from the Wayback Machine, and stores Denmark Today vibe capsules from Danish news feeds.
+TimeVault is a local-first application for Hack Esbjerg 2026. It captures URLs, text, and images into a SQL Server database, writes a three-sentence AI context note, and auto-tags content.
 
-## Run
+## 🏗️ Project Structure
+
+```
+src/main/java/com/example/
+│
+├── Application.java           # Spring Boot entry point
+│
+├── shared/                    # ⭐ SHARED BACKEND (both versions use this)
+│   ├── model/
+│   │   └── VaultItem.java     # Database entity
+│   ├── repository/
+│   │   └── VaultItemRepository.java  # JPA repository
+│   └── service/
+│       └── VaultItemService.java     # Business logic
+│
+├── web/                       # 🌐 WEB VERSION (Vaadin) - Miroslav
+│   └── views/
+│       └── MainView.java      # Web UI
+│
+└── desktop/                   # 🖥️ DESKTOP VERSION (JavaFX) - Friend
+    └── (implement here)       # JavaFX app
+```
+
+## 👥 Team Division
+
+| Part | Owner | Technology | Folder |
+|------|-------|------------|--------|
+| **Shared Backend** | Both | Spring Data JPA, MS SQL | `shared/` |
+| **Web Frontend** | Miroslav | Vaadin 25 | `web/` |
+| **Desktop Frontend** | Friend | JavaFX | `desktop/` |
+
+## 🚀 Run Web Version
 
 ```bash
-./mvnw javafx:run
+./mvnw spring-boot:run
 ```
 
-## Build
+Then open: **http://localhost:8080**
 
-```bash
-./mvnw package
+## 🔧 Configuration
+
+Edit `src/main/resources/application.properties`:
+
+```properties
+spring.datasource.url=jdbc:sqlserver://localhost:1433;databaseName=School;encrypt=true;trustServerCertificate=true
+spring.datasource.username=YOUR_USERNAME
+spring.datasource.password=YOUR_PASSWORD
 ```
 
-## AI Providers
+## 📦 Using Shared Backend
 
-TimeVault works without an API key by falling back to a local context generator. To use a real model, set one of these environment variables before launching:
+Both web and desktop versions use the same `VaultItemService`:
 
-```bash
-GEMINI_API_KEY=...
+```java
+@Autowired
+private VaultItemService vaultItemService;
+
+// Save URL
+vaultItemService.saveUrl(url, title, content, aiContext);
+
+// Save text
+vaultItemService.saveText(title, content, aiContext);
+
+// Save image
+vaultItemService.saveImage(title, imagePath, aiContext);
+
+// Get recent items
+List<VaultItem> items = vaultItemService.findRecent();
+
+// Search
+List<VaultItem> results = vaultItemService.search("keyword");
+
+// Delete
+vaultItemService.delete(itemId);
 ```
 
-or
+## 🗄️ Database (MS SQL Server)
 
-```bash
-ANTHROPIC_API_KEY=...
-```
+The table `vault_items` is auto-created by Hibernate. Schema:
 
-Optional:
+| Column | Type | Description |
+|--------|------|-------------|
+| id | BIGINT | Primary key |
+| title | NVARCHAR(500) | Item title |
+| content | NVARCHAR(MAX) | Full content |
+| ai_context | NVARCHAR(MAX) | AI-generated summary |
+| item_type | NVARCHAR(50) | URL, IMAGE, or TEXT |
+| tags | NVARCHAR(500) | Auto-generated tags |
+| source_url | NVARCHAR(1000) | Original URL (for URL type) |
+| created_at | DATETIME2 | Creation timestamp |
+| updated_at | DATETIME2 | Last update timestamp |
 
-```bash
-TIMEVAULT_AI_PROVIDER=gemini
-TIMEVAULT_AI_PROVIDER=anthropic
-```
+## 🎯 Features
 
-## Database Config
+- ✅ User pastes URL, uploads image, or types text
+- ✅ App saves content to MS SQL database
+- ✅ Auto-tags by type, platform, date
+- ✅ Search and browse saved items
+- 🔄 AI context generation (pending)
 
-Create your local ignored file from the tracked example:
+## 🛠️ Tech Stack
 
-```bash
-copy src\main\resources\db.example.properties src\main\resources\db.properties
-```
+- **Backend**: Spring Boot 4.0.3, Spring Data JPA
+- **Database**: MS SQL Server
+- **Web UI**: Vaadin 25.0.7
+- **Desktop UI**: JavaFX (to be implemented)
+- **Java**: 21
 
-The real `db.properties` file is gitignored, so credentials stay out of GitHub.
-
-## Artifact Storage
-
-Saved HTML snapshots, copied images, and exports still live in:
-
-```text
-~/.timevault
-```
