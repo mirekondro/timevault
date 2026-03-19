@@ -32,33 +32,40 @@ public final class ProtectedItemCrypto {
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-    public LockedItemEnvelope createNewLock(ProtectedItemData data, String rawPassword) {
+    public LockedItemEnvelope createNewLock(ProtectedItemData data, byte[] imageBytes, String rawPassword) {
         byte[] salt = new byte[SALT_BYTES];
         RANDOM.nextBytes(salt);
 
         byte[] encryptionKey = deriveKey(rawPassword, salt);
-        String encryptedPayload = encrypt(data, encryptionKey);
+        String encryptedPayload = encryptPayload(data, encryptionKey);
+        byte[] encryptedImageData = encryptBytes(imageBytes, encryptionKey);
         return new LockedItemEnvelope(
                 PasswordHasher.hash(rawPassword),
                 Base64.getEncoder().encodeToString(salt),
                 encryptedPayload,
-                new UnlockedItemSession(data, encryptionKey));
+                encryptedImageData,
+                new UnlockedItemSession(data, encryptionKey, imageBytes));
     }
 
-    public LockedItemEnvelope relockWithExistingSession(ProtectedItemData data, VaultItemFx item) {
+    public LockedItemEnvelope relockWithExistingSession(ProtectedItemData data, byte[] imageBytes, VaultItemFx item) {
         if (item == null || item.getUnlockedSession() == null) {
             throw new IllegalStateException("Cannot re-lock an item that is not unlocked in this session.");
         }
 
-        String encryptedPayload = encrypt(data, item.getUnlockedSession().encryptionKey());
+        String encryptedPayload = encryptPayload(data, item.getUnlockedSession().encryptionKey());
+        byte[] rawImageBytes = imageBytes == null || imageBytes.length == 0
+                ? item.getUnlockedSession().imageBytes()
+                : imageBytes.clone();
+        byte[] encryptedImageData = encryptBytes(rawImageBytes, item.getUnlockedSession().encryptionKey());
         return new LockedItemEnvelope(
                 item.getLockPasswordHash(),
                 item.getLockSalt(),
                 encryptedPayload,
-                new UnlockedItemSession(data, item.getUnlockedSession().encryptionKey()));
+                encryptedImageData,
+                new UnlockedItemSession(data, item.getUnlockedSession().encryptionKey(), rawImageBytes));
     }
 
-    public UnlockedItemSession unlock(VaultItemFx item, String rawPassword) {
+    public UnlockedItemSession unlock(VaultItemFx item, byte[] protectedImageData, String rawPassword) {
         if (item == null || !item.isLocked()) {
             throw new IllegalArgumentException("This item is not locked.");
         }
@@ -68,8 +75,9 @@ public final class ProtectedItemCrypto {
 
         byte[] salt = decode(item.getLockSalt());
         byte[] encryptionKey = deriveKey(rawPassword, salt);
-        ProtectedItemData data = decrypt(item.getLockPayload(), encryptionKey);
-        return new UnlockedItemSession(data, encryptionKey);
+        ProtectedItemData data = decryptPayload(item.getLockPayload(), encryptionKey);
+        byte[] imageBytes = decryptBytes(protectedImageData, encryptionKey);
+        return new UnlockedItemSession(data, encryptionKey, imageBytes);
     }
 
     private byte[] deriveKey(String rawPassword, byte[] salt) {
@@ -82,39 +90,67 @@ public final class ProtectedItemCrypto {
         }
     }
 
-    private String encrypt(ProtectedItemData data, byte[] encryptionKey) {
+    private String encryptPayload(ProtectedItemData data, byte[] encryptionKey) {
+        try {
+            byte[] plainJson = OBJECT_MAPPER.writeValueAsBytes(data);
+            return Base64.getEncoder().encodeToString(encryptBytes(plainJson, encryptionKey));
+        } catch (Exception exception) {
+            throw new IllegalStateException("Could not encrypt the protected item payload.", exception);
+        }
+    }
+
+    private ProtectedItemData decryptPayload(String payload, byte[] encryptionKey) {
+        try {
+            if (payload == null || payload.isBlank()) {
+                return new ProtectedItemData("", "", "", "", "");
+            }
+            byte[] plainJson = decryptBytes(Base64.getDecoder().decode(payload), encryptionKey);
+            return OBJECT_MAPPER.readValue(new String(plainJson, StandardCharsets.UTF_8), ProtectedItemData.class);
+        } catch (Exception exception) {
+            throw new IllegalStateException("Could not decrypt the protected item payload.", exception);
+        }
+    }
+
+    private byte[] encryptBytes(byte[] plainBytes, byte[] encryptionKey) {
+        if (plainBytes == null || plainBytes.length == 0) {
+            return new byte[0];
+        }
+
         try {
             byte[] iv = new byte[IV_BYTES];
             RANDOM.nextBytes(iv);
 
             Cipher cipher = Cipher.getInstance(CIPHER_ALGORITHM);
             cipher.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(encryptionKey, "AES"), new GCMParameterSpec(TAG_BITS, iv));
-            byte[] plainJson = OBJECT_MAPPER.writeValueAsBytes(data);
-            byte[] encryptedBytes = cipher.doFinal(plainJson);
-
-            return Base64.getEncoder().encodeToString(iv)
-                    + "$" + Base64.getEncoder().encodeToString(encryptedBytes);
+            byte[] encryptedBytes = cipher.doFinal(plainBytes);
+            byte[] payload = new byte[iv.length + encryptedBytes.length];
+            System.arraycopy(iv, 0, payload, 0, iv.length);
+            System.arraycopy(encryptedBytes, 0, payload, iv.length, encryptedBytes.length);
+            return payload;
         } catch (Exception exception) {
-            throw new IllegalStateException("Could not encrypt the protected item payload.", exception);
+            throw new IllegalStateException("Could not encrypt the protected image payload.", exception);
         }
     }
 
-    private ProtectedItemData decrypt(String payload, byte[] encryptionKey) {
-        try {
-            String[] parts = payload == null ? new String[0] : payload.split("\\$", 2);
-            if (parts.length != 2) {
-                throw new IllegalStateException("Invalid protected item payload format.");
-            }
+    private byte[] decryptBytes(byte[] payload, byte[] encryptionKey) {
+        if (payload == null || payload.length == 0) {
+            return new byte[0];
+        }
+        if (payload.length <= IV_BYTES) {
+            throw new IllegalStateException("Invalid protected image payload format.");
+        }
 
-            byte[] iv = Base64.getDecoder().decode(parts[0]);
-            byte[] encryptedBytes = Base64.getDecoder().decode(parts[1]);
+        try {
+            byte[] iv = new byte[IV_BYTES];
+            byte[] encryptedBytes = new byte[payload.length - IV_BYTES];
+            System.arraycopy(payload, 0, iv, 0, IV_BYTES);
+            System.arraycopy(payload, IV_BYTES, encryptedBytes, 0, encryptedBytes.length);
 
             Cipher cipher = Cipher.getInstance(CIPHER_ALGORITHM);
             cipher.init(Cipher.DECRYPT_MODE, new SecretKeySpec(encryptionKey, "AES"), new GCMParameterSpec(TAG_BITS, iv));
-            byte[] plainJson = cipher.doFinal(encryptedBytes);
-            return OBJECT_MAPPER.readValue(new String(plainJson, StandardCharsets.UTF_8), ProtectedItemData.class);
+            return cipher.doFinal(encryptedBytes);
         } catch (Exception exception) {
-            throw new IllegalStateException("Could not decrypt the protected item payload.", exception);
+            throw new IllegalStateException("Could not decrypt the protected image payload.", exception);
         }
     }
 
@@ -130,6 +166,7 @@ public final class ProtectedItemCrypto {
             String passwordHash,
             String lockSalt,
             String encryptedPayload,
+            byte[] encryptedImageData,
             UnlockedItemSession unlockedSession) {
     }
 }

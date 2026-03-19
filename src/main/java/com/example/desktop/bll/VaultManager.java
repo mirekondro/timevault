@@ -4,8 +4,10 @@ import com.example.desktop.dao.SchemaInitializer;
 import com.example.desktop.dao.UserDAO;
 import com.example.desktop.dao.VaultItemDAO;
 import com.example.desktop.model.AppModel;
+import com.example.desktop.model.ImageAssetData;
 import com.example.desktop.model.ItemLockOptions;
 import com.example.desktop.model.ProtectedItemData;
+import com.example.desktop.model.StoredImageRecord;
 import com.example.desktop.model.UnlockedItemSession;
 import com.example.desktop.model.VaultItemFx;
 import com.example.desktop.security.ProtectedItemCrypto;
@@ -13,7 +15,11 @@ import com.example.shared.model.UserSession;
 import com.example.shared.model.VaultUser;
 import com.example.shared.security.AccountValidator;
 import com.example.shared.security.PasswordHasher;
+import com.example.shared.service.GeminiService;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -26,15 +32,22 @@ import java.util.Optional;
  */
 public class VaultManager {
 
+    private static final long MAX_IMAGE_BYTES = 10L * 1024L * 1024L;
+
     private final VaultItemDAO vaultItemDAO;
     private final UserDAO userDAO;
     private final SchemaInitializer schemaInitializer;
+    private final GeminiService geminiService;
     private final ProtectedItemCrypto protectedItemCrypto = new ProtectedItemCrypto();
 
-    public VaultManager(VaultItemDAO vaultItemDAO, UserDAO userDAO, SchemaInitializer schemaInitializer) {
+    public VaultManager(VaultItemDAO vaultItemDAO,
+                        UserDAO userDAO,
+                        SchemaInitializer schemaInitializer,
+                        GeminiService geminiService) {
         this.vaultItemDAO = vaultItemDAO;
         this.userDAO = userDAO;
         this.schemaInitializer = schemaInitializer;
+        this.geminiService = geminiService;
     }
 
     public void initialize(AppModel appModel) {
@@ -192,11 +205,12 @@ public class VaultManager {
         item.setOwnerId(currentUser.id());
         item.setCreatedAt(LocalDateTime.now());
         item.setUpdatedAt(item.getCreatedAt());
-        if (!applyLockConfiguration(appModel, item, null, lockOptions)) {
+        LockConfigurationResult lockResult = applyLockConfiguration(appModel, item, null, lockOptions, null);
+        if (!lockResult.success()) {
             return false;
         }
 
-        return saveNewItem(appModel, currentUser, item, "status.save.url.saved");
+        return saveNewItem(appModel, currentUser, item, lockResult.imageRecord(), "status.save.url.saved");
     }
 
     public boolean updateUrl(AppModel appModel,
@@ -230,11 +244,12 @@ public class VaultManager {
         updatedItem.setTags(buildTags(AppModel.TYPE_URL, url));
         updatedItem.setSourceUrl(url);
         updatedItem.setUpdatedAt(LocalDateTime.now());
-        if (!applyLockConfiguration(appModel, updatedItem, existingItem, lockOptions)) {
+        LockConfigurationResult lockResult = applyLockConfiguration(appModel, updatedItem, existingItem, lockOptions, null);
+        if (!lockResult.success()) {
             return false;
         }
 
-        return updateExistingItem(appModel, currentUser, updatedItem, "status.edit.url.updated");
+        return updateExistingItem(appModel, currentUser, updatedItem, lockResult.imageRecord(), "status.edit.url.updated");
     }
 
     public boolean createText(AppModel appModel, String titleInput, String contentInput, ItemLockOptions lockOptions) {
@@ -259,11 +274,12 @@ public class VaultManager {
         item.setOwnerId(currentUser.id());
         item.setCreatedAt(LocalDateTime.now());
         item.setUpdatedAt(item.getCreatedAt());
-        if (!applyLockConfiguration(appModel, item, null, lockOptions)) {
+        LockConfigurationResult lockResult = applyLockConfiguration(appModel, item, null, lockOptions, null);
+        if (!lockResult.success()) {
             return false;
         }
 
-        return saveNewItem(appModel, currentUser, item, "status.save.text.saved");
+        return saveNewItem(appModel, currentUser, item, lockResult.imageRecord(), "status.save.text.saved");
     }
 
     public boolean updateText(AppModel appModel,
@@ -295,46 +311,52 @@ public class VaultManager {
         updatedItem.setTags(buildTags(AppModel.TYPE_TEXT, content));
         updatedItem.setSourceUrl(null);
         updatedItem.setUpdatedAt(LocalDateTime.now());
-        if (!applyLockConfiguration(appModel, updatedItem, existingItem, lockOptions)) {
+        LockConfigurationResult lockResult = applyLockConfiguration(appModel, updatedItem, existingItem, lockOptions, null);
+        if (!lockResult.success()) {
             return false;
         }
 
-        return updateExistingItem(appModel, currentUser, updatedItem, "status.edit.text.updated");
+        return updateExistingItem(appModel, currentUser, updatedItem, lockResult.imageRecord(), "status.edit.text.updated");
     }
 
-    public boolean createImage(AppModel appModel, String titleInput, String pathInput, ItemLockOptions lockOptions) {
+    public boolean createImage(AppModel appModel, String titleInput, Path selectedImagePath, ItemLockOptions lockOptions) {
         UserSession currentUser = requireAuthenticatedUser(appModel);
         if (currentUser == null) {
             return false;
         }
 
-        String title = sanitize(titleInput);
-        String path = sanitize(pathInput);
-        if (title.isBlank() || path.isBlank()) {
-            appModel.showErrorKey("status.save.image.missing");
+        Optional<ImageAssetData> imageAsset = readImageAsset(appModel, selectedImagePath);
+        if (imageAsset.isEmpty()) {
             return false;
         }
 
+        String title = firstNonBlank(titleInput, imageAsset.get().fileName());
+        String aiContext = analyzeImageContext(imageAsset.get());
         VaultItemFx item = new VaultItemFx();
         item.setTitle(title);
-        item.setContent(path);
-        item.setAiContext(buildContext("IMAGE", title, path));
+        item.setContent(imageAsset.get().fileName());
+        item.setAiContext(aiContext);
         item.setItemType(AppModel.TYPE_IMAGE);
-        item.setTags(buildTags(AppModel.TYPE_IMAGE, title));
+        item.setTags(buildTags(AppModel.TYPE_IMAGE, title + " " + imageAsset.get().fileName()));
         item.setOwnerId(currentUser.id());
         item.setCreatedAt(LocalDateTime.now());
         item.setUpdatedAt(item.getCreatedAt());
-        if (!applyLockConfiguration(appModel, item, null, lockOptions)) {
+        item.setImageMimeType(imageAsset.get().mimeType());
+        item.setImageByteCount(imageAsset.get().size());
+        item.setCachedImageBytes(imageAsset.get().bytes());
+
+        LockConfigurationResult lockResult = applyLockConfiguration(appModel, item, null, lockOptions, imageAsset.get());
+        if (!lockResult.success()) {
             return false;
         }
 
-        return saveNewItem(appModel, currentUser, item, "status.save.image.saved");
+        return saveNewItem(appModel, currentUser, item, lockResult.imageRecord(), "status.save.image.saved");
     }
 
     public boolean updateImage(AppModel appModel,
                                VaultItemFx existingItem,
                                String titleInput,
-                               String pathInput,
+                               Path replacementImagePath,
                                ItemLockOptions lockOptions) {
         UserSession currentUser = requireAuthenticatedUser(appModel);
         if (currentUser == null) {
@@ -345,26 +367,34 @@ public class VaultManager {
             return false;
         }
 
-        String title = sanitize(titleInput);
-        String path = sanitize(pathInput);
-        if (title.isBlank() || path.isBlank()) {
-            appModel.showErrorKey("status.save.image.missing");
+        Optional<ImageAssetData> imageAsset = resolveImageAssetForUpdate(appModel, currentUser, existingItem, replacementImagePath);
+        if (imageAsset.isEmpty()) {
             return false;
         }
+
+        String title = firstNonBlank(titleInput, appModel.getResolvedTitle(existingItem));
+        String aiContext = replacementImagePath == null
+                ? firstNonBlank(appModel.getResolvedContext(existingItem), analyzeImageContext(imageAsset.get()))
+                : analyzeImageContext(imageAsset.get());
 
         VaultItemFx updatedItem = copyItem(existingItem);
         updatedItem.setTitle(title);
-        updatedItem.setContent(path);
-        updatedItem.setAiContext(buildContext("IMAGE", title, path));
+        updatedItem.setContent(imageAsset.get().fileName());
+        updatedItem.setAiContext(aiContext);
         updatedItem.setItemType(AppModel.TYPE_IMAGE);
-        updatedItem.setTags(buildTags(AppModel.TYPE_IMAGE, title));
+        updatedItem.setTags(buildTags(AppModel.TYPE_IMAGE, title + " " + imageAsset.get().fileName()));
         updatedItem.setSourceUrl(null);
         updatedItem.setUpdatedAt(LocalDateTime.now());
-        if (!applyLockConfiguration(appModel, updatedItem, existingItem, lockOptions)) {
+        updatedItem.setImageMimeType(imageAsset.get().mimeType());
+        updatedItem.setImageByteCount(imageAsset.get().size());
+        updatedItem.setCachedImageBytes(imageAsset.get().bytes());
+
+        LockConfigurationResult lockResult = applyLockConfiguration(appModel, updatedItem, existingItem, lockOptions, imageAsset.get());
+        if (!lockResult.success()) {
             return false;
         }
 
-        return updateExistingItem(appModel, currentUser, updatedItem, "status.edit.image.updated");
+        return updateExistingItem(appModel, currentUser, updatedItem, lockResult.imageRecord(), "status.edit.image.updated");
     }
 
     public boolean unlockItem(AppModel appModel, VaultItemFx item, String rawPassword) {
@@ -384,18 +414,58 @@ public class VaultManager {
         }
 
         try {
-            UnlockedItemSession unlockedSession = protectedItemCrypto.unlock(item, rawPassword);
+            byte[] protectedImageData = loadStoredImageRecord(item.getOwnerId(), item.getId())
+                    .map(StoredImageRecord::protectedImageData)
+                    .orElseGet(() -> new byte[0]);
+            UnlockedItemSession unlockedSession = protectedItemCrypto.unlock(item, protectedImageData, rawPassword);
             VaultItemFx unlockedItem = copyItem(item);
             unlockedItem.setUnlockedSession(unlockedSession);
             appModel.updateItem(unlockedItem);
             appModel.showSuccessKey("status.lock.unlock.success", unlockedItem.getId());
             return true;
+        } catch (SQLException exception) {
+            appModel.showErrorKey("status.lock.unlock.error", safeMessage(exception));
+            return false;
         } catch (IllegalArgumentException exception) {
             appModel.showErrorKey("status.lock.unlock.invalid");
             return false;
         } catch (IllegalStateException exception) {
             appModel.showErrorKey("status.lock.unlock.error", safeMessage(exception));
             return false;
+        }
+    }
+
+    public Optional<ImageAssetData> loadImageAsset(AppModel appModel, VaultItemFx item) {
+        if (item == null
+                || !AppModel.TYPE_IMAGE.equalsIgnoreCase(item.getItemType())
+                || appModel.isLockedItemHidden(item)
+                || !item.hasStoredImage()) {
+            return Optional.empty();
+        }
+
+        String fileName = firstNonBlank(appModel.getResolvedContent(item), item.getTitle());
+        if (item.isUnlockedInSession() && item.getUnlockedSession() != null && item.getUnlockedSession().imageBytes().length > 0) {
+            return Optional.of(new ImageAssetData(fileName, item.getImageMimeType(), item.getUnlockedSession().imageBytes()));
+        }
+
+        byte[] cachedImageBytes = item.getCachedImageBytes();
+        if (cachedImageBytes.length > 0) {
+            return Optional.of(new ImageAssetData(fileName, item.getImageMimeType(), cachedImageBytes));
+        }
+
+        try {
+            Optional<StoredImageRecord> storedImageRecord = loadStoredImageRecord(item.getOwnerId(), item.getId());
+            if (storedImageRecord.isEmpty() || storedImageRecord.get().imageData().length == 0) {
+                return Optional.empty();
+            }
+
+            item.setCachedImageBytes(storedImageRecord.get().imageData());
+            item.setImageMimeType(firstNonBlank(storedImageRecord.get().mimeType(), item.getImageMimeType()));
+            item.setImageByteCount(Math.max(item.getImageByteCount(), storedImageRecord.get().byteCount()));
+            return Optional.of(new ImageAssetData(fileName, item.getImageMimeType(), item.getCachedImageBytes()));
+        } catch (SQLException exception) {
+            appModel.showErrorKey("status.image.load.error", safeMessage(exception));
+            return Optional.empty();
         }
     }
 
@@ -433,10 +503,14 @@ public class VaultManager {
         }
     }
 
-    private boolean saveNewItem(AppModel appModel, UserSession currentUser, VaultItemFx item, String successKey) {
+    private boolean saveNewItem(AppModel appModel,
+                                UserSession currentUser,
+                                VaultItemFx item,
+                                StoredImageRecord imageRecord,
+                                String successKey) {
         appModel.setBusy(true);
         try {
-            VaultItemFx savedItem = vaultItemDAO.insert(currentUser.id(), item);
+            VaultItemFx savedItem = vaultItemDAO.insert(currentUser.id(), item, imageRecord);
             appModel.addItem(savedItem);
             appModel.showSuccessKey(successKey, savedItem.getId(), currentUser.id());
             return true;
@@ -448,10 +522,14 @@ public class VaultManager {
         }
     }
 
-    private boolean updateExistingItem(AppModel appModel, UserSession currentUser, VaultItemFx item, String successKey) {
+    private boolean updateExistingItem(AppModel appModel,
+                                       UserSession currentUser,
+                                       VaultItemFx item,
+                                       StoredImageRecord imageRecord,
+                                       String successKey) {
         appModel.setBusy(true);
         try {
-            boolean updated = vaultItemDAO.update(currentUser.id(), item);
+            boolean updated = vaultItemDAO.update(currentUser.id(), item, imageRecord);
             if (!updated) {
                 appModel.showErrorKey("status.edit.missing");
                 return false;
@@ -465,6 +543,74 @@ public class VaultManager {
         } finally {
             appModel.setBusy(false);
         }
+    }
+
+    private Optional<ImageAssetData> readImageAsset(AppModel appModel, Path imagePath) {
+        if (imagePath == null) {
+            appModel.showErrorKey("status.save.image.missing");
+            return Optional.empty();
+        }
+
+        try {
+            byte[] bytes = Files.readAllBytes(imagePath);
+            if (bytes.length == 0) {
+                appModel.showErrorKey("status.save.image.read.error");
+                return Optional.empty();
+            }
+            if (bytes.length > MAX_IMAGE_BYTES) {
+                appModel.showErrorKey("status.save.image.too.large", MAX_IMAGE_BYTES / (1024 * 1024));
+                return Optional.empty();
+            }
+
+            String mimeType = Files.probeContentType(imagePath);
+            if (mimeType == null || mimeType.isBlank()) {
+                mimeType = "image/png";
+            }
+
+            return Optional.of(new ImageAssetData(imagePath.getFileName().toString(), mimeType, bytes));
+        } catch (IOException exception) {
+            appModel.showErrorKey("status.save.image.read.error");
+            return Optional.empty();
+        }
+    }
+
+    private Optional<ImageAssetData> resolveImageAssetForUpdate(AppModel appModel,
+                                                                UserSession currentUser,
+                                                                VaultItemFx existingItem,
+                                                                Path replacementImagePath) {
+        if (replacementImagePath != null) {
+            return readImageAsset(appModel, replacementImagePath);
+        }
+
+        String fileName = firstNonBlank(appModel.getResolvedContent(existingItem), existingItem.getTitle());
+        if (existingItem.isUnlockedInSession() && existingItem.getUnlockedSession() != null
+                && existingItem.getUnlockedSession().imageBytes().length > 0) {
+            return Optional.of(new ImageAssetData(fileName, existingItem.getImageMimeType(), existingItem.getUnlockedSession().imageBytes()));
+        }
+
+        byte[] cachedImageBytes = existingItem.getCachedImageBytes();
+        if (cachedImageBytes.length > 0) {
+            return Optional.of(new ImageAssetData(fileName, existingItem.getImageMimeType(), cachedImageBytes));
+        }
+
+        try {
+            Optional<StoredImageRecord> storedImageRecord = loadStoredImageRecord(currentUser.id(), existingItem.getId());
+            if (storedImageRecord.isEmpty() || storedImageRecord.get().imageData().length == 0) {
+                appModel.showErrorKey("status.image.load.missing");
+                return Optional.empty();
+            }
+            existingItem.setCachedImageBytes(storedImageRecord.get().imageData());
+            existingItem.setImageMimeType(firstNonBlank(storedImageRecord.get().mimeType(), existingItem.getImageMimeType()));
+            existingItem.setImageByteCount(Math.max(existingItem.getImageByteCount(), storedImageRecord.get().byteCount()));
+            return Optional.of(new ImageAssetData(fileName, existingItem.getImageMimeType(), existingItem.getCachedImageBytes()));
+        } catch (SQLException exception) {
+            appModel.showErrorKey("status.image.load.error", safeMessage(exception));
+            return Optional.empty();
+        }
+    }
+
+    private String analyzeImageContext(ImageAssetData imageAsset) {
+        return geminiService.analyzeImage(imageAsset.bytes(), imageAsset.mimeType(), imageAsset.fileName());
     }
 
     private String buildTags(String type, String content) {
@@ -495,10 +641,11 @@ public class VaultManager {
                 + " A future reader would see \"" + summary + "\" as evidence of how people stored and described things in this version of TimeVault.";
     }
 
-    private boolean applyLockConfiguration(AppModel appModel,
-                                           VaultItemFx item,
-                                           VaultItemFx existingItem,
-                                           ItemLockOptions lockOptions) {
+    private LockConfigurationResult applyLockConfiguration(AppModel appModel,
+                                                           VaultItemFx item,
+                                                           VaultItemFx existingItem,
+                                                           ItemLockOptions lockOptions,
+                                                           ImageAssetData imageAsset) {
         ItemLockOptions safeLockOptions = lockOptions == null
                 ? new ItemLockOptions(false, "", "")
                 : lockOptions;
@@ -506,10 +653,10 @@ public class VaultManager {
         if (!safeLockOptions.enabled()) {
             if (existingItem != null && existingItem.isLocked() && !existingItem.isUnlockedInSession()) {
                 appModel.showErrorKey("status.lock.unlock.required");
-                return false;
+                return LockConfigurationResult.failed();
             }
             clearLockState(item);
-            return true;
+            return LockConfigurationResult.success(buildPlainImageRecord(item, imageAsset));
         }
 
         ProtectedItemData protectedItemData = new ProtectedItemData(
@@ -525,27 +672,51 @@ public class VaultManager {
         if (existingItem != null && existingItem.isLocked() && password.isBlank() && confirmPassword.isBlank()) {
             if (!existingItem.isUnlockedInSession()) {
                 appModel.showErrorKey("status.lock.unlock.required");
-                return false;
+                return LockConfigurationResult.failed();
             }
-            applyProtectedEnvelope(item, protectedItemCrypto.relockWithExistingSession(protectedItemData, existingItem));
-            return true;
+            ProtectedItemCrypto.LockedItemEnvelope envelope = protectedItemCrypto.relockWithExistingSession(
+                    protectedItemData,
+                    imageAsset == null ? null : imageAsset.bytes(),
+                    existingItem);
+            applyProtectedEnvelope(item, envelope);
+            return LockConfigurationResult.success(buildProtectedImageRecord(item, envelope.encryptedImageData()));
         }
 
         if (password.isBlank() || confirmPassword.isBlank()) {
             appModel.showErrorKey("status.lock.password.required");
-            return false;
+            return LockConfigurationResult.failed();
         }
         if (!AccountValidator.isValidPassword(password)) {
             appModel.showErrorKey("status.lock.password.min");
-            return false;
+            return LockConfigurationResult.failed();
         }
         if (!password.equals(confirmPassword)) {
             appModel.showErrorKey("status.lock.password.confirm");
-            return false;
+            return LockConfigurationResult.failed();
         }
 
-        applyProtectedEnvelope(item, protectedItemCrypto.createNewLock(protectedItemData, password));
-        return true;
+        byte[] rawImageBytes = imageAsset == null ? new byte[0] : imageAsset.bytes();
+        ProtectedItemCrypto.LockedItemEnvelope envelope = protectedItemCrypto.createNewLock(protectedItemData, rawImageBytes, password);
+        applyProtectedEnvelope(item, envelope);
+        return LockConfigurationResult.success(buildProtectedImageRecord(item, envelope.encryptedImageData()));
+    }
+
+    private StoredImageRecord buildPlainImageRecord(VaultItemFx item, ImageAssetData imageAsset) {
+        if (item == null || imageAsset == null || imageAsset.bytes().length == 0) {
+            return null;
+        }
+        item.setImageMimeType(imageAsset.mimeType());
+        item.setImageByteCount(imageAsset.size());
+        item.setCachedImageBytes(imageAsset.bytes());
+        return new StoredImageRecord(imageAsset.mimeType(), imageAsset.size(), imageAsset.bytes(), null);
+    }
+
+    private StoredImageRecord buildProtectedImageRecord(VaultItemFx item, byte[] encryptedImageData) {
+        if (item == null || encryptedImageData == null || encryptedImageData.length == 0) {
+            return null;
+        }
+        item.clearCachedImageBytes();
+        return new StoredImageRecord(item.getImageMimeType(), item.getImageByteCount(), null, encryptedImageData);
     }
 
     private void applyProtectedEnvelope(VaultItemFx item, ProtectedItemCrypto.LockedItemEnvelope envelope) {
@@ -559,6 +730,7 @@ public class VaultManager {
         item.setLockSalt(envelope.lockSalt());
         item.setLockPayload(envelope.encryptedPayload());
         item.setUnlockedSession(envelope.unlockedSession());
+        item.clearCachedImageBytes();
     }
 
     private void clearLockState(VaultItemFx item) {
@@ -567,6 +739,10 @@ public class VaultManager {
         item.setLockSalt("");
         item.setLockPayload("");
         item.clearUnlockedSession();
+    }
+
+    private Optional<StoredImageRecord> loadStoredImageRecord(long userId, long itemId) throws SQLException {
+        return vaultItemDAO.findStoredImageByItemId(userId, itemId);
     }
 
     private String firstNonBlank(String value, String fallback) {
@@ -618,6 +794,9 @@ public class VaultManager {
         copy.setLockSalt(source.getLockSalt());
         copy.setLockPayload(source.getLockPayload());
         copy.setUnlockedSession(source.getUnlockedSession() == null ? null : source.getUnlockedSession().copy());
+        copy.setImageMimeType(source.getImageMimeType());
+        copy.setImageByteCount(source.getImageByteCount());
+        copy.setCachedImageBytes(source.getCachedImageBytes());
         return copy;
     }
 
@@ -627,5 +806,16 @@ public class VaultManager {
 
     private String safeMessage(Exception exception) {
         return exception.getMessage() == null ? exception.getClass().getSimpleName() : exception.getMessage();
+    }
+
+    private record LockConfigurationResult(boolean success, StoredImageRecord imageRecord) {
+
+        private static LockConfigurationResult success(StoredImageRecord imageRecord) {
+            return new LockConfigurationResult(true, imageRecord);
+        }
+
+        private static LockConfigurationResult failed() {
+            return new LockConfigurationResult(false, null);
+        }
     }
 }

@@ -8,7 +8,9 @@
 <?import javafx.scene.control.Separator?>
 <?import javafx.scene.control.TextArea?>
 <?import javafx.scene.layout.FlowPane?>
+<?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.image.ImageView?>
 
 <VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.example.desktop.gui.DetailController"
@@ -26,6 +28,13 @@
     </VBox>
     <VBox fx:id="detailContentBox" spacing="14.0">
         <Hyperlink fx:id="sourceLink" onAction="#handleOpenSource" text="" visible="false" managed="false"/>
+        <VBox fx:id="imageBox" spacing="8.0" visible="false" managed="false">
+            <Label fx:id="imageSectionLabel" styleClass="section-title"/>
+            <StackPane styleClass="image-preview-shell">
+                <ImageView fx:id="detailImageView" fitWidth="340.0" fitHeight="240.0" preserveRatio="true"/>
+            </StackPane>
+            <Label fx:id="imageMetaLabel" styleClass="muted-copy" wrapText="true"/>
+        </VBox>
         <Separator/>
         <Label fx:id="contextSectionLabel" styleClass="section-title"/>
         <TextArea fx:id="contextArea" editable="false" prefRowCount="5" styleClass="context-box" wrapText="true"/>

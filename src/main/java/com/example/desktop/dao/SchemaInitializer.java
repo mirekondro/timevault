@@ -39,6 +39,7 @@ public class SchemaInitializer {
             ensureVaultItemsTable(statement);
             ensureVaultItemsUserColumn(statement);
             ensureVaultItemsLockColumns(statement);
+            ensureVaultItemImagesTable(statement);
             migrateLegacyItems(connection);
             enforceUserOwnership(statement);
             ensureIndexes(statement);
@@ -50,6 +51,10 @@ public class SchemaInitializer {
     }
 
     private void dropTables(Statement statement) throws SQLException {
+        statement.executeUpdate("""
+                IF OBJECT_ID('dbo.vault_item_images', 'U') IS NOT NULL
+                DROP TABLE dbo.vault_item_images
+                """);
         statement.executeUpdate("""
                 IF OBJECT_ID('dbo.vault_items', 'U') IS NOT NULL
                 DROP TABLE dbo.vault_items
@@ -157,6 +162,70 @@ public class SchemaInitializer {
                 IF COL_LENGTH('dbo.vault_items', 'lock_payload') IS NULL
                 BEGIN
                     ALTER TABLE dbo.vault_items ADD lock_payload NVARCHAR(MAX) NULL
+                END
+                """);
+    }
+
+    private void ensureVaultItemImagesTable(Statement statement) throws SQLException {
+        statement.executeUpdate("""
+                IF OBJECT_ID('dbo.vault_item_images', 'U') IS NULL
+                BEGIN
+                    CREATE TABLE dbo.vault_item_images (
+                        item_id BIGINT NOT NULL PRIMARY KEY,
+                        mime_type NVARCHAR(100) NULL,
+                        byte_count BIGINT NOT NULL CONSTRAINT df_vault_item_images_byte_count DEFAULT 0,
+                        image_data VARBINARY(MAX) NULL,
+                        protected_image_data VARBINARY(MAX) NULL,
+                        created_at DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
+                        updated_at DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
+                        CONSTRAINT fk_vault_item_images_item
+                            FOREIGN KEY (item_id) REFERENCES dbo.vault_items(id) ON DELETE CASCADE
+                    )
+                END
+                """);
+
+        statement.executeUpdate("""
+                IF COL_LENGTH('dbo.vault_item_images', 'mime_type') IS NULL
+                BEGIN
+                    ALTER TABLE dbo.vault_item_images ADD mime_type NVARCHAR(100) NULL
+                END
+                """);
+
+        statement.executeUpdate("""
+                IF COL_LENGTH('dbo.vault_item_images', 'byte_count') IS NULL
+                BEGIN
+                    ALTER TABLE dbo.vault_item_images
+                    ADD byte_count BIGINT NOT NULL CONSTRAINT df_vault_item_images_byte_count DEFAULT 0
+                END
+                """);
+
+        statement.executeUpdate("""
+                IF COL_LENGTH('dbo.vault_item_images', 'image_data') IS NULL
+                BEGIN
+                    ALTER TABLE dbo.vault_item_images ADD image_data VARBINARY(MAX) NULL
+                END
+                """);
+
+        statement.executeUpdate("""
+                IF COL_LENGTH('dbo.vault_item_images', 'protected_image_data') IS NULL
+                BEGIN
+                    ALTER TABLE dbo.vault_item_images ADD protected_image_data VARBINARY(MAX) NULL
+                END
+                """);
+
+        statement.executeUpdate("""
+                IF COL_LENGTH('dbo.vault_item_images', 'created_at') IS NULL
+                BEGIN
+                    ALTER TABLE dbo.vault_item_images
+                    ADD created_at DATETIME2 NOT NULL CONSTRAINT df_vault_item_images_created_at DEFAULT SYSDATETIME()
+                END
+                """);
+
+        statement.executeUpdate("""
+                IF COL_LENGTH('dbo.vault_item_images', 'updated_at') IS NULL
+                BEGIN
+                    ALTER TABLE dbo.vault_item_images
+                    ADD updated_at DATETIME2 NOT NULL CONSTRAINT df_vault_item_images_updated_at DEFAULT SYSDATETIME()
                 END
                 """);
     }
@@ -281,6 +350,16 @@ public class SchemaInitializer {
                       AND object_id = OBJECT_ID('dbo.vault_items')
                 )
                 CREATE INDEX idx_vault_items_user_created_at ON dbo.vault_items(user_id, created_at DESC)
+                """);
+
+        statement.executeUpdate("""
+                IF NOT EXISTS (
+                    SELECT 1
+                    FROM sys.indexes
+                    WHERE name = 'idx_vault_item_images_item_id'
+                      AND object_id = OBJECT_ID('dbo.vault_item_images')
+                )
+                CREATE INDEX idx_vault_item_images_item_id ON dbo.vault_item_images(item_id)
                 """);
     }
 }

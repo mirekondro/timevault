@@ -1,0 +1,31 @@
+package com.example.desktop.config;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Properties;
+
+/**
+ * Loads shared non-database application settings for the desktop app.
+ */
+public class DesktopApplicationConfig {
+
+    private final Properties properties = new Properties();
+
+    public DesktopApplicationConfig() {
+        try (InputStream inputStream = getClass().getClassLoader().getResourceAsStream("application.properties")) {
+            if (inputStream != null) {
+                properties.load(inputStream);
+            }
+        } catch (IOException exception) {
+            throw new IllegalStateException("Could not load application.properties.", exception);
+        }
+    }
+
+    public String geminiApiKey() {
+        return properties.getProperty("gemini.api.key", "").trim();
+    }
+
+    public String geminiModel() {
+        return properties.getProperty("gemini.model", "gemini-2.0-flash").trim();
+    }
+}

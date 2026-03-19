@@ -31,6 +31,9 @@ public class VaultItemFx {
     private String lockSalt = "";
     private String lockPayload = "";
     private UnlockedItemSession unlockedSession;
+    private String imageMimeType = "";
+    private long imageByteCount;
+    private byte[] cachedImageBytes = new byte[0];
 
     public long getId() {
         return id.get();
@@ -198,6 +201,38 @@ public class VaultItemFx {
 
     public void clearUnlockedSession() {
         unlockedSession = null;
+    }
+
+    public String getImageMimeType() {
+        return imageMimeType;
+    }
+
+    public void setImageMimeType(String imageMimeType) {
+        this.imageMimeType = imageMimeType == null ? "" : imageMimeType;
+    }
+
+    public long getImageByteCount() {
+        return imageByteCount;
+    }
+
+    public void setImageByteCount(long imageByteCount) {
+        this.imageByteCount = Math.max(imageByteCount, 0L);
+    }
+
+    public boolean hasStoredImage() {
+        return imageByteCount > 0;
+    }
+
+    public byte[] getCachedImageBytes() {
+        return cachedImageBytes.clone();
+    }
+
+    public void setCachedImageBytes(byte[] cachedImageBytes) {
+        this.cachedImageBytes = cachedImageBytes == null ? new byte[0] : cachedImageBytes.clone();
+    }
+
+    public void clearCachedImageBytes() {
+        cachedImageBytes = new byte[0];
     }
 
     public String getPreviewSource() {

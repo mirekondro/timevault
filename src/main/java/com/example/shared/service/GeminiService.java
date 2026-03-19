@@ -41,6 +41,12 @@ public class GeminiService {
     private static final String GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s";
 
     public GeminiService() {
+        this("", "gemini-2.0-flash");
+    }
+
+    public GeminiService(String apiKey, String model) {
+        this.apiKey = apiKey == null ? "" : apiKey.trim();
+        this.model = model == null || model.isBlank() ? "gemini-2.0-flash" : model.trim();
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(30))
                 .build();

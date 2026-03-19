@@ -1,6 +1,7 @@
 package com.example.desktop;
 
 import com.example.desktop.bll.VaultManager;
+import com.example.desktop.config.DesktopApplicationConfig;
 import com.example.desktop.dao.ConnectionManager;
 import com.example.desktop.dao.DatabaseConfig;
 import com.example.desktop.dao.SchemaInitializer;
@@ -9,6 +10,7 @@ import com.example.desktop.dao.SqlVaultItemDAO;
 import com.example.desktop.gui.AuthController;
 import com.example.desktop.gui.MainController;
 import com.example.desktop.model.AppModel;
+import com.example.shared.service.GeminiService;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -30,12 +32,14 @@ public class DesktopApp extends Application {
 
     @Override
     public void start(Stage stage) throws IOException {
+        DesktopApplicationConfig applicationConfig = new DesktopApplicationConfig();
         DatabaseConfig databaseConfig = new DatabaseConfig();
         ConnectionManager connectionManager = new ConnectionManager(databaseConfig);
         SchemaInitializer schemaInitializer = new SchemaInitializer(connectionManager, databaseConfig);
         SqlVaultItemDAO vaultItemDAO = new SqlVaultItemDAO(connectionManager);
         SqlUserDAO userDAO = new SqlUserDAO(connectionManager);
-        VaultManager vaultManager = new VaultManager(vaultItemDAO, userDAO, schemaInitializer);
+        GeminiService geminiService = new GeminiService(applicationConfig.geminiApiKey(), applicationConfig.geminiModel());
+        VaultManager vaultManager = new VaultManager(vaultItemDAO, userDAO, schemaInitializer, geminiService);
         AppModel appModel = new AppModel();
 
         Rectangle2D visualBounds = Screen.getPrimary().getVisualBounds();

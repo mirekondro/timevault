@@ -10,6 +10,7 @@ import javafx.scene.control.TextField;
 import javafx.stage.FileChooser;
 
 import java.io.File;
+import java.nio.file.Path;
 
 /**
  * Add/edit dialog for image items.
@@ -51,6 +52,7 @@ public class ImageDialogController extends BaseItemDialogController {
 
     private boolean editMode;
     private VaultItemFx editingItem;
+    private Path selectedImagePath;
 
     @Override
     public void setContext(com.example.desktop.model.AppModel appModel,
@@ -69,6 +71,7 @@ public class ImageDialogController extends BaseItemDialogController {
     public void prepareForCreate() {
         editMode = false;
         editingItem = null;
+        selectedImagePath = null;
         titleField.clear();
         pathField.clear();
         prepareLockStateForCreate(lockToggle, lockPasswordField, confirmLockPasswordField);
@@ -78,6 +81,7 @@ public class ImageDialogController extends BaseItemDialogController {
     public void prepareForEdit(VaultItemFx item) {
         editMode = true;
         editingItem = item;
+        selectedImagePath = null;
         titleField.setText(appModel.getResolvedTitle(item));
         pathField.setText(appModel.getResolvedContent(item));
         prepareLockStateForEdit(lockToggle, lockPasswordField, confirmLockPasswordField, item);
@@ -93,6 +97,7 @@ public class ImageDialogController extends BaseItemDialogController {
 
         File selectedFile = chooser.showOpenDialog(dialogStage);
         if (selectedFile != null) {
+            selectedImagePath = selectedFile.toPath();
             pathField.setText(selectedFile.getAbsolutePath());
             if (titleField.getText().isBlank()) {
                 titleField.setText(selectedFile.getName());
@@ -108,12 +113,12 @@ public class ImageDialogController extends BaseItemDialogController {
                         appModel,
                         editingItem,
                         titleField.getText(),
-                        pathField.getText(),
+                        selectedImagePath,
                         readLockOptions(lockToggle, lockPasswordField, confirmLockPasswordField))
                 : vaultManager.createImage(
                         appModel,
                         titleField.getText(),
-                        pathField.getText(),
+                        selectedImagePath,
                         readLockOptions(lockToggle, lockPasswordField, confirmLockPasswordField));
         if (saved) {
             closeDialog();

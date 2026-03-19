@@ -3,6 +3,7 @@ package com.example.desktop.gui;
 import com.example.desktop.DesktopNavigator;
 import com.example.desktop.bll.VaultManager;
 import com.example.desktop.model.AppModel;
+import com.example.desktop.model.ImageAssetData;
 import com.example.desktop.model.VaultItemFx;
 import javafx.application.HostServices;
 import javafx.beans.binding.Bindings;
@@ -12,11 +13,15 @@ import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextArea;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
+import java.io.ByteArrayInputStream;
 import java.util.Arrays;
+import java.util.Locale;
 
 /**
  * Controller for the selected item details pane.
@@ -49,6 +54,18 @@ public class DetailController implements AppContextAware {
 
     @FXML
     private Hyperlink sourceLink;
+
+    @FXML
+    private VBox imageBox;
+
+    @FXML
+    private Label imageSectionLabel;
+
+    @FXML
+    private ImageView detailImageView;
+
+    @FXML
+    private Label imageMetaLabel;
 
     @FXML
     private FlowPane tagsPane;
@@ -85,6 +102,7 @@ public class DetailController implements AppContextAware {
         appModel.bindText(contextSectionLabel, "detail.section.context");
         appModel.bindText(tagsSectionLabel, "detail.section.tags");
         appModel.bindText(contentSectionLabel, "detail.section.content");
+        appModel.bindText(imageSectionLabel, "detail.section.image");
         appModel.bindText(unlockTitleLabel, "detail.locked.title");
         appModel.bindText(unlockCopyLabel, "detail.locked.copy");
         appModel.bindPrompt(unlockPasswordField, "detail.unlock.prompt");
@@ -133,6 +151,7 @@ public class DetailController implements AppContextAware {
             sourceLink.setText("");
             sourceLink.setVisible(false);
             sourceLink.setManaged(false);
+            clearImagePreview();
             contextArea.setText("");
             contentArea.setText("");
             unlockBox.setVisible(false);
@@ -149,6 +168,7 @@ public class DetailController implements AppContextAware {
             sourceLink.setText("");
             sourceLink.setVisible(false);
             sourceLink.setManaged(false);
+            clearImagePreview();
             contextArea.setText("");
             contentArea.setText("");
             unlockBox.setVisible(true);
@@ -162,6 +182,7 @@ public class DetailController implements AppContextAware {
         sourceLink.setText(sourceUrl);
         sourceLink.setVisible(!sourceUrl.isBlank());
         sourceLink.setManaged(sourceLink.isVisible());
+        updateImagePreview(item);
         unlockBox.setVisible(false);
         unlockBox.setManaged(false);
         detailContentBox.setVisible(true);
@@ -184,5 +205,51 @@ public class DetailController implements AppContextAware {
         Label tagLabel = new Label(text);
         tagLabel.getStyleClass().add("tag-chip");
         tagsPane.getChildren().add(tagLabel);
+    }
+
+    private void updateImagePreview(VaultItemFx item) {
+        if (item == null || !AppModel.TYPE_IMAGE.equalsIgnoreCase(item.getItemType())) {
+            clearImagePreview();
+            return;
+        }
+
+        imageBox.setVisible(true);
+        imageBox.setManaged(true);
+
+        vaultManager.loadImageAsset(appModel, item).ifPresentOrElse(imageAsset -> {
+            detailImageView.setImage(new Image(new ByteArrayInputStream(imageAsset.bytes())));
+            imageMetaLabel.setText(formatImageMeta(item, imageAsset));
+        }, () -> {
+            detailImageView.setImage(null);
+            imageMetaLabel.setText(appModel.text("detail.image.unavailable"));
+        });
+    }
+
+    private void clearImagePreview() {
+        detailImageView.setImage(null);
+        imageMetaLabel.setText("");
+        imageBox.setVisible(false);
+        imageBox.setManaged(false);
+    }
+
+    private String formatImageMeta(VaultItemFx item, ImageAssetData imageAsset) {
+        String mimeType = imageAsset.mimeType() == null || imageAsset.mimeType().isBlank()
+                ? item.getImageMimeType()
+                : imageAsset.mimeType();
+        String sizeLabel = formatByteCount(Math.max(item.getImageByteCount(), imageAsset.size()));
+        return appModel.text("detail.image.meta", sizeLabel, mimeType.toLowerCase(Locale.ROOT));
+    }
+
+    private String formatByteCount(long byteCount) {
+        if (byteCount <= 0) {
+            return "0 B";
+        }
+        if (byteCount >= 1024L * 1024L) {
+            return String.format(Locale.ROOT, "%.1f MB", byteCount / (1024d * 1024d));
+        }
+        if (byteCount >= 1024L) {
+            return String.format(Locale.ROOT, "%.1f KB", byteCount / 1024d);
+        }
+        return byteCount + " B";
     }
 }

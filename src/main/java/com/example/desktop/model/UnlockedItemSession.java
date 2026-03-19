@@ -9,10 +9,12 @@ public final class UnlockedItemSession {
 
     private final ProtectedItemData data;
     private final byte[] encryptionKey;
+    private final byte[] imageBytes;
 
-    public UnlockedItemSession(ProtectedItemData data, byte[] encryptionKey) {
+    public UnlockedItemSession(ProtectedItemData data, byte[] encryptionKey, byte[] imageBytes) {
         this.data = data;
         this.encryptionKey = encryptionKey == null ? new byte[0] : encryptionKey.clone();
+        this.imageBytes = imageBytes == null ? new byte[0] : imageBytes.clone();
     }
 
     public ProtectedItemData data() {
@@ -23,8 +25,12 @@ public final class UnlockedItemSession {
         return encryptionKey.clone();
     }
 
+    public byte[] imageBytes() {
+        return imageBytes.clone();
+    }
+
     public UnlockedItemSession copy() {
-        return new UnlockedItemSession(data, encryptionKey);
+        return new UnlockedItemSession(data, encryptionKey, imageBytes);
     }
 
     @Override
@@ -32,6 +38,7 @@ public final class UnlockedItemSession {
         return "UnlockedItemSession{"
                 + "data=" + data
                 + ", encryptionKeyBytes=" + encryptionKey.length
+                + ", imageBytes=" + imageBytes.length
                 + '}';
     }
 
@@ -39,6 +46,7 @@ public final class UnlockedItemSession {
     public int hashCode() {
         int result = data != null ? data.hashCode() : 0;
         result = 31 * result + Arrays.hashCode(encryptionKey);
+        result = 31 * result + Arrays.hashCode(imageBytes);
         return result;
     }
 
@@ -51,6 +59,7 @@ public final class UnlockedItemSession {
             return false;
         }
         return java.util.Objects.equals(data, that.data)
-                && Arrays.equals(encryptionKey, that.encryptionKey);
+                && Arrays.equals(encryptionKey, that.encryptionKey)
+                && Arrays.equals(imageBytes, that.imageBytes);
     }
 }

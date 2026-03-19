@@ -22,7 +22,7 @@
         <Label fx:id="dialogCopyLabel" styleClass="muted-copy" wrapText="true"/>
         <TextField fx:id="titleField" styleClass="text-field"/>
         <HBox spacing="10.0">
-            <TextField fx:id="pathField" styleClass="text-field" HBox.hgrow="ALWAYS"/>
+            <TextField fx:id="pathField" editable="false" styleClass="text-field" HBox.hgrow="ALWAYS"/>
             <Button fx:id="browseButton" mnemonicParsing="false" onAction="#handleBrowse"
                     styleClass="ghost-button"/>
         </HBox>
