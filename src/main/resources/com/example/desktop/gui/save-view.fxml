@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Tab?>
+<?import javafx.scene.control.TabPane?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Priority?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.example.desktop.gui.SaveController"
+      spacing="12.0" styleClass="vault-card">
+    <padding>
+        <Insets top="18.0" right="18.0" bottom="18.0" left="18.0"/>
+    </padding>
+    <Label styleClass="section-title" text="Capture Into The Vault"/>
+    <Label styleClass="muted-copy" text="Each save action goes through the business layer and updates the shared AppModel." wrapText="true"/>
+
+    <TabPane tabClosingPolicy="UNAVAILABLE">
+        <tabs>
+            <Tab text="URL">
+                <content>
+                    <VBox spacing="12.0">
+                        <padding><Insets top="18.0" right="18.0" bottom="18.0" left="18.0"/></padding>
+                        <Label styleClass="muted-copy" text="Save a link with optional notes or extracted text." wrapText="true"/>
+                        <TextField fx:id="urlField" promptText="https://example.com" styleClass="text-field"/>
+                        <TextField fx:id="urlTitleField" promptText="Optional title" styleClass="text-field"/>
+                        <TextArea fx:id="urlNotesArea" prefRowCount="4" promptText="Optional notes or copied content"
+                                  styleClass="text-area" wrapText="true"/>
+                        <Button fx:id="saveUrlButton" mnemonicParsing="false" onAction="#handleSaveUrl"
+                                styleClass="accent-button" text="Save URL"/>
+                    </VBox>
+                </content>
+            </Tab>
+            <Tab text="Text">
+                <content>
+                    <VBox spacing="12.0">
+                        <padding><Insets top="18.0" right="18.0" bottom="18.0" left="18.0"/></padding>
+                        <Label styleClass="muted-copy" text="Save text notes or copy-pasted content." wrapText="true"/>
+                        <TextField fx:id="textTitleField" promptText="Title" styleClass="text-field"/>
+                        <TextArea fx:id="textContentArea" prefRowCount="6" promptText="Write or paste the text here"
+                                  styleClass="text-area" wrapText="true"/>
+                        <Button fx:id="saveTextButton" mnemonicParsing="false" onAction="#handleSaveText"
+                                styleClass="accent-button" text="Save Text"/>
+                    </VBox>
+                </content>
+            </Tab>
+            <Tab text="Image">
+                <content>
+                    <VBox spacing="12.0">
+                        <padding><Insets top="18.0" right="18.0" bottom="18.0" left="18.0"/></padding>
+                        <Label styleClass="muted-copy" text="Pick an image file and save its local reference." wrapText="true"/>
+                        <TextField fx:id="imageTitleField" promptText="Image title" styleClass="text-field"/>
+                        <HBox spacing="12.0">
+                            <TextField fx:id="imagePathField" editable="false" promptText="Choose an image file"
+                                       styleClass="text-field" HBox.hgrow="ALWAYS"/>
+                            <Button mnemonicParsing="false" onAction="#handleBrowseImage"
+                                    styleClass="ghost-button" text="Browse"/>
+                        </HBox>
+                        <Button fx:id="saveImageButton" mnemonicParsing="false" onAction="#handleSaveImage"
+                                styleClass="accent-button" text="Save Image"/>
+                    </VBox>
+                </content>
+            </Tab>
+        </tabs>
+    </TabPane>
+</VBox>

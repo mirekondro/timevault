@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.SplitPane?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<BorderPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.example.desktop.gui.MainController"
+            prefHeight="920.0" prefWidth="1380.0" styleClass="app-root">
+    <padding>
+        <Insets top="22.0" right="22.0" bottom="22.0" left="22.0"/>
+    </padding>
+    <top>
+        <VBox spacing="18.0">
+            <fx:include fx:id="topBarView" source="top-bar.fxml"/>
+            <fx:include fx:id="saveView" source="save-view.fxml"/>
+        </VBox>
+    </top>
+    <center>
+        <SplitPane dividerPositions="0.42">
+            <items>
+                <fx:include fx:id="archiveView" source="archive-view.fxml"/>
+                <fx:include fx:id="detailView" source="detail-view.fxml"/>
+            </items>
+        </SplitPane>
+    </center>
+    <bottom>
+        <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="status-bar">
+            <padding>
+                <Insets top="16.0" right="4.0" bottom="4.0" left="4.0"/>
+            </padding>
+            <Label fx:id="statusLabel" styleClass="status-label" text="Ready"/>
+        </HBox>
+    </bottom>
+</BorderPane>
