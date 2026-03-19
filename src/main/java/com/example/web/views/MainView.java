@@ -48,6 +48,9 @@ public class MainView extends VerticalLayout {
         setMargin(false);
         addClassName("main-view");
 
+        // Force white text styling
+        getStyle().set("color", "#ffffff");
+
         itemsGrid.addClassName("vault-grid");
         itemsGrid.setWidthFull();
         currentView.setSizeFull();
@@ -59,6 +62,9 @@ public class MainView extends VerticalLayout {
         main.setSpacing(false);
         main.setMargin(false);
         main.setAlignItems(Alignment.CENTER);
+
+        // Force white text on main layout
+        main.getStyle().set("color", "#ffffff");
 
         // Header spans full width
         Component header = createHeader();
@@ -306,11 +312,22 @@ public class MainView extends VerticalLayout {
         panel.setAlignItems(FlexComponent.Alignment.CENTER);
         panel.setDefaultHorizontalComponentAlignment(FlexComponent.Alignment.CENTER);
 
+        // Force white text and gradient background on panel
+        panel.getStyle().set("color", "#ffffff");
+        panel.getStyle().set("background", "linear-gradient(135deg, #60A5FA 0%, #A78BFA 50%, #F472B6 100%)");
+        panel.getStyle().set("border-radius", "12px");
+        panel.getStyle().set("padding", "20px");
+        panel.getStyle().set("position", "relative");
+
         TextField urlField = new TextField();
         urlField.setPlaceholder("Paste any link (e.g. https://github.com/...)");
         urlField.setPrefixComponent(VaadinIcon.LINK.create());
         urlField.setWidthFull();
         urlField.addClassName("modern-input");
+
+        // Force input field styling
+        urlField.getStyle().set("background", "rgba(255, 255, 255, 0.1)");
+        urlField.getStyle().set("color", "#ffffff");
 
         Button saveButton = new Button("Extract & Save to Vault", VaadinIcon.MAGIC.create());
         saveButton.addClassName("modern-button");
@@ -343,7 +360,21 @@ public class MainView extends VerticalLayout {
             }
         });
 
-        panel.add(new Paragraph("AI will automatically fetch the webpage, read the content, and generate a contextual summary."), urlField, saveButton);
+        Paragraph description = new Paragraph("AI will automatically fetch the webpage, read the content, and generate a contextual summary.");
+        description.getStyle().set("color", "#ffffff");
+        description.getStyle().set("text-align", "center");
+        description.getStyle().set("margin", "0 0 20px 0");
+
+        panel.add(description, urlField, saveButton);
+
+        // Force white text on all components
+        panel.getChildren().forEach(component -> {
+            component.getElement().getStyle().set("color", "#ffffff");
+            if (component instanceof Paragraph) {
+                component.getElement().getStyle().set("color", "#ffffff");
+            }
+        });
+
         return panel;
     }
 
@@ -353,6 +384,13 @@ public class MainView extends VerticalLayout {
         panel.addClassName("input-panel");
         panel.setAlignItems(FlexComponent.Alignment.CENTER);
         panel.setDefaultHorizontalComponentAlignment(FlexComponent.Alignment.CENTER);
+
+        // Force white text and gradient background on panel
+        panel.getStyle().set("color", "#ffffff");
+        panel.getStyle().set("background", "linear-gradient(135deg, #60A5FA 0%, #A78BFA 50%, #F472B6 100%)");
+        panel.getStyle().set("border-radius", "12px");
+        panel.getStyle().set("padding", "20px");
+        panel.getStyle().set("position", "relative");
 
         MemoryBuffer buffer = new MemoryBuffer();
         Upload upload = new Upload(buffer);
@@ -372,7 +410,21 @@ public class MainView extends VerticalLayout {
             }
         });
 
-        panel.add(new Paragraph("Upload an image. The AI Vision model will deeply analyze its contents and context."), upload);
+        Paragraph description = new Paragraph("Upload an image. The AI Vision model will deeply analyze its contents and context.");
+        description.getStyle().set("color", "#ffffff");
+        description.getStyle().set("text-align", "center");
+        description.getStyle().set("margin", "0 0 20px 0");
+
+        panel.add(description, upload);
+
+        // Force white text on all components
+        panel.getChildren().forEach(component -> {
+            component.getElement().getStyle().set("color", "#ffffff");
+            if (component instanceof Paragraph) {
+                component.getElement().getStyle().set("color", "#ffffff");
+            }
+        });
+
         return panel;
     }
 
@@ -383,11 +435,22 @@ public class MainView extends VerticalLayout {
         panel.setAlignItems(FlexComponent.Alignment.CENTER);
         panel.setDefaultHorizontalComponentAlignment(FlexComponent.Alignment.CENTER);
 
+        // Force white text and gradient background on panel
+        panel.getStyle().set("color", "#ffffff");
+        panel.getStyle().set("background", "linear-gradient(135deg, #60A5FA 0%, #A78BFA 50%, #F472B6 100%)");
+        panel.getStyle().set("border-radius", "12px");
+        panel.getStyle().set("padding", "20px");
+        panel.getStyle().set("position", "relative");
+
         TextArea textArea = new TextArea();
         textArea.setPlaceholder("Dump your thoughts, meeting notes, or raw text here...");
         textArea.setWidthFull();
         textArea.setMinHeight("150px");
         textArea.addClassName("modern-input");
+
+        // Force text area styling
+        textArea.getStyle().set("background", "rgba(255, 255, 255, 0.1)");
+        textArea.getStyle().set("color", "#ffffff");
 
         Button saveButton = new Button("Synthesize Note", VaadinIcon.MAGIC.create());
         saveButton.addClassName("modern-button");
@@ -409,7 +472,21 @@ public class MainView extends VerticalLayout {
             }
         });
 
-        panel.add(new Paragraph("AI will extract key points, generate tags, and create a permanent memory of your text."), textArea, saveButton);
+        Paragraph description = new Paragraph("AI will extract key points, generate tags, and create a permanent memory of your text.");
+        description.getStyle().set("color", "#ffffff");
+        description.getStyle().set("text-align", "center");
+        description.getStyle().set("margin", "0 0 20px 0");
+
+        panel.add(description, textArea, saveButton);
+
+        // Force white text on all components
+        panel.getChildren().forEach(component -> {
+            component.getElement().getStyle().set("color", "#ffffff");
+            if (component instanceof Paragraph) {
+                component.getElement().getStyle().set("color", "#ffffff");
+            }
+        });
+
         return panel;
     }
 

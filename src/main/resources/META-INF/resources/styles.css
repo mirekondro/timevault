@@ -5,12 +5,40 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 html {
-  --lumo-body-text-color: #ffffff;
-  --lumo-header-text-color: #ffffff;
-  --lumo-secondary-text-color: #cbd5e1;
-  --lumo-tertiary-text-color: #94a3b8;
-  --lumo-primary-text-color: #a78bfa;
-  --lumo-base-color: #14141e;
+  --lumo-body-text-color: #ffffff !important;
+  --lumo-header-text-color: #ffffff !important;
+  --lumo-secondary-text-color: #cbd5e1 !important;
+  --lumo-tertiary-text-color: #94a3b8 !important;
+  --lumo-primary-text-color: #a78bfa !important;
+  --lumo-base-color: #14141e !important;
+  --lumo-contrast: #ffffff !important;
+  --lumo-contrast-90pct: rgba(255, 255, 255, 0.9) !important;
+  --lumo-contrast-80pct: rgba(255, 255, 255, 0.8) !important;
+  --lumo-contrast-70pct: rgba(255, 255, 255, 0.7) !important;
+  --lumo-contrast-60pct: rgba(255, 255, 255, 0.6) !important;
+  --lumo-contrast-50pct: rgba(255, 255, 255, 0.5) !important;
+  --lumo-contrast-40pct: rgba(255, 255, 255, 0.4) !important;
+  --lumo-contrast-30pct: rgba(255, 255, 255, 0.3) !important;
+  --lumo-contrast-20pct: rgba(255, 255, 255, 0.2) !important;
+  --lumo-contrast-10pct: rgba(255, 255, 255, 0.1) !important;
+  --lumo-contrast-5pct: rgba(255, 255, 255, 0.05) !important;
+  --lumo-disabled-text-color: rgba(255, 255, 255, 0.4) !important;
+  --lumo-success-text-color: #22c55e !important;
+  --lumo-error-text-color: #ef4444 !important;
+}
+
+/* Global text color enforcement */
+html, body, * {
+  color: #ffffff;
+}
+
+/* Vaadin theme overrides */
+html[theme~="dark"] {
+  --lumo-base-color: #14141e !important;
+  --lumo-tint-5pct: rgba(255, 255, 255, 0.05) !important;
+  --lumo-tint-10pct: rgba(255, 255, 255, 0.1) !important;
+  --lumo-shade-5pct: rgba(0, 0, 0, 0.05) !important;
+  --lumo-shade-10pct: rgba(0, 0, 0, 0.1) !important;
 }
 
 :root {
@@ -184,30 +212,39 @@ vaadin-vertical-layout.main-view > vaadin-vertical-layout {
 
 /* Glowing AI Card (Input section) */
 .modern-card {
-  background: var(--glass-bg);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-radius: var(--radius-xl);
-  padding: 40px;
-  border: 1px solid var(--glass-border);
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02), 0 20px 40px rgba(0,0,0,0.4);
+  background: var(--ai-gradient);
+  border-radius: calc(var(--radius-xl) + 2px);
+  padding: 2px;
   position: relative;
   overflow: hidden;
   width: 100%;
   max-width: 800px;
   margin: 0 auto;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.4), 0 0 30px rgba(167, 139, 250, 0.3);
 }
 
-/* Glowing top edge for input card */
 .modern-card::before {
   content: '';
   position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 2px;
-  background: var(--ai-gradient);
-  opacity: 0.7;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--glass-border);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02);
 }
 
+.modern-card > * {
+  position: relative;
+  z-index: 1;
+  padding: 40px;
+}
+
+/* Modern Tabs */
 .modern-tabs {
   margin-bottom: 30px;
   --lumo-primary-text-color: #A78BFA;
@@ -443,10 +480,31 @@ vaadin-vertical-layout.main-view > vaadin-vertical-layout {
 .input-panel {
   padding: 0;
   margin: 0;
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+}
+
+.input-panel::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  right: 2px;
+  bottom: 2px;
+  background: rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(10px);
+  border-radius: calc(var(--radius-md) - 2px);
+  z-index: 0;
+}
+
+.input-panel > * {
+  position: relative;
+  z-index: 1;
 }
 
 .input-panel p {
-  color: var(--text-secondary) !important;
+  color: var(--text-primary) !important;
   font-size: 14px;
   margin: 0 0 20px 0;
   line-height: 1.6;
@@ -667,5 +725,304 @@ input, textarea {
 
 .vault-search::part(input-field) input::placeholder {
   color: var(--text-muted) !important;
+}
+
+/* ============================================
+   COMPREHENSIVE TEXT COLOR FIXES
+   ============================================ */
+
+/* Force all text to be white on dark background */
+vaadin-vertical-layout, vaadin-horizontal-layout, vaadin-div,
+vaadin-span, vaadin-paragraph, vaadin-text-area, vaadin-text-field,
+vaadin-button, vaadin-tab, vaadin-tabs, vaadin-upload, vaadin-details,
+div, span, p, h1, h2, h3, h4, h5, h6, label {
+  color: var(--text-primary) !important;
+}
+
+/* Vaadin Tab specific fixes */
+vaadin-tab {
+  color: var(--text-secondary) !important;
+}
+
+vaadin-tab[selected] {
+  color: white !important;
+}
+
+vaadin-tab::part(content) {
+  color: inherit !important;
+}
+
+/* Vaadin Button text */
+vaadin-button {
+  color: white !important;
+}
+
+vaadin-button::part(label) {
+  color: inherit !important;
+}
+
+/* Text Area and Text Field fixes */
+vaadin-text-area, vaadin-text-field {
+  color: white !important;
+}
+
+vaadin-text-area::part(input-field), vaadin-text-field::part(input-field) {
+  color: white !important;
+  background-color: rgba(0, 0, 0, 0.2) !important;
+}
+
+vaadin-text-area::part(input-field) textarea,
+vaadin-text-field::part(input-field) input {
+  color: white !important;
+  background: transparent !important;
+}
+
+/* Upload component text */
+vaadin-upload {
+  color: white !important;
+}
+
+vaadin-upload::part(primary-buttons),
+vaadin-upload::part(upload-button) {
+  color: white !important;
+}
+
+/* Tab panel content */
+vaadin-tab-panel {
+  color: var(--text-primary) !important;
+}
+
+/* Details/Summary components */
+vaadin-details {
+  color: var(--text-primary) !important;
+}
+
+vaadin-details::part(summary) {
+  color: var(--text-primary) !important;
+}
+
+vaadin-details::part(content) {
+  color: var(--text-primary) !important;
+}
+
+/* Form labels and text */
+label, .v-label {
+  color: var(--text-primary) !important;
+}
+
+/* Paragraph text */
+vaadin-rich-text-editor, vaadin-rich-text-editor::part(content) {
+  color: var(--text-primary) !important;
+}
+
+/* Any remaining dark text elements */
+* {
+  color: inherit;
+}
+
+/* Specific override for tab content areas */
+.tab-content, .vaadin-tab-panel, [role="tabpanel"] {
+  color: var(--text-primary) !important;
+}
+
+.tab-content *, .vaadin-tab-panel *, [role="tabpanel"] * {
+  color: inherit !important;
+}
+
+/* Input placeholders */
+input::placeholder, textarea::placeholder {
+  color: var(--text-muted) !important;
+}
+
+/* Modern input overrides */
+.modern-input, .modern-input * {
+  color: white !important;
+}
+
+/* ADDITIONAL COMPREHENSIVE TEXT FIXES */
+
+/* All paragraph elements */
+p, vaadin-paragraph {
+  color: var(--text-primary) !important;
+}
+
+/* All text content inside tab panels and content areas */
+vaadin-tab-panel *,
+vaadin-vertical-layout *,
+vaadin-horizontal-layout *,
+.input-panel *,
+.modern-card * {
+  color: var(--text-primary) !important;
+}
+
+/* Force white text on all interactive elements */
+vaadin-button span,
+vaadin-tab span,
+vaadin-upload span,
+vaadin-details span,
+.modern-button *,
+.input-panel p,
+.input-panel label,
+.input-panel span {
+  color: white !important;
+}
+
+/* Tab description and helper text */
+vaadin-tab-panel p,
+vaadin-tab-panel span,
+vaadin-tab-panel div {
+  color: var(--text-primary) !important;
+}
+
+/* All text inside Vaadin components */
+vaadin-vertical-layout p,
+vaadin-horizontal-layout p,
+vaadin-vertical-layout span,
+vaadin-horizontal-layout span,
+vaadin-vertical-layout div,
+vaadin-horizontal-layout div {
+  color: var(--text-primary) !important;
+}
+
+/* Specific fixes for input descriptions */
+.input-panel vaadin-paragraph,
+.input-panel p {
+  color: white !important;
+}
+
+/* Override any default Vaadin text colors */
+vaadin-tab-panel[aria-labelledby] {
+  color: var(--text-primary) !important;
+}
+
+vaadin-tab-panel[aria-labelledby] * {
+  color: inherit !important;
+}
+
+/* ============================================
+   FINAL TEXT COLOR OVERRIDES - CATCH ALL
+   ============================================ */
+
+/* Force absolutely ALL text elements to be white */
+body, html, div, p, span, h1, h2, h3, h4, h5, h6,
+vaadin-vertical-layout, vaadin-horizontal-layout, vaadin-div,
+vaadin-paragraph, vaadin-tab-panel, vaadin-tab,
+vaadin-button, vaadin-text-field, vaadin-text-area,
+vaadin-upload, vaadin-details, label, .v-label {
+  color: #ffffff !important;
+}
+
+/* Ensure all children inherit white color */
+body *, html *, div *, p *, span *,
+vaadin-vertical-layout *, vaadin-horizontal-layout *,
+vaadin-tab-panel *, vaadin-tab *, .input-panel * {
+  color: inherit !important;
+}
+
+/* Tab content specific overrides */
+vaadin-tab-panel[slot="tab-content"] {
+  color: #ffffff !important;
+}
+
+vaadin-tab-panel[slot="tab-content"] * {
+  color: #ffffff !important;
+}
+
+/* Input panel text overrides */
+.input-panel, .input-panel * {
+  color: #ffffff !important;
+}
+
+/* Modern card text overrides */
+.modern-card, .modern-card * {
+  color: #ffffff !important;
+}
+
+/* Final catchall for any remaining dark text */
+[style*="color: rgb(0"], [style*="color: black"], [style*="color: #000"] {
+  color: #ffffff !important;
+}
+
+/* ============================================
+   EXTREMELY STRONG TEXT COLOR OVERRIDES
+   ============================================ */
+
+/* Nuclear option - force ALL elements to be white */
+* {
+  color: #ffffff !important;
+}
+
+/* Specific overrides for common problematic elements */
+vaadin-tab-panel *,
+vaadin-vertical-layout *,
+vaadin-horizontal-layout *,
+vaadin-tabs *,
+vaadin-tab *,
+vaadin-button *,
+vaadin-text-field *,
+vaadin-text-area *,
+vaadin-upload *,
+div *, span *, p *, h1 *, h2 *, h3 *, h4 *, h5 *, h6 *,
+.input-panel *,
+.modern-card *,
+.hero-section * {
+  color: #ffffff !important;
+}
+
+/* Override any inline styles that might set dark colors */
+[style*="color"] {
+  color: #ffffff !important;
+}
+
+/* Override Lumo theme specific elements */
+vaadin-tab::part(*) {
+  color: #ffffff !important;
+}
+
+vaadin-button::part(*) {
+  color: #ffffff !important;
+}
+
+vaadin-text-field::part(*) {
+  color: #ffffff !important;
+}
+
+vaadin-text-area::part(*) {
+  color: #ffffff !important;
+}
+
+/* Override any computed styles */
+vaadin-tab[theme*=""] {
+  color: #ffffff !important;
+}
+
+vaadin-button[theme*=""] {
+  color: #ffffff !important;
+}
+
+/* Force white text on ALL shadow DOM parts */
+*::part(*) {
+  color: #ffffff !important;
+}
+
+/* Override any CSS custom properties that might affect text color */
+* {
+  --lumo-body-text-color: #ffffff !important;
+  --lumo-header-text-color: #ffffff !important;
+  --lumo-secondary-text-color: #ffffff !important;
+}
+
+/* Clear cache and force reload styles */
+.timevault-text-override {
+  color: #ffffff !important;
+}
+
+/* Apply to body to force inheritance */
+body {
+  color: #ffffff !important;
+}
+
+body * {
+  color: inherit !important;
 }
 
