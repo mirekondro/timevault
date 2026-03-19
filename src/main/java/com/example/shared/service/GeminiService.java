@@ -57,6 +57,21 @@ public class GeminiService {
     }
 
     /**
+     * Test API connectivity with a simple text request
+     */
+    public String testConnection() {
+        if (!isConfigured()) {
+            return "API not configured";
+        }
+
+        try {
+            return callGemini("Say hello in one sentence.", null);
+        } catch (Exception e) {
+            return "API test failed: " + e.getMessage();
+        }
+    }
+
+    /**
      * Generate a 3-sentence context for text content
      */
     public String generateTextContext(String content) {
