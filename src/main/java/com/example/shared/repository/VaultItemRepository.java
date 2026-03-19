@@ -24,6 +24,9 @@ public interface VaultItemRepository extends JpaRepository<VaultItem, Long> {
     // Find recent items ordered by creation date
     List<VaultItem> findTop10ByOwnerIdAndDeletedAtIsNullOrderByCreatedAtDesc(Long userId);
 
+    // Find top 3 recent items ordered by creation date
+    List<VaultItem> findTop3ByOrderByCreatedAtDesc();
+
     // Find all ordered by creation date
     List<VaultItem> findAllByOwnerIdAndDeletedAtIsNullOrderByCreatedAtDesc(Long userId);
 
