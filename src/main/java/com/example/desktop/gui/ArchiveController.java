@@ -12,11 +12,15 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
+import javafx.scene.control.ButtonBar;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
+import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
+import javafx.scene.control.PasswordField;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
+import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 
@@ -151,9 +155,13 @@ public class ArchiveController implements AppContextAware {
 
     @FXML
     private void handleEdit() {
-        VaultItemFx selectedItem = appModel.getSelectedItem();
-        if (selectedItem == null) {
+        if (appModel.getSelectedItem() == null) {
             appModel.showErrorKey("status.edit.select");
+            return;
+        }
+
+        VaultItemFx selectedItem = requireUnlockedSelection("lock.prompt.header.edit");
+        if (selectedItem == null) {
             return;
         }
 
@@ -176,9 +184,13 @@ public class ArchiveController implements AppContextAware {
 
     @FXML
     private void handleDelete() {
-        VaultItemFx selectedItem = appModel.getSelectedItem();
-        if (selectedItem == null) {
+        if (appModel.getSelectedItem() == null) {
             appModel.showErrorKey("status.delete.select");
+            return;
+        }
+
+        VaultItemFx selectedItem = requireUnlockedSelection("lock.prompt.header.delete");
+        if (selectedItem == null) {
             return;
         }
 
@@ -236,6 +248,56 @@ public class ArchiveController implements AppContextAware {
         deleteButton.disableProperty().bind(appModel.busyProperty()
                 .or(appModel.authenticatedProperty().not())
                 .or(appModel.selectedItemProperty().isNull()));
+    }
+
+    private VaultItemFx requireUnlockedSelection(String promptHeaderKey) {
+        VaultItemFx selectedItem = appModel.getSelectedItem();
+        if (selectedItem == null) {
+            return null;
+        }
+        if (!selectedItem.isLocked() || selectedItem.isUnlockedInSession()) {
+            return selectedItem;
+        }
+
+        Optional<String> password = promptForItemPassword(promptHeaderKey, selectedItem);
+        if (password.isEmpty()) {
+            return null;
+        }
+
+        return vaultManager.unlockItem(appModel, selectedItem, password.get())
+                ? appModel.getSelectedItem()
+                : null;
+    }
+
+    private Optional<String> promptForItemPassword(String headerKey, VaultItemFx item) {
+        Dialog<String> dialog = new Dialog<>();
+        dialog.initOwner(ownerStage);
+        dialog.initModality(Modality.WINDOW_MODAL);
+        dialog.setTitle(appModel.text("lock.prompt.title"));
+        dialog.setHeaderText(appModel.text(headerKey, appModel.getItemTitle(item)));
+
+        ButtonType continueButtonType = new ButtonType(
+                appModel.text("lock.prompt.submit"),
+                ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(continueButtonType, ButtonType.CANCEL);
+
+        PasswordField passwordField = new PasswordField();
+        passwordField.setPromptText(appModel.text("lock.prompt.password.prompt"));
+
+        Label helperLabel = new Label(appModel.text("lock.prompt.copy"));
+        helperLabel.setWrapText(true);
+
+        VBox content = new VBox(10, helperLabel, passwordField);
+        dialog.getDialogPane().setContent(content);
+
+        dialog.getDialogPane().getStylesheets().add(
+                getClass().getResource("/desktop/styles.css").toExternalForm());
+        dialog.getDialogPane().getStyleClass().add("dialog-pane");
+
+        dialog.setResultConverter(buttonType ->
+                buttonType == continueButtonType ? passwordField.getText() : null);
+
+        return dialog.showAndWait().filter(value -> value != null && !value.isBlank());
     }
 
     private <T extends AppContextAware> void openDialog(String fxmlPath,

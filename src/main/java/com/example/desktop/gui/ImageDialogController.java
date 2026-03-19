@@ -3,7 +3,9 @@ package com.example.desktop.gui;
 import com.example.desktop.model.VaultItemFx;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
+import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
 import javafx.stage.FileChooser;
 
@@ -30,6 +32,18 @@ public class ImageDialogController extends BaseItemDialogController {
     private Button browseButton;
 
     @FXML
+    private CheckBox lockToggle;
+
+    @FXML
+    private PasswordField lockPasswordField;
+
+    @FXML
+    private PasswordField confirmLockPasswordField;
+
+    @FXML
+    private Label lockHintLabel;
+
+    @FXML
     private Button primaryButton;
 
     @FXML
@@ -49,6 +63,7 @@ public class ImageDialogController extends BaseItemDialogController {
         appModel.bindPrompt(pathField, "save.image.path.prompt");
         appModel.bindText(browseButton, "save.image.browse");
         appModel.bindText(cancelButton, "dialog.common.cancel");
+        configureLockControls(lockToggle, lockPasswordField, confirmLockPasswordField, lockHintLabel);
     }
 
     public void prepareForCreate() {
@@ -56,14 +71,16 @@ public class ImageDialogController extends BaseItemDialogController {
         editingItem = null;
         titleField.clear();
         pathField.clear();
+        prepareLockStateForCreate(lockToggle, lockPasswordField, confirmLockPasswordField);
         refreshModeText();
     }
 
     public void prepareForEdit(VaultItemFx item) {
         editMode = true;
         editingItem = item;
-        titleField.setText(item.getTitle());
-        pathField.setText(item.getContent());
+        titleField.setText(appModel.getResolvedTitle(item));
+        pathField.setText(appModel.getResolvedContent(item));
+        prepareLockStateForEdit(lockToggle, lockPasswordField, confirmLockPasswordField, item);
         refreshModeText();
     }
 
@@ -87,8 +104,17 @@ public class ImageDialogController extends BaseItemDialogController {
     @FXML
     private void handleSave() {
         boolean saved = editMode
-                ? vaultManager.updateImage(appModel, editingItem, titleField.getText(), pathField.getText())
-                : vaultManager.createImage(appModel, titleField.getText(), pathField.getText());
+                ? vaultManager.updateImage(
+                        appModel,
+                        editingItem,
+                        titleField.getText(),
+                        pathField.getText(),
+                        readLockOptions(lockToggle, lockPasswordField, confirmLockPasswordField))
+                : vaultManager.createImage(
+                        appModel,
+                        titleField.getText(),
+                        pathField.getText(),
+                        readLockOptions(lockToggle, lockPasswordField, confirmLockPasswordField));
         if (saved) {
             closeDialog();
         }

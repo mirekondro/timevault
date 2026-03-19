@@ -337,6 +337,7 @@
 .combo-box,
 .search-field,
 .text-field,
+.password-field,
 .text-area,
 .button {
     -fx-background-radius: 50px;
@@ -385,6 +386,7 @@
 
 .search-field,
 .text-field,
+.password-field,
 .combo-box,
 .text-area {
     -fx-background-color: rgba(255, 255, 255, 0.05);
@@ -512,6 +514,42 @@
 .text-area .content {
     -fx-background-color: transparent;
     -fx-background-radius: 20px;
+}
+
+.lock-box {
+    -fx-padding: 4px 0 0 0;
+}
+
+.lock-toggle {
+    -fx-text-fill: white;
+    -fx-font-size: 13px;
+    -fx-font-weight: 700;
+}
+
+.lock-toggle .box {
+    -fx-background-color: rgba(255, 255, 255, 0.05);
+    -fx-border-color: rgba(255, 255, 255, 0.12);
+    -fx-border-width: 1px;
+    -fx-background-radius: 8px;
+    -fx-border-radius: 8px;
+}
+
+.lock-toggle:selected .box {
+    -fx-background-color: rgba(88, 196, 221, 0.18);
+    -fx-border-color: rgba(143, 226, 242, 0.4);
+}
+
+.lock-toggle .mark {
+    -fx-background-color: white;
+}
+
+.locked-detail-box {
+    -fx-background-color: linear-gradient(to bottom right, rgba(33, 44, 58, 0.96), rgba(22, 31, 43, 0.96));
+    -fx-background-radius: 18px;
+    -fx-border-color: rgba(255, 255, 255, 0.08);
+    -fx-border-radius: 18px;
+    -fx-border-width: 1px;
+    -fx-padding: 16px;
 }
 
 .readonly-area {

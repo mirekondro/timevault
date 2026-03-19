@@ -26,7 +26,8 @@ public class SqlVaultItemDAO implements VaultItemDAO {
     @Override
     public List<VaultItemFx> findAllByUserId(long userId) throws SQLException {
         String sql = """
-                SELECT id, user_id, title, content, ai_context, item_type, tags, source_url, created_at, updated_at
+                SELECT id, user_id, title, content, ai_context, item_type, tags, source_url,
+                       is_locked, lock_password_hash, lock_salt, lock_payload, created_at, updated_at
                 FROM dbo.vault_items
                 WHERE user_id = ?
                 ORDER BY created_at DESC, id DESC
@@ -49,8 +50,10 @@ public class SqlVaultItemDAO implements VaultItemDAO {
     @Override
     public VaultItemFx insert(long userId, VaultItemFx item) throws SQLException {
         String sql = """
-                INSERT INTO dbo.vault_items (user_id, title, content, ai_context, item_type, tags, source_url, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO dbo.vault_items (
+                    user_id, title, content, ai_context, item_type, tags, source_url,
+                    is_locked, lock_password_hash, lock_salt, lock_payload, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """;
 
         LocalDateTime createdAt = item.getCreatedAt() == null ? LocalDateTime.now() : item.getCreatedAt();
@@ -66,8 +69,12 @@ public class SqlVaultItemDAO implements VaultItemDAO {
             statement.setString(5, item.getItemType());
             statement.setString(6, item.getTags());
             statement.setString(7, item.getSourceUrl());
-            statement.setTimestamp(8, Timestamp.valueOf(createdAt));
-            statement.setTimestamp(9, Timestamp.valueOf(updatedAt));
+            statement.setBoolean(8, item.isLocked());
+            statement.setString(9, item.getLockPasswordHash());
+            statement.setString(10, item.getLockSalt());
+            statement.setString(11, item.getLockPayload());
+            statement.setTimestamp(12, Timestamp.valueOf(createdAt));
+            statement.setTimestamp(13, Timestamp.valueOf(updatedAt));
             statement.executeUpdate();
 
             try (ResultSet generatedKeys = statement.getGeneratedKeys()) {
@@ -87,7 +94,8 @@ public class SqlVaultItemDAO implements VaultItemDAO {
     public boolean update(long userId, VaultItemFx item) throws SQLException {
         String sql = """
                 UPDATE dbo.vault_items
-                SET title = ?, content = ?, ai_context = ?, item_type = ?, tags = ?, source_url = ?, updated_at = ?
+                SET title = ?, content = ?, ai_context = ?, item_type = ?, tags = ?, source_url = ?,
+                    is_locked = ?, lock_password_hash = ?, lock_salt = ?, lock_payload = ?, updated_at = ?
                 WHERE id = ? AND user_id = ?
                 """;
 
@@ -100,9 +108,13 @@ public class SqlVaultItemDAO implements VaultItemDAO {
             statement.setString(4, item.getItemType());
             statement.setString(5, item.getTags());
             statement.setString(6, item.getSourceUrl());
-            statement.setTimestamp(7, Timestamp.valueOf(updatedAt));
-            statement.setLong(8, item.getId());
-            statement.setLong(9, userId);
+            statement.setBoolean(7, item.isLocked());
+            statement.setString(8, item.getLockPasswordHash());
+            statement.setString(9, item.getLockSalt());
+            statement.setString(10, item.getLockPayload());
+            statement.setTimestamp(11, Timestamp.valueOf(updatedAt));
+            statement.setLong(12, item.getId());
+            statement.setLong(13, userId);
 
             boolean updated = statement.executeUpdate() > 0;
             if (updated) {
@@ -134,6 +146,10 @@ public class SqlVaultItemDAO implements VaultItemDAO {
         item.setItemType(resultSet.getString("item_type"));
         item.setTags(resultSet.getString("tags"));
         item.setSourceUrl(resultSet.getString("source_url"));
+        item.setLocked(resultSet.getBoolean("is_locked"));
+        item.setLockPasswordHash(resultSet.getString("lock_password_hash"));
+        item.setLockSalt(resultSet.getString("lock_salt"));
+        item.setLockPayload(resultSet.getString("lock_payload"));
 
         Timestamp createdAt = resultSet.getTimestamp("created_at");
         Timestamp updatedAt = resultSet.getTimestamp("updated_at");

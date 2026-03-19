@@ -385,27 +385,69 @@ public class AppModel {
         return text(option.labelKey());
     }
 
+    public boolean isLockedItemHidden(VaultItemFx item) {
+        return item != null && item.isLocked() && !item.isUnlockedInSession();
+    }
+
+    public String getResolvedTitle(VaultItemFx item) {
+        ProtectedItemData data = resolveItemData(item);
+        return data == null ? "" : firstNonBlank(data.title(), "");
+    }
+
+    public String getResolvedContent(VaultItemFx item) {
+        ProtectedItemData data = resolveItemData(item);
+        return data == null ? "" : firstNonBlank(data.content(), "");
+    }
+
+    public String getResolvedContext(VaultItemFx item) {
+        ProtectedItemData data = resolveItemData(item);
+        return data == null ? "" : firstNonBlank(data.aiContext(), "");
+    }
+
+    public String getResolvedTags(VaultItemFx item) {
+        ProtectedItemData data = resolveItemData(item);
+        return data == null ? "" : firstNonBlank(data.tags(), "");
+    }
+
+    public String getResolvedSourceUrl(VaultItemFx item) {
+        ProtectedItemData data = resolveItemData(item);
+        return data == null ? "" : firstNonBlank(data.sourceUrl(), "");
+    }
+
     public String getItemTitle(VaultItemFx item) {
-        if (item == null || item.getTitle().isBlank()) {
+        if (isLockedItemHidden(item)) {
+            return text("item.locked");
+        }
+        String title = getResolvedTitle(item);
+        if (item == null || title.isBlank()) {
             return text("item.untitled");
         }
-        return item.getTitle();
+        return title;
     }
 
     public String getItemSnippet(VaultItemFx item) {
+        if (isLockedItemHidden(item)) {
+            return text("item.locked");
+        }
         String source = getSearchablePreview(item);
         return source.length() > 180 ? source.substring(0, 180) + "..." : source;
     }
 
     public String getItemContext(VaultItemFx item) {
+        if (isLockedItemHidden(item)) {
+            return text("detail.locked.copy");
+        }
         return firstNonBlank(
-                item == null ? null : item.getContextSource(),
+                getResolvedContext(item),
                 text("item.context.none"));
     }
 
     public String getItemContent(VaultItemFx item) {
+        if (isLockedItemHidden(item)) {
+            return text("detail.locked.copy");
+        }
         return firstNonBlank(
-                item == null ? null : item.getContentSource(),
+                getResolvedContent(item),
                 text("item.content.none"));
     }
 
@@ -548,6 +590,20 @@ public class AppModel {
     }
 
     private List<String> getSearchValues(VaultItemFx item, String searchColumn) {
+        if (isLockedItemHidden(item)) {
+            return switch (normalizeSearchColumn(searchColumn)) {
+                case SEARCH_COLUMN_TITLE -> List.of(text("item.locked"));
+                case SEARCH_COLUMN_TYPE -> List.of(getTypeLabel(item == null ? null : item.getItemType()));
+                case SEARCH_COLUMN_CREATED -> List.of(formatTimestamp(item == null ? null : item.getCreatedAt()));
+                case SEARCH_COLUMN_PREVIEW -> List.of(text("item.locked"));
+                case SEARCH_COLUMN_ALL -> List.of(
+                        text("item.locked"),
+                        getTypeLabel(item == null ? null : item.getItemType()),
+                        formatTimestamp(item == null ? null : item.getCreatedAt()));
+                default -> List.of();
+            };
+        }
+
         return switch (normalizeSearchColumn(searchColumn)) {
             case SEARCH_COLUMN_TITLE -> List.of(getItemTitle(item));
             case SEARCH_COLUMN_TYPE -> List.of(getTypeLabel(item == null ? null : item.getItemType()));
@@ -607,9 +663,28 @@ public class AppModel {
     }
 
     private String getSearchablePreview(VaultItemFx item) {
+        if (isLockedItemHidden(item)) {
+            return text("item.locked");
+        }
         return firstNonBlank(
-                item == null ? null : item.getPreviewSource(),
+                getResolvedContext(item),
+                getResolvedContent(item),
                 text("item.preview.none"));
+    }
+
+    private ProtectedItemData resolveItemData(VaultItemFx item) {
+        if (item == null) {
+            return null;
+        }
+        if (item.isUnlockedInSession() && item.getUnlockedSession() != null) {
+            return item.getUnlockedSession().data();
+        }
+        return new ProtectedItemData(
+                item.getTitle(),
+                item.getContent(),
+                item.getAiContext(),
+                item.getTags(),
+                item.getSourceUrl());
     }
 
     private boolean hasActiveArchiveSearch() {

@@ -38,6 +38,7 @@ public class SchemaInitializer {
             ensureUsersTable(statement);
             ensureVaultItemsTable(statement);
             ensureVaultItemsUserColumn(statement);
+            ensureVaultItemsLockColumns(statement);
             migrateLegacyItems(connection);
             enforceUserOwnership(statement);
             ensureIndexes(statement);
@@ -108,6 +109,10 @@ public class SchemaInitializer {
                         item_type NVARCHAR(50) NULL,
                         tags NVARCHAR(500) NULL,
                         source_url NVARCHAR(1000) NULL,
+                        is_locked BIT NOT NULL CONSTRAINT df_vault_items_is_locked DEFAULT 0,
+                        lock_password_hash NVARCHAR(512) NULL,
+                        lock_salt NVARCHAR(128) NULL,
+                        lock_payload NVARCHAR(MAX) NULL,
                         created_at DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
                         updated_at DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
                         CONSTRAINT fk_vault_items_user FOREIGN KEY (user_id) REFERENCES dbo.vault_users(id)
@@ -121,6 +126,37 @@ public class SchemaInitializer {
                 IF COL_LENGTH('dbo.vault_items', 'user_id') IS NULL
                 BEGIN
                     ALTER TABLE dbo.vault_items ADD user_id BIGINT NULL
+                END
+                """);
+    }
+
+    private void ensureVaultItemsLockColumns(Statement statement) throws SQLException {
+        statement.executeUpdate("""
+                IF COL_LENGTH('dbo.vault_items', 'is_locked') IS NULL
+                BEGIN
+                    ALTER TABLE dbo.vault_items
+                    ADD is_locked BIT NOT NULL CONSTRAINT df_vault_items_is_locked DEFAULT 0
+                END
+                """);
+
+        statement.executeUpdate("""
+                IF COL_LENGTH('dbo.vault_items', 'lock_password_hash') IS NULL
+                BEGIN
+                    ALTER TABLE dbo.vault_items ADD lock_password_hash NVARCHAR(512) NULL
+                END
+                """);
+
+        statement.executeUpdate("""
+                IF COL_LENGTH('dbo.vault_items', 'lock_salt') IS NULL
+                BEGIN
+                    ALTER TABLE dbo.vault_items ADD lock_salt NVARCHAR(128) NULL
+                END
+                """);
+
+        statement.executeUpdate("""
+                IF COL_LENGTH('dbo.vault_items', 'lock_payload') IS NULL
+                BEGIN
+                    ALTER TABLE dbo.vault_items ADD lock_payload NVARCHAR(MAX) NULL
                 END
                 """);
     }

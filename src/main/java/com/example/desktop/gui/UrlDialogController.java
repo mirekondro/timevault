@@ -3,7 +3,9 @@ package com.example.desktop.gui;
 import com.example.desktop.model.VaultItemFx;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
+import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 
@@ -28,6 +30,18 @@ public class UrlDialogController extends BaseItemDialogController {
     private TextArea notesArea;
 
     @FXML
+    private CheckBox lockToggle;
+
+    @FXML
+    private PasswordField lockPasswordField;
+
+    @FXML
+    private PasswordField confirmLockPasswordField;
+
+    @FXML
+    private Label lockHintLabel;
+
+    @FXML
     private Button primaryButton;
 
     @FXML
@@ -47,6 +61,7 @@ public class UrlDialogController extends BaseItemDialogController {
         appModel.bindPrompt(titleField, "save.url.title.prompt");
         appModel.bindPrompt(notesArea, "save.url.notes.prompt");
         appModel.bindText(cancelButton, "dialog.common.cancel");
+        configureLockControls(lockToggle, lockPasswordField, confirmLockPasswordField, lockHintLabel);
     }
 
     public void prepareForCreate() {
@@ -55,23 +70,36 @@ public class UrlDialogController extends BaseItemDialogController {
         urlField.clear();
         titleField.clear();
         notesArea.clear();
+        prepareLockStateForCreate(lockToggle, lockPasswordField, confirmLockPasswordField);
         refreshModeText();
     }
 
     public void prepareForEdit(VaultItemFx item) {
         editMode = true;
         editingItem = item;
-        urlField.setText(item.getSourceUrl());
-        titleField.setText(item.getTitle());
-        notesArea.setText(item.getContent());
+        urlField.setText(appModel.getResolvedSourceUrl(item));
+        titleField.setText(appModel.getResolvedTitle(item));
+        notesArea.setText(appModel.getResolvedContent(item));
+        prepareLockStateForEdit(lockToggle, lockPasswordField, confirmLockPasswordField, item);
         refreshModeText();
     }
 
     @FXML
     private void handleSave() {
         boolean saved = editMode
-                ? vaultManager.updateUrl(appModel, editingItem, urlField.getText(), titleField.getText(), notesArea.getText())
-                : vaultManager.createUrl(appModel, urlField.getText(), titleField.getText(), notesArea.getText());
+                ? vaultManager.updateUrl(
+                        appModel,
+                        editingItem,
+                        urlField.getText(),
+                        titleField.getText(),
+                        notesArea.getText(),
+                        readLockOptions(lockToggle, lockPasswordField, confirmLockPasswordField))
+                : vaultManager.createUrl(
+                        appModel,
+                        urlField.getText(),
+                        titleField.getText(),
+                        notesArea.getText(),
+                        readLockOptions(lockToggle, lockPasswordField, confirmLockPasswordField));
         if (saved) {
             closeDialog();
         }

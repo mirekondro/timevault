@@ -4,7 +4,11 @@ import com.example.desktop.dao.SchemaInitializer;
 import com.example.desktop.dao.UserDAO;
 import com.example.desktop.dao.VaultItemDAO;
 import com.example.desktop.model.AppModel;
+import com.example.desktop.model.ItemLockOptions;
+import com.example.desktop.model.ProtectedItemData;
+import com.example.desktop.model.UnlockedItemSession;
 import com.example.desktop.model.VaultItemFx;
+import com.example.desktop.security.ProtectedItemCrypto;
 import com.example.shared.model.UserSession;
 import com.example.shared.model.VaultUser;
 import com.example.shared.security.AccountValidator;
@@ -25,6 +29,7 @@ public class VaultManager {
     private final VaultItemDAO vaultItemDAO;
     private final UserDAO userDAO;
     private final SchemaInitializer schemaInitializer;
+    private final ProtectedItemCrypto protectedItemCrypto = new ProtectedItemCrypto();
 
     public VaultManager(VaultItemDAO vaultItemDAO, UserDAO userDAO, SchemaInitializer schemaInitializer) {
         this.vaultItemDAO = vaultItemDAO;
@@ -163,7 +168,7 @@ public class VaultManager {
         return appModel.text("detail.meta.empty.auth");
     }
 
-    public boolean createUrl(AppModel appModel, String urlInput, String titleInput, String notesInput) {
+    public boolean createUrl(AppModel appModel, String urlInput, String titleInput, String notesInput, ItemLockOptions lockOptions) {
         UserSession currentUser = requireAuthenticatedUser(appModel);
         if (currentUser == null) {
             return false;
@@ -187,11 +192,19 @@ public class VaultManager {
         item.setOwnerId(currentUser.id());
         item.setCreatedAt(LocalDateTime.now());
         item.setUpdatedAt(item.getCreatedAt());
+        if (!applyLockConfiguration(appModel, item, null, lockOptions)) {
+            return false;
+        }
 
         return saveNewItem(appModel, currentUser, item, "status.save.url.saved");
     }
 
-    public boolean updateUrl(AppModel appModel, VaultItemFx existingItem, String urlInput, String titleInput, String notesInput) {
+    public boolean updateUrl(AppModel appModel,
+                             VaultItemFx existingItem,
+                             String urlInput,
+                             String titleInput,
+                             String notesInput,
+                             ItemLockOptions lockOptions) {
         UserSession currentUser = requireAuthenticatedUser(appModel);
         if (currentUser == null) {
             return false;
@@ -217,11 +230,14 @@ public class VaultManager {
         updatedItem.setTags(buildTags(AppModel.TYPE_URL, url));
         updatedItem.setSourceUrl(url);
         updatedItem.setUpdatedAt(LocalDateTime.now());
+        if (!applyLockConfiguration(appModel, updatedItem, existingItem, lockOptions)) {
+            return false;
+        }
 
         return updateExistingItem(appModel, currentUser, updatedItem, "status.edit.url.updated");
     }
 
-    public boolean createText(AppModel appModel, String titleInput, String contentInput) {
+    public boolean createText(AppModel appModel, String titleInput, String contentInput, ItemLockOptions lockOptions) {
         UserSession currentUser = requireAuthenticatedUser(appModel);
         if (currentUser == null) {
             return false;
@@ -243,11 +259,18 @@ public class VaultManager {
         item.setOwnerId(currentUser.id());
         item.setCreatedAt(LocalDateTime.now());
         item.setUpdatedAt(item.getCreatedAt());
+        if (!applyLockConfiguration(appModel, item, null, lockOptions)) {
+            return false;
+        }
 
         return saveNewItem(appModel, currentUser, item, "status.save.text.saved");
     }
 
-    public boolean updateText(AppModel appModel, VaultItemFx existingItem, String titleInput, String contentInput) {
+    public boolean updateText(AppModel appModel,
+                              VaultItemFx existingItem,
+                              String titleInput,
+                              String contentInput,
+                              ItemLockOptions lockOptions) {
         UserSession currentUser = requireAuthenticatedUser(appModel);
         if (currentUser == null) {
             return false;
@@ -272,11 +295,14 @@ public class VaultManager {
         updatedItem.setTags(buildTags(AppModel.TYPE_TEXT, content));
         updatedItem.setSourceUrl(null);
         updatedItem.setUpdatedAt(LocalDateTime.now());
+        if (!applyLockConfiguration(appModel, updatedItem, existingItem, lockOptions)) {
+            return false;
+        }
 
         return updateExistingItem(appModel, currentUser, updatedItem, "status.edit.text.updated");
     }
 
-    public boolean createImage(AppModel appModel, String titleInput, String pathInput) {
+    public boolean createImage(AppModel appModel, String titleInput, String pathInput, ItemLockOptions lockOptions) {
         UserSession currentUser = requireAuthenticatedUser(appModel);
         if (currentUser == null) {
             return false;
@@ -298,11 +324,18 @@ public class VaultManager {
         item.setOwnerId(currentUser.id());
         item.setCreatedAt(LocalDateTime.now());
         item.setUpdatedAt(item.getCreatedAt());
+        if (!applyLockConfiguration(appModel, item, null, lockOptions)) {
+            return false;
+        }
 
         return saveNewItem(appModel, currentUser, item, "status.save.image.saved");
     }
 
-    public boolean updateImage(AppModel appModel, VaultItemFx existingItem, String titleInput, String pathInput) {
+    public boolean updateImage(AppModel appModel,
+                               VaultItemFx existingItem,
+                               String titleInput,
+                               String pathInput,
+                               ItemLockOptions lockOptions) {
         UserSession currentUser = requireAuthenticatedUser(appModel);
         if (currentUser == null) {
             return false;
@@ -327,8 +360,43 @@ public class VaultManager {
         updatedItem.setTags(buildTags(AppModel.TYPE_IMAGE, title));
         updatedItem.setSourceUrl(null);
         updatedItem.setUpdatedAt(LocalDateTime.now());
+        if (!applyLockConfiguration(appModel, updatedItem, existingItem, lockOptions)) {
+            return false;
+        }
 
         return updateExistingItem(appModel, currentUser, updatedItem, "status.edit.image.updated");
+    }
+
+    public boolean unlockItem(AppModel appModel, VaultItemFx item, String rawPassword) {
+        if (item == null) {
+            appModel.showErrorKey("status.lock.unlock.select");
+            return false;
+        }
+        if (!item.isLocked()) {
+            return true;
+        }
+        if (item.isUnlockedInSession()) {
+            return true;
+        }
+        if (rawPassword == null || rawPassword.isBlank()) {
+            appModel.showErrorKey("status.lock.password.required");
+            return false;
+        }
+
+        try {
+            UnlockedItemSession unlockedSession = protectedItemCrypto.unlock(item, rawPassword);
+            VaultItemFx unlockedItem = copyItem(item);
+            unlockedItem.setUnlockedSession(unlockedSession);
+            appModel.updateItem(unlockedItem);
+            appModel.showSuccessKey("status.lock.unlock.success", unlockedItem.getId());
+            return true;
+        } catch (IllegalArgumentException exception) {
+            appModel.showErrorKey("status.lock.unlock.invalid");
+            return false;
+        } catch (IllegalStateException exception) {
+            appModel.showErrorKey("status.lock.unlock.error", safeMessage(exception));
+            return false;
+        }
     }
 
     public boolean deleteSelected(AppModel appModel) {
@@ -340,6 +408,10 @@ public class VaultManager {
         VaultItemFx selectedItem = appModel.getSelectedItem();
         if (selectedItem == null) {
             appModel.showErrorKey("status.delete.select");
+            return false;
+        }
+        if (selectedItem.isLocked() && !selectedItem.isUnlockedInSession()) {
+            appModel.showErrorKey("status.lock.unlock.required");
             return false;
         }
 
@@ -423,6 +495,80 @@ public class VaultManager {
                 + " A future reader would see \"" + summary + "\" as evidence of how people stored and described things in this version of TimeVault.";
     }
 
+    private boolean applyLockConfiguration(AppModel appModel,
+                                           VaultItemFx item,
+                                           VaultItemFx existingItem,
+                                           ItemLockOptions lockOptions) {
+        ItemLockOptions safeLockOptions = lockOptions == null
+                ? new ItemLockOptions(false, "", "")
+                : lockOptions;
+
+        if (!safeLockOptions.enabled()) {
+            if (existingItem != null && existingItem.isLocked() && !existingItem.isUnlockedInSession()) {
+                appModel.showErrorKey("status.lock.unlock.required");
+                return false;
+            }
+            clearLockState(item);
+            return true;
+        }
+
+        ProtectedItemData protectedItemData = new ProtectedItemData(
+                item.getTitle(),
+                item.getContent(),
+                item.getAiContext(),
+                item.getTags(),
+                item.getSourceUrl());
+
+        String password = safePasswordValue(safeLockOptions.password());
+        String confirmPassword = safePasswordValue(safeLockOptions.confirmPassword());
+
+        if (existingItem != null && existingItem.isLocked() && password.isBlank() && confirmPassword.isBlank()) {
+            if (!existingItem.isUnlockedInSession()) {
+                appModel.showErrorKey("status.lock.unlock.required");
+                return false;
+            }
+            applyProtectedEnvelope(item, protectedItemCrypto.relockWithExistingSession(protectedItemData, existingItem));
+            return true;
+        }
+
+        if (password.isBlank() || confirmPassword.isBlank()) {
+            appModel.showErrorKey("status.lock.password.required");
+            return false;
+        }
+        if (!AccountValidator.isValidPassword(password)) {
+            appModel.showErrorKey("status.lock.password.min");
+            return false;
+        }
+        if (!password.equals(confirmPassword)) {
+            appModel.showErrorKey("status.lock.password.confirm");
+            return false;
+        }
+
+        applyProtectedEnvelope(item, protectedItemCrypto.createNewLock(protectedItemData, password));
+        return true;
+    }
+
+    private void applyProtectedEnvelope(VaultItemFx item, ProtectedItemCrypto.LockedItemEnvelope envelope) {
+        item.setTitle(VaultItemFx.LOCKED_TITLE_PLACEHOLDER);
+        item.setContent(null);
+        item.setAiContext(null);
+        item.setTags(null);
+        item.setSourceUrl(null);
+        item.setLocked(true);
+        item.setLockPasswordHash(envelope.passwordHash());
+        item.setLockSalt(envelope.lockSalt());
+        item.setLockPayload(envelope.encryptedPayload());
+        item.setUnlockedSession(envelope.unlockedSession());
+    }
+
+    private void clearLockState(VaultItemFx item) {
+        item.setLocked(false);
+        item.setLockPasswordHash("");
+        item.setLockSalt("");
+        item.setLockPayload("");
+        item.clearUnlockedSession();
+    }
+
     private String firstNonBlank(String value, String fallback) {
         return value == null || value.isBlank() ? fallback : value.trim();
     }
@@ -467,7 +613,16 @@ public class VaultManager {
         copy.setSourceUrl(source.getSourceUrl());
         copy.setCreatedAt(source.getCreatedAt());
         copy.setUpdatedAt(source.getUpdatedAt());
+        copy.setLocked(source.isLocked());
+        copy.setLockPasswordHash(source.getLockPasswordHash());
+        copy.setLockSalt(source.getLockSalt());
+        copy.setLockPayload(source.getLockPayload());
+        copy.setUnlockedSession(source.getUnlockedSession() == null ? null : source.getUnlockedSession().copy());
         return copy;
+    }
+
+    private String safePasswordValue(String value) {
+        return value == null ? "" : value;
     }
 
     private String safeMessage(Exception exception) {

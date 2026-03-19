@@ -3,7 +3,9 @@ package com.example.desktop.gui;
 import com.example.desktop.model.VaultItemFx;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
+import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 
@@ -25,6 +27,18 @@ public class TextDialogController extends BaseItemDialogController {
     private TextArea contentArea;
 
     @FXML
+    private CheckBox lockToggle;
+
+    @FXML
+    private PasswordField lockPasswordField;
+
+    @FXML
+    private PasswordField confirmLockPasswordField;
+
+    @FXML
+    private Label lockHintLabel;
+
+    @FXML
     private Button primaryButton;
 
     @FXML
@@ -43,6 +57,7 @@ public class TextDialogController extends BaseItemDialogController {
         appModel.bindPrompt(titleField, "save.text.title.prompt");
         appModel.bindPrompt(contentArea, "save.text.content.prompt");
         appModel.bindText(cancelButton, "dialog.common.cancel");
+        configureLockControls(lockToggle, lockPasswordField, confirmLockPasswordField, lockHintLabel);
     }
 
     public void prepareForCreate() {
@@ -50,22 +65,33 @@ public class TextDialogController extends BaseItemDialogController {
         editingItem = null;
         titleField.clear();
         contentArea.clear();
+        prepareLockStateForCreate(lockToggle, lockPasswordField, confirmLockPasswordField);
         refreshModeText();
     }
 
     public void prepareForEdit(VaultItemFx item) {
         editMode = true;
         editingItem = item;
-        titleField.setText(item.getTitle());
-        contentArea.setText(item.getContent());
+        titleField.setText(appModel.getResolvedTitle(item));
+        contentArea.setText(appModel.getResolvedContent(item));
+        prepareLockStateForEdit(lockToggle, lockPasswordField, confirmLockPasswordField, item);
         refreshModeText();
     }
 
     @FXML
     private void handleSave() {
         boolean saved = editMode
-                ? vaultManager.updateText(appModel, editingItem, titleField.getText(), contentArea.getText())
-                : vaultManager.createText(appModel, titleField.getText(), contentArea.getText());
+                ? vaultManager.updateText(
+                        appModel,
+                        editingItem,
+                        titleField.getText(),
+                        contentArea.getText(),
+                        readLockOptions(lockToggle, lockPasswordField, confirmLockPasswordField))
+                : vaultManager.createText(
+                        appModel,
+                        titleField.getText(),
+                        contentArea.getText(),
+                        readLockOptions(lockToggle, lockPasswordField, confirmLockPasswordField));
         if (saved) {
             closeDialog();
         }

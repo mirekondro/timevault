@@ -7,10 +7,13 @@ import com.example.desktop.model.VaultItemFx;
 import javafx.application.HostServices;
 import javafx.beans.binding.Bindings;
 import javafx.fxml.FXML;
+import javafx.scene.control.Button;
 import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
+import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextArea;
 import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 import java.util.Arrays;
@@ -25,6 +28,24 @@ public class DetailController implements AppContextAware {
 
     @FXML
     private Label detailMetaLabel;
+
+    @FXML
+    private VBox unlockBox;
+
+    @FXML
+    private Label unlockTitleLabel;
+
+    @FXML
+    private Label unlockCopyLabel;
+
+    @FXML
+    private PasswordField unlockPasswordField;
+
+    @FXML
+    private Button unlockButton;
+
+    @FXML
+    private VBox detailContentBox;
 
     @FXML
     private Hyperlink sourceLink;
@@ -64,11 +85,20 @@ public class DetailController implements AppContextAware {
         appModel.bindText(contextSectionLabel, "detail.section.context");
         appModel.bindText(tagsSectionLabel, "detail.section.tags");
         appModel.bindText(contentSectionLabel, "detail.section.content");
+        appModel.bindText(unlockTitleLabel, "detail.locked.title");
+        appModel.bindText(unlockCopyLabel, "detail.locked.copy");
+        appModel.bindPrompt(unlockPasswordField, "detail.unlock.prompt");
+        appModel.bindText(unlockButton, "detail.unlock.button");
 
         sourceLink.disableProperty().bind(Bindings.createBooleanBinding(() -> {
             VaultItemFx item = appModel.getSelectedItem();
-            return item == null || item.getSourceUrl() == null || item.getSourceUrl().isBlank();
+            return item == null || appModel.getResolvedSourceUrl(item).isBlank() || appModel.isLockedItemHidden(item);
         }, appModel.selectedItemProperty()));
+        unlockButton.disableProperty().bind(unlockPasswordField.textProperty().isEmpty()
+                .or(Bindings.createBooleanBinding(() -> {
+                    VaultItemFx item = appModel.getSelectedItem();
+                    return item == null || !item.isLocked() || item.isUnlockedInSession();
+                }, appModel.selectedItemProperty())));
 
         appModel.selectedItemProperty().addListener((obs, oldItem, newItem) -> updateDetails(newItem));
         appModel.currentUserProperty().addListener((obs, oldUser, newUser) -> updateDetails(appModel.getSelectedItem()));
@@ -79,13 +109,23 @@ public class DetailController implements AppContextAware {
     @FXML
     private void handleOpenSource() {
         VaultItemFx item = appModel.getSelectedItem();
-        if (item != null && item.getSourceUrl() != null && !item.getSourceUrl().isBlank()) {
-            hostServices.showDocument(item.getSourceUrl());
+        String sourceUrl = appModel.getResolvedSourceUrl(item);
+        if (item != null && !sourceUrl.isBlank()) {
+            hostServices.showDocument(sourceUrl);
+        }
+    }
+
+    @FXML
+    private void handleUnlock() {
+        VaultItemFx item = appModel.getSelectedItem();
+        if (vaultManager.unlockItem(appModel, item, unlockPasswordField.getText())) {
+            unlockPasswordField.clear();
         }
     }
 
     private void updateDetails(VaultItemFx item) {
         tagsPane.getChildren().clear();
+        unlockPasswordField.clear();
 
         if (item == null) {
             detailTitleLabel.setText(appModel.text("detail.title.empty"));
@@ -95,22 +135,45 @@ public class DetailController implements AppContextAware {
             sourceLink.setManaged(false);
             contextArea.setText("");
             contentArea.setText("");
+            unlockBox.setVisible(false);
+            unlockBox.setManaged(false);
+            detailContentBox.setVisible(true);
+            detailContentBox.setManaged(true);
             addTag(appModel.getNoTagsText());
             return;
         }
 
         detailTitleLabel.setText(appModel.getItemTitle(item));
         detailMetaLabel.setText(appModel.getItemDetailMeta(item));
-        sourceLink.setText(item.getSourceUrl());
-        sourceLink.setVisible(item.getSourceUrl() != null && !item.getSourceUrl().isBlank());
+        if (appModel.isLockedItemHidden(item)) {
+            sourceLink.setText("");
+            sourceLink.setVisible(false);
+            sourceLink.setManaged(false);
+            contextArea.setText("");
+            contentArea.setText("");
+            unlockBox.setVisible(true);
+            unlockBox.setManaged(true);
+            detailContentBox.setVisible(false);
+            detailContentBox.setManaged(false);
+            return;
+        }
+
+        String sourceUrl = appModel.getResolvedSourceUrl(item);
+        sourceLink.setText(sourceUrl);
+        sourceLink.setVisible(!sourceUrl.isBlank());
         sourceLink.setManaged(sourceLink.isVisible());
+        unlockBox.setVisible(false);
+        unlockBox.setManaged(false);
+        detailContentBox.setVisible(true);
+        detailContentBox.setManaged(true);
         contextArea.setText(appModel.getItemContext(item));
         contentArea.setText(appModel.getItemContent(item));
 
-        if (item.getTags() == null || item.getTags().isBlank()) {
+        String tags = appModel.getResolvedTags(item);
+        if (tags.isBlank()) {
             addTag(appModel.getNoTagsText());
         } else {
-            Arrays.stream(item.getTags().split(","))
+            Arrays.stream(tags.split(","))
                     .map(String::trim)
                     .filter(tag -> !tag.isBlank())
                     .forEach(this::addTag);

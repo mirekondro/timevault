@@ -14,6 +14,8 @@ import java.time.LocalDateTime;
  */
 public class VaultItemFx {
 
+    public static final String LOCKED_TITLE_PLACEHOLDER = "Locked item";
+
     private final LongProperty id = new SimpleLongProperty();
     private final LongProperty ownerId = new SimpleLongProperty();
     private final StringProperty title = new SimpleStringProperty("");
@@ -24,6 +26,11 @@ public class VaultItemFx {
     private final StringProperty sourceUrl = new SimpleStringProperty("");
     private final ObjectProperty<LocalDateTime> createdAt = new SimpleObjectProperty<>();
     private final ObjectProperty<LocalDateTime> updatedAt = new SimpleObjectProperty<>();
+    private boolean locked;
+    private String lockPasswordHash = "";
+    private String lockSalt = "";
+    private String lockPayload = "";
+    private UnlockedItemSession unlockedSession;
 
     public long getId() {
         return id.get();
@@ -143,6 +150,54 @@ public class VaultItemFx {
 
     public ObjectProperty<LocalDateTime> updatedAtProperty() {
         return updatedAt;
+    }
+
+    public boolean isLocked() {
+        return locked;
+    }
+
+    public void setLocked(boolean locked) {
+        this.locked = locked;
+    }
+
+    public String getLockPasswordHash() {
+        return lockPasswordHash;
+    }
+
+    public void setLockPasswordHash(String lockPasswordHash) {
+        this.lockPasswordHash = lockPasswordHash == null ? "" : lockPasswordHash;
+    }
+
+    public String getLockSalt() {
+        return lockSalt;
+    }
+
+    public void setLockSalt(String lockSalt) {
+        this.lockSalt = lockSalt == null ? "" : lockSalt;
+    }
+
+    public String getLockPayload() {
+        return lockPayload;
+    }
+
+    public void setLockPayload(String lockPayload) {
+        this.lockPayload = lockPayload == null ? "" : lockPayload;
+    }
+
+    public boolean isUnlockedInSession() {
+        return unlockedSession != null;
+    }
+
+    public UnlockedItemSession getUnlockedSession() {
+        return unlockedSession;
+    }
+
+    public void setUnlockedSession(UnlockedItemSession unlockedSession) {
+        this.unlockedSession = unlockedSession;
+    }
+
+    public void clearUnlockedSession() {
+        unlockedSession = null;
     }
 
     public String getPreviewSource() {
