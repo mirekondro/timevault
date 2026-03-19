@@ -19,24 +19,27 @@
     </padding>
 
     <left>
-        <Label styleClass="header-brand" text="TimeVault" BorderPane.alignment="CENTER_LEFT"/>
+        <Label fx:id="brandLabel" styleClass="header-brand" BorderPane.alignment="CENTER_LEFT"/>
     </left>
 
     <center>
         <HBox alignment="CENTER" spacing="10.0" styleClass="header-controls">
-            <TextField fx:id="searchField" prefWidth="270.0" promptText="Search your vault"
+            <TextField fx:id="searchField" prefWidth="270.0"
                        styleClass="search-field header-search-field"/>
             <ComboBox fx:id="typeFilterComboBox" prefWidth="120.0" styleClass="combo-box header-filter"/>
             <Button fx:id="reloadButton" mnemonicParsing="false" onAction="#handleReload"
-                    styleClass="ghost-button compact-button" text="Reload"/>
+                    styleClass="ghost-button compact-button"/>
         </HBox>
     </center>
 
     <right>
         <HBox alignment="CENTER_RIGHT" spacing="12.0" styleClass="header-actions">
-            <Label fx:id="currentUserLabel" styleClass="header-user" text="No user"/>
-            <Button fx:id="logoutButton" mnemonicParsing="false" onAction="#handleLogout"
-                    styleClass="ghost-button compact-button" text="Log Out"/>
+            <Button fx:id="avatarButton" mnemonicParsing="false" onAction="#handleUserMenuToggle"
+                    styleClass="avatar-button" text="">
+                <graphic>
+                    <Label fx:id="avatarLetterLabel" styleClass="avatar-letter"/>
+                </graphic>
+            </Button>
         </HBox>
     </right>
 </BorderPane>

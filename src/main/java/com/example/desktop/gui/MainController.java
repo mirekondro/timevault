@@ -31,12 +31,16 @@ public class MainController {
     @FXML
     private Label statusLabel;
 
+    @FXML
+    private Label footerCreditLabel;
+
     public void setContext(AppModel appModel,
                            VaultManager vaultManager,
                            HostServices hostServices,
                            Stage stage,
                            DesktopNavigator navigator) {
         statusLabel.textProperty().bind(appModel.statusMessageProperty());
+        appModel.bindText(footerCreditLabel, "footer.credit");
 
         initializeChild(headerViewController, appModel, vaultManager, hostServices, stage, navigator);
         initializeChild(topBarViewController, appModel, vaultManager, hostServices, stage, navigator);

@@ -8,14 +8,11 @@ import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 
 /**
  * Observable desktop model for one archived vault item.
  */
 public class VaultItemFx {
-
-    private static final DateTimeFormatter DISPLAY_FORMAT = DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm");
 
     private final LongProperty id = new SimpleLongProperty();
     private final LongProperty ownerId = new SimpleLongProperty();
@@ -148,22 +145,16 @@ public class VaultItemFx {
         return updatedAt;
     }
 
-    public String getFormattedCreatedAt() {
-        LocalDateTime timestamp = getCreatedAt();
-        return timestamp == null ? "Unknown time" : timestamp.format(DISPLAY_FORMAT);
+    public String getPreviewSource() {
+        return firstNonBlank(getAiContext(), getContent(), "");
     }
 
-    public String getDisplaySnippet() {
-        String source = firstNonBlank(getAiContext(), getContent(), "No preview available yet.");
-        return source.length() > 180 ? source.substring(0, 180) + "..." : source;
+    public String getContextSource() {
+        return firstNonBlank(getAiContext(), "");
     }
 
-    public String getDisplayContext() {
-        return firstNonBlank(getAiContext(), "No context stored yet.");
-    }
-
-    public String getDisplayContent() {
-        return firstNonBlank(getContent(), "No content stored yet.");
+    public String getContentSource() {
+        return firstNonBlank(getContent(), "");
     }
 
     private String firstNonBlank(String... values) {

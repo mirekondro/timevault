@@ -37,7 +37,16 @@ public class DetailController implements AppContextAware {
     private TextArea contextArea;
 
     @FXML
+    private Label contextSectionLabel;
+
+    @FXML
     private TextArea contentArea;
+
+    @FXML
+    private Label tagsSectionLabel;
+
+    @FXML
+    private Label contentSectionLabel;
 
     @FXML
     private Button deleteButton;
@@ -56,6 +65,11 @@ public class DetailController implements AppContextAware {
         this.vaultManager = vaultManager;
         this.hostServices = hostServices;
 
+        appModel.bindText(contextSectionLabel, "detail.section.context");
+        appModel.bindText(tagsSectionLabel, "detail.section.tags");
+        appModel.bindText(contentSectionLabel, "detail.section.content");
+        appModel.bindText(deleteButton, "detail.button.delete");
+
         deleteButton.disableProperty().bind(appModel.selectedItemProperty().isNull().or(appModel.busyProperty()));
         sourceLink.disableProperty().bind(Bindings.createBooleanBinding(() -> {
             VaultItemFx item = appModel.getSelectedItem();
@@ -64,6 +78,7 @@ public class DetailController implements AppContextAware {
 
         appModel.selectedItemProperty().addListener((obs, oldItem, newItem) -> updateDetails(newItem));
         appModel.currentUserProperty().addListener((obs, oldUser, newUser) -> updateDetails(appModel.getSelectedItem()));
+        appModel.localeProperty().addListener((obs, oldLocale, newLocale) -> updateDetails(appModel.getSelectedItem()));
         updateDetails(appModel.getSelectedItem());
     }
 
@@ -84,27 +99,27 @@ public class DetailController implements AppContextAware {
         tagsPane.getChildren().clear();
 
         if (item == null) {
-            detailTitleLabel.setText("Select an item");
+            detailTitleLabel.setText(appModel.text("detail.title.empty"));
             detailMetaLabel.setText(vaultManager.getEmptyDetailMessage(appModel));
             sourceLink.setText("");
             sourceLink.setVisible(false);
             sourceLink.setManaged(false);
             contextArea.setText("");
             contentArea.setText("");
-            addTag("No tags");
+            addTag(appModel.getNoTagsText());
             return;
         }
 
-        detailTitleLabel.setText(item.getTitle().isBlank() ? "Untitled item" : item.getTitle());
-        detailMetaLabel.setText(item.getItemType() + " | Account #" + item.getOwnerId() + " | " + item.getFormattedCreatedAt());
+        detailTitleLabel.setText(appModel.getItemTitle(item));
+        detailMetaLabel.setText(appModel.getItemDetailMeta(item));
         sourceLink.setText(item.getSourceUrl());
         sourceLink.setVisible(item.getSourceUrl() != null && !item.getSourceUrl().isBlank());
         sourceLink.setManaged(sourceLink.isVisible());
-        contextArea.setText(item.getDisplayContext());
-        contentArea.setText(item.getDisplayContent());
+        contextArea.setText(appModel.getItemContext(item));
+        contentArea.setText(appModel.getItemContent(item));
 
         if (item.getTags() == null || item.getTags().isBlank()) {
-            addTag("No tags");
+            addTag(appModel.getNoTagsText());
         } else {
             Arrays.stream(item.getTags().split(","))
                     .map(String::trim)

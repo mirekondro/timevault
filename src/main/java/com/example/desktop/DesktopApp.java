@@ -58,7 +58,7 @@ public class DesktopApp extends Application {
         authScene.getStylesheets().add(stylesheet);
         mainScene.getStylesheets().add(stylesheet);
 
-        DesktopNavigator navigator = new DesktopNavigator(stage, authScene, mainScene);
+        DesktopNavigator navigator = new DesktopNavigator(stage, authScene, mainScene, appModel);
         navigator.setOnShowAuth(authController::showLoginView);
 
         authController.setContext(appModel, vaultManager, getHostServices(), stage, navigator);

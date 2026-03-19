@@ -19,41 +19,38 @@
         </padding>
 
         <VBox spacing="8.0">
-            <Label styleClass="eyebrow" text="PERSONAL DIGITAL VAULT"/>
-            <Label styleClass="hero-title" text="TimeVault"/>
-            <Label styleClass="muted-copy"
-                   text="Log in to open your vault. Need an account? Jump to registration from the link below."
-                   wrapText="true"/>
+            <Label fx:id="authEyebrowLabel" styleClass="eyebrow"/>
+            <Label fx:id="authTitleLabel" styleClass="hero-title"/>
+            <Label fx:id="authCopyLabel" styleClass="muted-copy" wrapText="true"/>
         </VBox>
 
         <VBox fx:id="loginPane" spacing="14.0">
-            <Label styleClass="section-title" text="Log In"/>
-            <TextField fx:id="loginEmailField" promptText="Email address" styleClass="text-field"/>
-            <PasswordField fx:id="loginPasswordField" promptText="Password" styleClass="text-field"/>
+            <Label fx:id="loginTitleLabel" styleClass="section-title"/>
+            <TextField fx:id="loginEmailField" styleClass="text-field"/>
+            <PasswordField fx:id="loginPasswordField" styleClass="text-field"/>
             <Button fx:id="loginButton" maxWidth="1.7976931348623157E308" mnemonicParsing="false"
-                    onAction="#handleLogin" styleClass="accent-button" text="Log In"/>
+                    onAction="#handleLogin" styleClass="accent-button"/>
             <HBox alignment="CENTER_LEFT" spacing="6.0">
-                <Label styleClass="muted-copy" text="Don't have an account?"/>
+                <Label fx:id="loginSwitchLabel" styleClass="muted-copy"/>
                 <Hyperlink fx:id="showRegisterLink" onAction="#handleShowRegister"
-                           styleClass="auth-link" text="Register here"/>
+                           styleClass="auth-link"/>
             </HBox>
         </VBox>
 
         <VBox fx:id="registerPane" managed="false" spacing="14.0" visible="false">
-            <Label styleClass="section-title" text="Register"/>
-            <TextField fx:id="registerEmailField" promptText="Email address" styleClass="text-field"/>
-            <PasswordField fx:id="registerPasswordField" promptText="Password (8+ characters)" styleClass="text-field"/>
-            <PasswordField fx:id="registerConfirmPasswordField" promptText="Confirm password" styleClass="text-field"/>
+            <Label fx:id="registerTitleLabel" styleClass="section-title"/>
+            <TextField fx:id="registerEmailField" styleClass="text-field"/>
+            <PasswordField fx:id="registerPasswordField" styleClass="text-field"/>
+            <PasswordField fx:id="registerConfirmPasswordField" styleClass="text-field"/>
             <Button fx:id="registerButton" maxWidth="1.7976931348623157E308" mnemonicParsing="false"
-                    onAction="#handleRegister" styleClass="accent-button" text="Create Account"/>
+                    onAction="#handleRegister" styleClass="accent-button"/>
             <HBox alignment="CENTER_LEFT" spacing="6.0">
-                <Label styleClass="muted-copy" text="Already registered?"/>
+                <Label fx:id="registerSwitchLabel" styleClass="muted-copy"/>
                 <Hyperlink fx:id="showLoginLink" onAction="#handleShowLogin"
-                           styleClass="auth-link" text="Back to log in"/>
+                           styleClass="auth-link"/>
             </HBox>
         </VBox>
 
-        <Label fx:id="authStatusLabel" styleClass="auth-status-label"
-               text="Register or log in to open your vault." wrapText="true"/>
+        <Label fx:id="authStatusLabel" styleClass="auth-status-label" wrapText="true"/>
     </VBox>
 </StackPane>

@@ -20,10 +20,22 @@ import javafx.stage.Stage;
 public class AuthController implements AppContextAware {
 
     @FXML
+    private Label authEyebrowLabel;
+
+    @FXML
+    private Label authTitleLabel;
+
+    @FXML
+    private Label authCopyLabel;
+
+    @FXML
     private VBox loginPane;
 
     @FXML
     private VBox registerPane;
+
+    @FXML
+    private Label loginTitleLabel;
 
     @FXML
     private TextField loginEmailField;
@@ -35,7 +47,13 @@ public class AuthController implements AppContextAware {
     private Button loginButton;
 
     @FXML
+    private Label loginSwitchLabel;
+
+    @FXML
     private Hyperlink showRegisterLink;
+
+    @FXML
+    private Label registerTitleLabel;
 
     @FXML
     private TextField registerEmailField;
@@ -48,6 +66,9 @@ public class AuthController implements AppContextAware {
 
     @FXML
     private Button registerButton;
+
+    @FXML
+    private Label registerSwitchLabel;
 
     @FXML
     private Hyperlink showLoginLink;
@@ -74,6 +95,23 @@ public class AuthController implements AppContextAware {
         registerEmailField.textProperty().bindBidirectional(appModel.registerEmailInputProperty());
         registerPasswordField.textProperty().bindBidirectional(appModel.registerPasswordInputProperty());
         registerConfirmPasswordField.textProperty().bindBidirectional(appModel.registerConfirmPasswordInputProperty());
+
+        appModel.bindText(authEyebrowLabel, "auth.eyebrow");
+        appModel.bindText(authTitleLabel, "auth.title");
+        appModel.bindText(authCopyLabel, "auth.copy");
+        appModel.bindText(loginTitleLabel, "auth.login.title");
+        appModel.bindPrompt(loginEmailField, "auth.login.email.prompt");
+        appModel.bindPrompt(loginPasswordField, "auth.login.password.prompt");
+        appModel.bindText(loginButton, "auth.login.button");
+        appModel.bindText(loginSwitchLabel, "auth.login.switch.copy");
+        appModel.bindText(showRegisterLink, "auth.login.switch.link");
+        appModel.bindText(registerTitleLabel, "auth.register.title");
+        appModel.bindPrompt(registerEmailField, "auth.register.email.prompt");
+        appModel.bindPrompt(registerPasswordField, "auth.register.password.prompt");
+        appModel.bindPrompt(registerConfirmPasswordField, "auth.register.confirm.prompt");
+        appModel.bindText(registerButton, "auth.register.button");
+        appModel.bindText(registerSwitchLabel, "auth.register.switch.copy");
+        appModel.bindText(showLoginLink, "auth.register.switch.link");
 
         authStatusLabel.textProperty().bind(appModel.statusMessageProperty());
         loginButton.disableProperty().bind(appModel.busyProperty());

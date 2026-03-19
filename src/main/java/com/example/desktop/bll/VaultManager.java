@@ -37,9 +37,9 @@ public class VaultManager {
         try {
             schemaInitializer.initializeSchema();
             appModel.clearVault();
-            appModel.setStatusMessage("Database is ready. Register or log in to open your vault.");
+            appModel.setStatusKey("status.db.ready");
         } catch (SQLException exception) {
-            appModel.setStatusMessage("Could not initialize database: " + safeMessage(exception));
+            appModel.setStatusKey("status.db.init.error", safeMessage(exception));
         } finally {
             appModel.setBusy(false);
         }
@@ -54,9 +54,9 @@ public class VaultManager {
         appModel.setBusy(true);
         try {
             int itemCount = loadCurrentUserItems(appModel, currentUser);
-            appModel.setStatusMessage("Loaded " + itemCount + " item(s) for " + currentUser.email() + ".");
+            appModel.setStatusKey("status.vault.loaded", itemCount, currentUser.email());
         } catch (SQLException exception) {
-            appModel.setStatusMessage("Could not load vault items: " + safeMessage(exception));
+            appModel.setStatusKey("status.db.load.error", safeMessage(exception));
         } finally {
             appModel.setBusy(false);
         }
@@ -68,24 +68,24 @@ public class VaultManager {
         String confirmPassword = appModel.registerConfirmPasswordInputProperty().get();
 
         if (!AccountValidator.isValidEmail(email)) {
-            appModel.setStatusMessage("Enter a valid email address before registering.");
+            appModel.setStatusKey("status.validation.email.register");
             return;
         }
 
         if (!AccountValidator.isValidPassword(password)) {
-            appModel.setStatusMessage("Passwords must be at least 8 characters long.");
+            appModel.setStatusKey("status.validation.password.min");
             return;
         }
 
         if (!password.equals(confirmPassword)) {
-            appModel.setStatusMessage("The password confirmation does not match.");
+            appModel.setStatusKey("status.validation.password.confirm");
             return;
         }
 
         appModel.setBusy(true);
         try {
             if (userDAO.findByEmail(email).isPresent()) {
-                appModel.setStatusMessage("That email is already registered. Try logging in instead.");
+                appModel.setStatusKey("status.auth.email.exists");
                 return;
             }
 
@@ -98,9 +98,9 @@ public class VaultManager {
             appModel.clearRegisterForm();
             appModel.clearLoginForm();
             int itemCount = loadCurrentUserItems(appModel, session);
-            appModel.setStatusMessage("Account created for " + session.email() + ". Loaded " + itemCount + " item(s).");
+            appModel.setStatusKey("status.auth.account.created", session.email(), itemCount);
         } catch (SQLException exception) {
-            appModel.setStatusMessage("Could not create account: " + safeMessage(exception));
+            appModel.setStatusKey("status.auth.create.error", safeMessage(exception));
         } finally {
             appModel.setBusy(false);
         }
@@ -111,12 +111,12 @@ public class VaultManager {
         String password = appModel.loginPasswordInputProperty().get();
 
         if (!AccountValidator.isValidEmail(email)) {
-            appModel.setStatusMessage("Enter a valid email address before logging in.");
+            appModel.setStatusKey("status.validation.email.login");
             return;
         }
 
         if (!AccountValidator.isValidPassword(password)) {
-            appModel.setStatusMessage("Passwords must be at least 8 characters long.");
+            appModel.setStatusKey("status.validation.password.min");
             return;
         }
 
@@ -124,7 +124,7 @@ public class VaultManager {
         try {
             Optional<VaultUser> existingUser = userDAO.findByEmail(email);
             if (existingUser.isEmpty() || !PasswordHasher.matches(password, existingUser.get().getPasswordHash())) {
-                appModel.setStatusMessage("Email or password is incorrect.");
+                appModel.setStatusKey("status.auth.invalid.credentials");
                 return;
             }
 
@@ -134,9 +134,9 @@ public class VaultManager {
             appModel.clearLoginForm();
             appModel.clearRegisterForm();
             int itemCount = loadCurrentUserItems(appModel, session);
-            appModel.setStatusMessage("Signed in as " + session.email() + ". Loaded " + itemCount + " item(s).");
+            appModel.setStatusKey("status.auth.logged.in", session.email(), itemCount);
         } catch (SQLException exception) {
-            appModel.setStatusMessage("Could not log in: " + safeMessage(exception));
+            appModel.setStatusKey("status.auth.login.error", safeMessage(exception));
         } finally {
             appModel.setBusy(false);
         }
@@ -145,7 +145,7 @@ public class VaultManager {
     public void logout(AppModel appModel) {
         UserSession currentUser = appModel.getCurrentUser();
         if (currentUser == null) {
-            appModel.setStatusMessage("No user is currently signed in.");
+            appModel.setStatusKey("status.auth.no.current.user");
             return;
         }
 
@@ -157,37 +157,21 @@ public class VaultManager {
         appModel.clearUrlForm();
         appModel.clearTextForm();
         appModel.clearImageForm();
-        appModel.setStatusMessage("Signed out of " + currentUser.email() + ".");
-    }
-
-    public String getSessionSummary(AppModel appModel) {
-        UserSession currentUser = appModel.getCurrentUser();
-        if (currentUser == null) {
-            return "Not signed in";
-        }
-        return "Signed in as " + currentUser.email();
-    }
-
-    public String getSessionMeta(AppModel appModel) {
-        UserSession currentUser = appModel.getCurrentUser();
-        if (currentUser == null) {
-            return "Create an account to keep every upload attached to your own user id.";
-        }
-        return "Account #" + currentUser.id() + " owns every saved item in this session.";
+        appModel.setStatusKey("status.auth.logged.out", currentUser.email());
     }
 
     public String getEmptyDetailMessage(AppModel appModel) {
         if (!appModel.isAuthenticated()) {
-            return "Log in to load your own vault items.";
+            return appModel.text("detail.meta.empty.unauth");
         }
-        return "Search or save an item to see its details.";
+        return appModel.text("detail.meta.empty.auth");
     }
 
     public String getArchiveSummary(AppModel appModel) {
         if (!appModel.isAuthenticated()) {
-            return "Log in to see your saved items.";
+            return appModel.text("archive.login.required");
         }
-        return appModel.getFilteredItems().size() + " visible item(s)";
+        return appModel.getVisibleArchiveSummary(appModel.getFilteredItems().size());
     }
 
     public void saveUrl(AppModel appModel) {
@@ -198,24 +182,24 @@ public class VaultManager {
 
         String url = appModel.urlInputProperty().get().trim();
         if (url.isBlank()) {
-            appModel.setStatusMessage("Enter a URL before saving.");
+            appModel.setStatusKey("status.save.url.missing");
             return;
         }
 
-        String title = firstNonBlank(appModel.urlTitleInputProperty().get(), "Saved URL");
+        String title = firstNonBlank(appModel.urlTitleInputProperty().get(), appModel.text("save.default.urlTitle"));
         String notes = firstNonBlank(appModel.urlNotesInputProperty().get(), url);
         VaultItemFx item = new VaultItemFx();
         item.setTitle(title);
         item.setContent(notes);
         item.setAiContext(buildContext("URL", title, notes));
-        item.setItemType("URL");
-        item.setTags(buildTags("URL", url));
+        item.setItemType(AppModel.TYPE_URL);
+        item.setTags(buildTags(AppModel.TYPE_URL, url));
         item.setSourceUrl(url);
         item.setOwnerId(currentUser.id());
         item.setCreatedAt(LocalDateTime.now());
         item.setUpdatedAt(item.getCreatedAt());
 
-        saveItem(appModel, currentUser, item, "Saved URL item");
+        saveItem(appModel, currentUser, item, "status.save.url.saved");
         appModel.clearUrlForm();
     }
 
@@ -228,7 +212,7 @@ public class VaultManager {
         String title = appModel.textTitleInputProperty().get().trim();
         String content = appModel.textContentInputProperty().get().trim();
         if (title.isBlank() || content.isBlank()) {
-            appModel.setStatusMessage("Add both a title and content for a text item.");
+            appModel.setStatusKey("status.save.text.missing");
             return;
         }
 
@@ -236,13 +220,13 @@ public class VaultManager {
         item.setTitle(title);
         item.setContent(content);
         item.setAiContext(buildContext("TEXT", title, content));
-        item.setItemType("TEXT");
-        item.setTags(buildTags("TEXT", content));
+        item.setItemType(AppModel.TYPE_TEXT);
+        item.setTags(buildTags(AppModel.TYPE_TEXT, content));
         item.setOwnerId(currentUser.id());
         item.setCreatedAt(LocalDateTime.now());
         item.setUpdatedAt(item.getCreatedAt());
 
-        saveItem(appModel, currentUser, item, "Saved text item");
+        saveItem(appModel, currentUser, item, "status.save.text.saved");
         appModel.clearTextForm();
     }
 
@@ -255,7 +239,7 @@ public class VaultManager {
         String title = appModel.imageTitleInputProperty().get().trim();
         String path = appModel.imagePathInputProperty().get().trim();
         if (title.isBlank() || path.isBlank()) {
-            appModel.setStatusMessage("Choose an image and give it a title before saving.");
+            appModel.setStatusKey("status.save.image.missing");
             return;
         }
 
@@ -263,13 +247,13 @@ public class VaultManager {
         item.setTitle(title);
         item.setContent(path);
         item.setAiContext(buildContext("IMAGE", title, path));
-        item.setItemType("IMAGE");
-        item.setTags(buildTags("IMAGE", title));
+        item.setItemType(AppModel.TYPE_IMAGE);
+        item.setTags(buildTags(AppModel.TYPE_IMAGE, title));
         item.setOwnerId(currentUser.id());
         item.setCreatedAt(LocalDateTime.now());
         item.setUpdatedAt(item.getCreatedAt());
 
-        saveItem(appModel, currentUser, item, "Saved image item");
+        saveItem(appModel, currentUser, item, "status.save.image.saved");
         appModel.clearImageForm();
     }
 
@@ -281,7 +265,7 @@ public class VaultManager {
 
         VaultItemFx selectedItem = appModel.getSelectedItem();
         if (selectedItem == null) {
-            appModel.setStatusMessage("Select an item before trying to delete.");
+            appModel.setStatusKey("status.delete.select");
             return;
         }
 
@@ -289,26 +273,26 @@ public class VaultManager {
         try {
             boolean deleted = vaultItemDAO.deleteById(currentUser.id(), selectedItem.getId());
             if (!deleted) {
-                appModel.setStatusMessage("That item no longer exists for your account.");
+                appModel.setStatusKey("status.delete.missing");
                 return;
             }
             appModel.removeItem(selectedItem.getId());
-            appModel.setStatusMessage("Deleted item #" + selectedItem.getId() + ".");
+            appModel.setStatusKey("status.delete.deleted", selectedItem.getId());
         } catch (SQLException exception) {
-            appModel.setStatusMessage("Could not delete item: " + safeMessage(exception));
+            appModel.setStatusKey("status.delete.error", safeMessage(exception));
         } finally {
             appModel.setBusy(false);
         }
     }
 
-    private void saveItem(AppModel appModel, UserSession currentUser, VaultItemFx item, String successPrefix) {
+    private void saveItem(AppModel appModel, UserSession currentUser, VaultItemFx item, String successKey) {
         appModel.setBusy(true);
         try {
             VaultItemFx savedItem = vaultItemDAO.insert(currentUser.id(), item);
             appModel.addItem(savedItem);
-            appModel.setStatusMessage(successPrefix + " #" + savedItem.getId() + " for account #" + currentUser.id() + ".");
+            appModel.setStatusKey(successKey, savedItem.getId(), currentUser.id());
         } catch (SQLException exception) {
-            appModel.setStatusMessage("Could not save item: " + safeMessage(exception));
+            appModel.setStatusKey("status.save.error", safeMessage(exception));
         } finally {
             appModel.setBusy(false);
         }
@@ -317,7 +301,7 @@ public class VaultManager {
     private String buildTags(String type, String content) {
         StringBuilder tags = new StringBuilder(type).append(", ").append(LocalDate.now());
 
-        if ("URL".equalsIgnoreCase(type)) {
+        if (AppModel.TYPE_URL.equalsIgnoreCase(type)) {
             String lowerContent = content.toLowerCase(Locale.ROOT);
             if (lowerContent.contains("github.com")) {
                 tags.append(", GitHub");
@@ -350,7 +334,7 @@ public class VaultManager {
         UserSession currentUser = appModel.getCurrentUser();
         if (currentUser == null) {
             appModel.clearVault();
-            appModel.setStatusMessage("Register or log in before accessing the vault.");
+            appModel.setStatusKey("status.auth.required");
             return null;
         }
         return currentUser;
@@ -368,7 +352,7 @@ public class VaultManager {
 
     private void resetVaultFilters(AppModel appModel) {
         appModel.searchTextProperty().set("");
-        appModel.selectedTypeProperty().set("ALL");
+        appModel.selectedTypeProperty().set(AppModel.TYPE_ALL);
     }
 
     private String safeMessage(Exception exception) {

@@ -11,27 +11,27 @@
     <FlowPane hgap="16.0" vgap="16.0" prefWrapLength="1100.0">
         <VBox minWidth="180.0" prefWidth="220.0" spacing="6.0" styleClass="stat-card">
             <padding><Insets top="18.0" right="18.0" bottom="18.0" left="18.0"/></padding>
-            <Label styleClass="muted-copy" text="Total saved"/>
+            <Label fx:id="totalTitleLabel" styleClass="muted-copy"/>
             <Label fx:id="totalCountValue" styleClass="stat-value" text="0"/>
-            <Label styleClass="card-copy" text="Everything currently stored in the vault." wrapText="true"/>
+            <Label fx:id="totalCopyLabel" styleClass="card-copy" wrapText="true"/>
         </VBox>
         <VBox minWidth="180.0" prefWidth="220.0" spacing="6.0" styleClass="stat-card">
             <padding><Insets top="18.0" right="18.0" bottom="18.0" left="18.0"/></padding>
-            <Label styleClass="muted-copy" text="URL items"/>
+            <Label fx:id="urlTitleLabel" styleClass="muted-copy"/>
             <Label fx:id="urlCountValue" styleClass="stat-value" text="0"/>
-            <Label styleClass="card-copy" text="Saved links and web references." wrapText="true"/>
+            <Label fx:id="urlCopyLabel" styleClass="card-copy" wrapText="true"/>
         </VBox>
         <VBox minWidth="180.0" prefWidth="220.0" spacing="6.0" styleClass="stat-card">
             <padding><Insets top="18.0" right="18.0" bottom="18.0" left="18.0"/></padding>
-            <Label styleClass="muted-copy" text="Text items"/>
+            <Label fx:id="textTitleLabel" styleClass="muted-copy"/>
             <Label fx:id="textCountValue" styleClass="stat-value" text="0"/>
-            <Label styleClass="card-copy" text="Notes, copied text, and quick captures." wrapText="true"/>
+            <Label fx:id="textCopyLabel" styleClass="card-copy" wrapText="true"/>
         </VBox>
         <VBox minWidth="180.0" prefWidth="220.0" spacing="6.0" styleClass="stat-card">
             <padding><Insets top="18.0" right="18.0" bottom="18.0" left="18.0"/></padding>
-            <Label styleClass="muted-copy" text="Image items"/>
+            <Label fx:id="imageTitleLabel" styleClass="muted-copy"/>
             <Label fx:id="imageCountValue" styleClass="stat-value" text="0"/>
-            <Label styleClass="card-copy" text="Images tracked by local file path." wrapText="true"/>
+            <Label fx:id="imageCopyLabel" styleClass="card-copy" wrapText="true"/>
         </VBox>
     </FlowPane>
 </VBox>

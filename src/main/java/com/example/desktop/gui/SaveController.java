@@ -6,6 +6,8 @@ import com.example.desktop.model.AppModel;
 import javafx.application.HostServices;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
@@ -20,7 +22,19 @@ import java.io.File;
 public class SaveController implements AppContextAware {
 
     @FXML
+    private Label sectionTitleLabel;
+
+    @FXML
+    private Label sectionCopyLabel;
+
+    @FXML
     private TabPane saveTabPane;
+
+    @FXML
+    private Tab urlTab;
+
+    @FXML
+    private Label urlCopyLabel;
 
     @FXML
     private TextField urlField;
@@ -32,10 +46,22 @@ public class SaveController implements AppContextAware {
     private TextArea urlNotesArea;
 
     @FXML
+    private Tab textTab;
+
+    @FXML
+    private Label textCopyLabel;
+
+    @FXML
     private TextField textTitleField;
 
     @FXML
     private TextArea textContentArea;
+
+    @FXML
+    private Tab imageTab;
+
+    @FXML
+    private Label imageCopyLabel;
 
     @FXML
     private TextField imageTitleField;
@@ -48,6 +74,9 @@ public class SaveController implements AppContextAware {
 
     @FXML
     private Button saveTextButton;
+
+    @FXML
+    private Button browseImageButton;
 
     @FXML
     private Button saveImageButton;
@@ -76,6 +105,26 @@ public class SaveController implements AppContextAware {
         imageTitleField.textProperty().bindBidirectional(appModel.imageTitleInputProperty());
         imagePathField.textProperty().bindBidirectional(appModel.imagePathInputProperty());
 
+        appModel.bindText(sectionTitleLabel, "save.section.title");
+        appModel.bindText(sectionCopyLabel, "save.section.copy");
+        appModel.bindText(urlTab, "save.tab.url");
+        appModel.bindText(textTab, "save.tab.text");
+        appModel.bindText(imageTab, "save.tab.image");
+        appModel.bindText(urlCopyLabel, "save.url.copy");
+        appModel.bindPrompt(urlField, "save.url.prompt");
+        appModel.bindPrompt(urlTitleField, "save.url.title.prompt");
+        appModel.bindPrompt(urlNotesArea, "save.url.notes.prompt");
+        appModel.bindText(saveUrlButton, "save.url.button");
+        appModel.bindText(textCopyLabel, "save.text.copy");
+        appModel.bindPrompt(textTitleField, "save.text.title.prompt");
+        appModel.bindPrompt(textContentArea, "save.text.content.prompt");
+        appModel.bindText(saveTextButton, "save.text.button");
+        appModel.bindText(imageCopyLabel, "save.image.copy");
+        appModel.bindPrompt(imageTitleField, "save.image.title.prompt");
+        appModel.bindPrompt(imagePathField, "save.image.path.prompt");
+        appModel.bindText(browseImageButton, "save.image.browse");
+        appModel.bindText(saveImageButton, "save.image.button");
+
         saveTabPane.disableProperty().bind(appModel.busyProperty().or(appModel.authenticatedProperty().not()));
         saveUrlButton.disableProperty().bind(appModel.busyProperty().or(appModel.authenticatedProperty().not()));
         saveTextButton.disableProperty().bind(appModel.busyProperty().or(appModel.authenticatedProperty().not()));
@@ -95,9 +144,9 @@ public class SaveController implements AppContextAware {
     @FXML
     private void handleBrowseImage() {
         FileChooser chooser = new FileChooser();
-        chooser.setTitle("Choose an image");
+        chooser.setTitle(appModel.text("fileChooser.image.title"));
         chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter(
-                "Images", "*.png", "*.jpg", "*.jpeg", "*.gif", "*.bmp", "*.webp"));
+                appModel.text("fileChooser.image.filter"), "*.png", "*.jpg", "*.jpeg", "*.gif", "*.bmp", "*.webp"));
 
         File selectedFile = chooser.showOpenDialog(stage);
         if (selectedFile != null) {
@@ -105,7 +154,7 @@ public class SaveController implements AppContextAware {
             if (appModel.imageTitleInputProperty().get().isBlank()) {
                 appModel.imageTitleInputProperty().set(selectedFile.getName());
             }
-            appModel.setStatusMessage("Selected image " + selectedFile.getName() + ".");
+            appModel.setStatusKey("status.save.image.selected", selectedFile.getName());
         }
     }
 

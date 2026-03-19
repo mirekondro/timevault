@@ -13,8 +13,8 @@
     <padding>
         <Insets top="18.0" right="18.0" bottom="18.0" left="18.0"/>
     </padding>
-    <Label styleClass="section-title" text="Archive"/>
-    <Label fx:id="visibleCountLabel" styleClass="muted-copy" text="0 visible item(s)"/>
+    <Label fx:id="archiveTitleLabel" styleClass="section-title"/>
+    <Label fx:id="visibleCountLabel" styleClass="muted-copy"/>
     <Separator/>
     <ListView fx:id="itemsListView" VBox.vgrow="ALWAYS"/>
 </VBox>

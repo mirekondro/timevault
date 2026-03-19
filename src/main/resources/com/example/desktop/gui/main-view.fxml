@@ -40,9 +40,9 @@
             <padding>
                 <Insets top="0.0" right="22.0" bottom="0.0" left="22.0"/>
             </padding>
-            <Label fx:id="statusLabel" styleClass="status-label" text="Ready"/>
+            <Label fx:id="statusLabel" styleClass="status-label"/>
             <Region HBox.hgrow="ALWAYS"/>
-            <Label styleClass="footer-credit" text="Designed and coded by Asim and Mirek"/>
+            <Label fx:id="footerCreditLabel" styleClass="footer-credit"/>
         </HBox>
     </bottom>
 </BorderPane>

@@ -15,16 +15,16 @@
     <padding>
         <Insets top="18.0" right="18.0" bottom="18.0" left="18.0"/>
     </padding>
-    <Label fx:id="detailTitleLabel" styleClass="detail-title" text="Select an item"/>
-    <Label fx:id="detailMetaLabel" styleClass="muted-copy" text="Search or save an item to see its details." wrapText="true"/>
+    <Label fx:id="detailTitleLabel" styleClass="detail-title"/>
+    <Label fx:id="detailMetaLabel" styleClass="muted-copy" wrapText="true"/>
     <Hyperlink fx:id="sourceLink" onAction="#handleOpenSource" text="" visible="false" managed="false"/>
     <Separator/>
-    <Label styleClass="section-title" text="AI / Context"/>
+    <Label fx:id="contextSectionLabel" styleClass="section-title"/>
     <TextArea fx:id="contextArea" editable="false" prefRowCount="5" styleClass="context-box" wrapText="true"/>
-    <Label styleClass="section-title" text="Tags"/>
+    <Label fx:id="tagsSectionLabel" styleClass="section-title"/>
     <FlowPane fx:id="tagsPane" hgap="8.0" vgap="8.0"/>
-    <Label styleClass="section-title" text="Content"/>
+    <Label fx:id="contentSectionLabel" styleClass="section-title"/>
     <TextArea fx:id="contentArea" editable="false" prefRowCount="10" styleClass="readonly-area" wrapText="true"/>
     <Button fx:id="deleteButton" mnemonicParsing="false" onAction="#handleDelete"
-            styleClass="ghost-button" text="Delete Item"/>
+            styleClass="ghost-button"/>
 </VBox>

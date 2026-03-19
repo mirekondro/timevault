@@ -17,6 +17,9 @@ import javafx.stage.Stage;
 public class ArchiveController implements AppContextAware {
 
     @FXML
+    private Label archiveTitleLabel;
+
+    @FXML
     private Label visibleCountLabel;
 
     @FXML
@@ -33,10 +36,12 @@ public class ArchiveController implements AppContextAware {
         this.appModel = appModel;
 
         itemsListView.setItems(appModel.getFilteredItems());
-        itemsListView.setCellFactory(listView -> new VaultItemCell());
+        itemsListView.setCellFactory(listView -> new VaultItemCell(appModel));
+        appModel.bindText(archiveTitleLabel, "archive.title");
 
         visibleCountLabel.textProperty().bind(Bindings.createStringBinding(
                 () -> vaultManager.getArchiveSummary(appModel),
+                appModel.localeProperty(),
                 appModel.getFilteredItems(),
                 appModel.authenticatedProperty()));
 

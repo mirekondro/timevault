@@ -17,52 +17,50 @@
     <padding>
         <Insets top="18.0" right="18.0" bottom="18.0" left="18.0"/>
     </padding>
-    <Label styleClass="section-title" text="Capture Into The Vault"/>
-    <Label styleClass="muted-copy" text="Each save action goes through the business layer and updates the shared AppModel." wrapText="true"/>
+    <Label fx:id="sectionTitleLabel" styleClass="section-title"/>
+    <Label fx:id="sectionCopyLabel" styleClass="muted-copy" wrapText="true"/>
 
     <TabPane fx:id="saveTabPane" tabClosingPolicy="UNAVAILABLE">
         <tabs>
-            <Tab text="URL">
+            <Tab fx:id="urlTab">
                 <content>
                     <VBox spacing="12.0">
                         <padding><Insets top="18.0" right="18.0" bottom="18.0" left="18.0"/></padding>
-                        <Label styleClass="muted-copy" text="Save a link with optional notes or extracted text." wrapText="true"/>
-                        <TextField fx:id="urlField" promptText="https://example.com" styleClass="text-field"/>
-                        <TextField fx:id="urlTitleField" promptText="Optional title" styleClass="text-field"/>
-                        <TextArea fx:id="urlNotesArea" prefRowCount="4" promptText="Optional notes or copied content"
-                                  styleClass="text-area" wrapText="true"/>
+                        <Label fx:id="urlCopyLabel" styleClass="muted-copy" wrapText="true"/>
+                        <TextField fx:id="urlField" styleClass="text-field"/>
+                        <TextField fx:id="urlTitleField" styleClass="text-field"/>
+                        <TextArea fx:id="urlNotesArea" prefRowCount="4" styleClass="text-area" wrapText="true"/>
                         <Button fx:id="saveUrlButton" mnemonicParsing="false" onAction="#handleSaveUrl"
-                                styleClass="accent-button" text="Save URL"/>
+                                styleClass="accent-button"/>
                     </VBox>
                 </content>
             </Tab>
-            <Tab text="Text">
+            <Tab fx:id="textTab">
                 <content>
                     <VBox spacing="12.0">
                         <padding><Insets top="18.0" right="18.0" bottom="18.0" left="18.0"/></padding>
-                        <Label styleClass="muted-copy" text="Save text notes or copy-pasted content." wrapText="true"/>
-                        <TextField fx:id="textTitleField" promptText="Title" styleClass="text-field"/>
-                        <TextArea fx:id="textContentArea" prefRowCount="6" promptText="Write or paste the text here"
-                                  styleClass="text-area" wrapText="true"/>
+                        <Label fx:id="textCopyLabel" styleClass="muted-copy" wrapText="true"/>
+                        <TextField fx:id="textTitleField" styleClass="text-field"/>
+                        <TextArea fx:id="textContentArea" prefRowCount="6" styleClass="text-area" wrapText="true"/>
                         <Button fx:id="saveTextButton" mnemonicParsing="false" onAction="#handleSaveText"
-                                styleClass="accent-button" text="Save Text"/>
+                                styleClass="accent-button"/>
                     </VBox>
                 </content>
             </Tab>
-            <Tab text="Image">
+            <Tab fx:id="imageTab">
                 <content>
                     <VBox spacing="12.0">
                         <padding><Insets top="18.0" right="18.0" bottom="18.0" left="18.0"/></padding>
-                        <Label styleClass="muted-copy" text="Pick an image file and save its local reference." wrapText="true"/>
-                        <TextField fx:id="imageTitleField" promptText="Image title" styleClass="text-field"/>
+                        <Label fx:id="imageCopyLabel" styleClass="muted-copy" wrapText="true"/>
+                        <TextField fx:id="imageTitleField" styleClass="text-field"/>
                         <HBox spacing="12.0">
-                            <TextField fx:id="imagePathField" editable="false" promptText="Choose an image file"
+                            <TextField fx:id="imagePathField" editable="false"
                                        styleClass="text-field" HBox.hgrow="ALWAYS"/>
-                            <Button mnemonicParsing="false" onAction="#handleBrowseImage"
-                                    styleClass="ghost-button" text="Browse"/>
+                            <Button fx:id="browseImageButton" mnemonicParsing="false" onAction="#handleBrowseImage"
+                                    styleClass="ghost-button"/>
                         </HBox>
                         <Button fx:id="saveImageButton" mnemonicParsing="false" onAction="#handleSaveImage"
-                                styleClass="accent-button" text="Save Image"/>
+                                styleClass="accent-button"/>
                     </VBox>
                 </content>
             </Tab>
