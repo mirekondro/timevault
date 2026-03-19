@@ -12,8 +12,9 @@
 
 <StackPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
            fx:controller="com.example.desktop.gui.AuthController"
+           alignment="CENTER"
            styleClass="auth-scene-root">
-    <VBox maxWidth="470.0" spacing="18.0" styleClass="auth-shell">
+    <VBox maxHeight="-Infinity" maxWidth="470.0" prefWidth="470.0" spacing="18.0" styleClass="auth-shell">
         <padding>
             <Insets top="28.0" right="28.0" bottom="28.0" left="28.0"/>
         </padding>

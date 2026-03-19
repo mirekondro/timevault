@@ -13,14 +13,35 @@ public class DesktopNavigator {
     private final Scene authScene;
     private final Scene mainScene;
     private final AppModel appModel;
+    private final double authStageWidth;
+    private final double authStageHeight;
+    private final double authMinWidth;
+    private final double authMinHeight;
+    private final double mainMinWidth;
+    private final double mainMinHeight;
     private Runnable onShowAuth = () -> { };
     private Runnable onShowMain = () -> { };
 
-    public DesktopNavigator(Stage stage, Scene authScene, Scene mainScene, AppModel appModel) {
+    public DesktopNavigator(Stage stage,
+                            Scene authScene,
+                            Scene mainScene,
+                            AppModel appModel,
+                            double authStageWidth,
+                            double authStageHeight,
+                            double authMinWidth,
+                            double authMinHeight,
+                            double mainMinWidth,
+                            double mainMinHeight) {
         this.stage = stage;
         this.authScene = authScene;
         this.mainScene = mainScene;
         this.appModel = appModel;
+        this.authStageWidth = authStageWidth;
+        this.authStageHeight = authStageHeight;
+        this.authMinWidth = authMinWidth;
+        this.authMinHeight = authMinHeight;
+        this.mainMinWidth = mainMinWidth;
+        this.mainMinHeight = mainMinHeight;
     }
 
     public void setOnShowAuth(Runnable onShowAuth) {
@@ -35,13 +56,22 @@ public class DesktopNavigator {
         onShowAuth.run();
         stage.titleProperty().unbind();
         stage.titleProperty().bind(appModel.textBinding(appModel.getCurrentSceneTitleKey(true)));
+        stage.setMaximized(false);
+        stage.setMinWidth(authMinWidth);
+        stage.setMinHeight(authMinHeight);
         stage.setScene(authScene);
+        stage.setWidth(authStageWidth);
+        stage.setHeight(authStageHeight);
+        stage.centerOnScreen();
     }
 
     public void showMainScene() {
         onShowMain.run();
         stage.titleProperty().unbind();
         stage.titleProperty().bind(appModel.textBinding(appModel.getCurrentSceneTitleKey(false)));
+        stage.setMinWidth(mainMinWidth);
+        stage.setMinHeight(mainMinHeight);
         stage.setScene(mainScene);
+        stage.setMaximized(true);
     }
 }

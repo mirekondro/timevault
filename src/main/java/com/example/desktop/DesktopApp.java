@@ -43,8 +43,14 @@ public class DesktopApp extends Application {
         AppModel appModel = new AppModel();
 
         Rectangle2D visualBounds = Screen.getPrimary().getVisualBounds();
-        double targetWidth = Math.min(1380, Math.max(900, visualBounds.getWidth() - 80));
-        double targetHeight = Math.min(920, Math.max(680, visualBounds.getHeight() - 80));
+        double authWidth = Math.min(640, visualBounds.getWidth());
+        double authHeight = Math.min(760, visualBounds.getHeight());
+        double authMinWidth = Math.min(560, visualBounds.getWidth());
+        double authMinHeight = Math.min(680, visualBounds.getHeight());
+        double mainWidth = Math.min(1380, Math.max(1100, visualBounds.getWidth() - 40));
+        double mainHeight = Math.min(920, Math.max(760, visualBounds.getHeight() - 40));
+        double mainMinWidth = Math.min(980, visualBounds.getWidth());
+        double mainMinHeight = Math.min(720, visualBounds.getHeight());
 
         vaultManager.initialize(appModel);
 
@@ -56,22 +62,30 @@ public class DesktopApp extends Application {
         Parent mainRoot = mainLoader.load();
         MainController mainController = mainLoader.getController();
 
-        Scene authScene = new Scene(authRoot, targetWidth, targetHeight);
-        Scene mainScene = new Scene(mainRoot, targetWidth, targetHeight);
+        Scene authScene = new Scene(authRoot, authWidth, authHeight);
+        Scene mainScene = new Scene(mainRoot, mainWidth, mainHeight);
         String stylesheet = getClass().getResource("/desktop/styles.css").toExternalForm();
         authScene.getStylesheets().add(stylesheet);
         mainScene.getStylesheets().add(stylesheet);
 
-        DesktopNavigator navigator = new DesktopNavigator(stage, authScene, mainScene, appModel);
+        DesktopNavigator navigator = new DesktopNavigator(
+                stage,
+                authScene,
+                mainScene,
+                appModel,
+                authWidth,
+                authHeight,
+                authMinWidth,
+                authMinHeight,
+                mainMinWidth,
+                mainMinHeight
+        );
         navigator.setOnShowAuth(authController::showLoginView);
 
         authController.setContext(appModel, vaultManager, getHostServices(), stage, navigator);
         mainController.setContext(appModel, vaultManager, getHostServices(), stage, navigator);
 
-        stage.setMinWidth(Math.min(900, visualBounds.getWidth()));
-        stage.setMinHeight(Math.min(680, visualBounds.getHeight()));
         navigator.showAuthScene();
-        stage.centerOnScreen();
         stage.show();
     }
 }
