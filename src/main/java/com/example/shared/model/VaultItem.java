@@ -64,7 +64,7 @@ public class VaultItem {
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
-    @Column(name = "user_id", nullable = false)
+    @Column(name = "user_id", nullable = false, insertable = false, updatable = false)
     private Long userId = 1L; // Default user ID for single-user application
 
     @PrePersist

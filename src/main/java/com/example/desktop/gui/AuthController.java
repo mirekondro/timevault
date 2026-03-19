@@ -118,6 +118,13 @@ public class AuthController implements AppContextAware {
         appModel.bindText(showLoginLink, "auth.register.switch.link");
 
         toastHostViewController.setTopOffset(26);
+        loginButton.defaultButtonProperty().bind(loginPane.visibleProperty());
+        registerButton.defaultButtonProperty().bind(registerPane.visibleProperty());
+        loginEmailField.setOnAction(event -> handleLogin());
+        loginPasswordField.setOnAction(event -> handleLogin());
+        registerEmailField.setOnAction(event -> handleRegister());
+        registerPasswordField.setOnAction(event -> handleRegister());
+        registerConfirmPasswordField.setOnAction(event -> handleRegister());
         loginButton.disableProperty().bind(appModel.busyProperty());
         registerButton.disableProperty().bind(appModel.busyProperty());
         showLoginView();

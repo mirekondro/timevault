@@ -337,11 +337,11 @@
 .stat-card,
 .type-sidebar-card {
     -fx-background-color: linear-gradient(to bottom right, rgba(255,255,255,0.035), rgba(255,255,255,0.015));
-    -fx-background-radius: 18px;
+    -fx-background-radius: 16px;
     -fx-border-color: -color-border;
-    -fx-border-radius: 18px;
+    -fx-border-radius: 16px;
     -fx-border-width: 1px;
-    -fx-padding: 18px;
+    -fx-padding: 14px;
     -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.24), 26, 0.18, 0, 8);
 }
 
@@ -361,7 +361,7 @@
 
 .stats-row {
     -fx-alignment: center-left;
-    -fx-padding: 0 0 4px 0;
+    -fx-padding: 0;
 }
 
 .workspace-shell {
@@ -631,13 +631,13 @@
 
 .stat-value {
     -fx-text-fill: white;
-    -fx-font-size: 22px;
+    -fx-font-size: 20px;
     -fx-font-weight: 800;
 }
 
 .card-copy {
     -fx-text-fill: #e4ecf5;
-    -fx-font-size: 11px;
+    -fx-font-size: 10px;
 }
 
 .context-box {

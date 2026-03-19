@@ -1,13 +1,17 @@
 package com.example.shared.service;
 
 import com.example.shared.model.VaultItem;
+import com.example.shared.model.VaultUser;
 import com.example.shared.repository.VaultItemRepository;
+import com.example.shared.repository.VaultUserRepository;
+import com.example.shared.security.PasswordHasher;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 
 /**
@@ -19,15 +23,21 @@ import java.util.Optional;
 @Transactional
 public class VaultItemService {
 
+    private static final String DEFAULT_WEB_USER_EMAIL = "web-demo@timevault.local";
+    private static final String DEFAULT_WEB_USER_PASSWORD = "timevault-demo-account";
+
     private final VaultItemRepository repository;
+    private final VaultUserRepository userRepository;
     private final GeminiService geminiService;
     private final FileStorageService fileStorageService;
 
     @Autowired
     public VaultItemService(VaultItemRepository repository,
+                           VaultUserRepository userRepository,
                            GeminiService geminiService,
                            FileStorageService fileStorageService) {
         this.repository = repository;
+        this.userRepository = userRepository;
         this.geminiService = geminiService;
         this.fileStorageService = fileStorageService;
     }
@@ -40,7 +50,7 @@ public class VaultItemService {
      * Save a generic vault item
      */
     public VaultItem save(VaultItem item) {
-        return repository.save(item);
+        return repository.save(assignDefaultOwner(item));
     }
 
     /**
@@ -52,13 +62,12 @@ public class VaultItemService {
 
         VaultItem item = new VaultItem(aiSummary.getTitle(), aiSummary.getContent(), "URL");
         item.setSourceUrl(url);
-        item.setUserId(1L); // Set default user ID
         item.setAiContext(aiSummary.getAiContext());
 
         // Auto-generate intelligent tags
         item.setTags(generateIntelligentTags("URL", url, pageContent, item.getAiContext()));
 
-        return repository.save(item);
+        return save(item);
     }
 
     /**
@@ -74,7 +83,6 @@ public class VaultItemService {
      */
     public VaultItem saveText(String title, String content) {
         VaultItem item = new VaultItem(title, content, "TEXT");
-        item.setUserId(1L); // Set default user ID
 
         // Generate AI context using Gemini
         String aiContext = geminiService.generateTextContext(content);
@@ -83,7 +91,7 @@ public class VaultItemService {
         // Auto-generate intelligent tags
         item.setTags(generateIntelligentTags("TEXT", title, content, aiContext));
 
-        return repository.save(item);
+        return save(item);
     }
 
     /**
@@ -95,7 +103,6 @@ public class VaultItemService {
             String storedPath = fileStorageService.store(imageData, originalFilename);
 
             VaultItem item = new VaultItem(title, storedPath, "IMAGE");
-            item.setUserId(1L); // Set default user ID
 
             // Analyze image with Gemini Vision
             String aiContext = geminiService.analyzeImage(imageData, mimeType, originalFilename);
@@ -104,14 +111,13 @@ public class VaultItemService {
             // Auto-generate intelligent tags
             item.setTags(generateIntelligentTags("IMAGE", originalFilename, "", aiContext));
 
-            return repository.save(item);
+            return save(item);
         } catch (Exception e) {
             // Fallback: save without storing file
             VaultItem item = new VaultItem(title, originalFilename, "IMAGE");
-            item.setUserId(1L); // Set default user ID
             item.setAiContext("Image saved. Analysis unavailable: " + e.getMessage());
             item.setTags(generateIntelligentTags("IMAGE", originalFilename, "", item.getAiContext()));
-            return repository.save(item);
+            return save(item);
         }
     }
 
@@ -127,7 +133,7 @@ public class VaultItemService {
             VaultItem item = new VaultItem(title, imagePath.toString(), "IMAGE");
             item.setAiContext("Image reference saved. File access error: " + e.getMessage());
             item.setTags(generateIntelligentTags("IMAGE", imagePath.getFileName().toString(), "", item.getAiContext()));
-            return repository.save(item);
+            return save(item);
         }
     }
 
@@ -136,35 +142,51 @@ public class VaultItemService {
     // ============================================
 
     public List<VaultItem> findAll() {
-        return repository.findAllByOrderByCreatedAtDesc();
+        return repository.findAllByOwnerIdAndDeletedAtIsNullOrderByCreatedAtDesc(resolveDefaultOwnerId());
     }
 
     public List<VaultItem> findRecent() {
-        return repository.findTop10ByOrderByCreatedAtDesc();
+        return repository.findTop10ByOwnerIdAndDeletedAtIsNullOrderByCreatedAtDesc(resolveDefaultOwnerId());
     }
 
     public List<VaultItem> findTop3Recent() {
-        return repository.findTop3ByOrderByCreatedAtDesc();
+        return repository.findTop3ByOwnerIdAndDeletedAtIsNullOrderByCreatedAtDesc(resolveDefaultOwnerId());
     }
 
     public Optional<VaultItem> findById(Long id) {
-        return repository.findById(id);
+        return repository.findByIdAndOwnerIdAndDeletedAtIsNull(id, resolveDefaultOwnerId());
     }
 
     public List<VaultItem> findByType(String itemType) {
-        return repository.findByItemType(itemType);
+        return repository.findByOwnerIdAndItemTypeAndDeletedAtIsNullOrderByCreatedAtDesc(resolveDefaultOwnerId(), itemType);
     }
 
     public List<VaultItem> search(String keyword) {
-        return repository.searchByKeyword(keyword);
+        String normalizedKeyword = normalizeKeyword(keyword);
+        if (normalizedKeyword.isEmpty()) {
+            return findAll();
+        }
+        return repository.findByOwnerIdAndTitleContainingIgnoreCaseAndDeletedAtIsNullOrderByCreatedAtDesc(
+                resolveDefaultOwnerId(),
+                normalizedKeyword);
     }
 
     public List<VaultItem> searchByAiDescription(String keyword) {
-        return repository.searchByAiContext(keyword);
+        String normalizedKeyword = normalizeKeyword(keyword);
+        if (normalizedKeyword.isEmpty()) {
+            return findAll();
+        }
+        return findAll().stream()
+                .filter(item -> containsIgnoreCase(item.getAiContext(), normalizedKeyword))
+                .toList();
     }
 
     public List<VaultItem> searchComprehensive(String keyword) {
-        return repository.searchComprehensive(keyword);
+        String normalizedKeyword = normalizeKeyword(keyword);
+        if (normalizedKeyword.isEmpty()) {
+            return findAll();
+        }
+        return repository.searchByUserAndKeyword(resolveDefaultOwnerId(), normalizedKeyword);
     }
 
     // ============================================
@@ -172,18 +194,14 @@ public class VaultItemService {
     // ============================================
 
     public void delete(Long id) {
-        Optional<VaultItem> item = repository.findById(id);
-        item.ifPresent(vaultItem -> {
-            // Delete associated file if it's an image
-            if ("IMAGE".equals(vaultItem.getItemType()) && vaultItem.getContent() != null) {
-                fileStorageService.delete(vaultItem.getContent());
-            }
-            repository.deleteById(id);
-        });
+        repository.softDeleteByIdAndOwnerId(id, resolveDefaultOwnerId());
     }
 
     public void deleteAll() {
-        repository.deleteAll();
+        Long userId = resolveDefaultOwnerId();
+        for (VaultItem item : repository.findAllByOwnerIdAndDeletedAtIsNullOrderByCreatedAtDesc(userId)) {
+            repository.softDeleteByIdAndOwnerId(item.getId(), userId);
+        }
     }
 
     // ============================================
@@ -191,11 +209,11 @@ public class VaultItemService {
     // ============================================
 
     public long countByType(String itemType) {
-        return repository.countByItemType(itemType);
+        return repository.countByOwnerIdAndItemTypeAndDeletedAtIsNull(resolveDefaultOwnerId(), itemType);
     }
 
     public long countAll() {
-        return repository.count();
+        return repository.countByOwnerIdAndDeletedAtIsNull(resolveDefaultOwnerId());
     }
 
     // ============================================
@@ -206,7 +224,7 @@ public class VaultItemService {
      * Regenerate AI context for an existing item
      */
     public VaultItem regenerateContext(Long id) {
-        Optional<VaultItem> optItem = repository.findById(id);
+        Optional<VaultItem> optItem = repository.findByIdAndOwnerIdAndDeletedAtIsNull(id, resolveDefaultOwnerId());
         if (optItem.isPresent()) {
             VaultItem item = optItem.get();
             String newContext = switch (item.getItemType()) {
@@ -336,6 +354,32 @@ public class VaultItemService {
     @Deprecated
     private String generateTags(String type, String content) {
         return generateIntelligentTags(type, content, "", "");
+    }
+
+    private VaultItem assignDefaultOwner(VaultItem item) {
+        VaultUser owner = resolveDefaultOwner();
+        item.setOwner(owner);
+        item.setUserId(owner.getId());
+        return item;
+    }
+
+    private VaultUser resolveDefaultOwner() {
+        return userRepository.findByEmailIgnoreCase(DEFAULT_WEB_USER_EMAIL)
+                .orElseGet(() -> userRepository.save(new VaultUser(
+                        DEFAULT_WEB_USER_EMAIL,
+                        PasswordHasher.hash(DEFAULT_WEB_USER_PASSWORD))));
+    }
+
+    private Long resolveDefaultOwnerId() {
+        return resolveDefaultOwner().getId();
+    }
+
+    private String normalizeKeyword(String keyword) {
+        return keyword == null ? "" : keyword.trim();
+    }
+
+    private boolean containsIgnoreCase(String value, String keyword) {
+        return value != null && value.toLowerCase(Locale.ROOT).contains(keyword.toLowerCase(Locale.ROOT));
     }
 }
 
