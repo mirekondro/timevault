@@ -26,10 +26,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 /**
- * WEB VERSION - Main View
- *
- * This is YOUR part - the web frontend using Vaadin
- * Uses shared backend services (VaultItemService)
+ * WEB VERSION - Modern, Beautiful Main View
+ * Beautiful TimeVault UI with Vaadin
  */
 @PageTitle("TimeVault - Your Digital Memory")
 @Route("")
@@ -45,38 +43,79 @@ public class MainView extends VerticalLayout {
         setSizeFull();
         setPadding(false);
         setSpacing(false);
-        addClassName("main-view");
+        getStyle()
+            .set("background", "linear-gradient(135deg, #667eea 0%, #764ba2 100%)")
+            .set("min-height", "100vh");
 
-        add(createHeader());
-        add(createHeroSection());
-        add(createContentSection());
-        add(createRecentItemsSection());
+        // Main scroll container
+        VerticalLayout main = new VerticalLayout();
+        main.setSizeFull();
+        main.setPadding(false);
+        main.setSpacing(false);
+
+        main.add(createHeader());
+        main.add(createHeroSection());
+
+        // Content wrapper with max width
+        VerticalLayout contentWrapper = new VerticalLayout();
+        contentWrapper.setMaxWidth("1200px");
+        contentWrapper.setWidth("100%");
+        contentWrapper.setPadding(true);
+        contentWrapper.setMargin(false);
+        contentWrapper.setSpacing(true);
+        contentWrapper.setAlignSelf(Alignment.CENTER);
+
+        contentWrapper.add(
+            createContentSection(),
+            createRecentItemsSection()
+        );
+
+        main.add(contentWrapper);
+        main.setFlexGrow(1, contentWrapper);
+
+        add(main);
     }
 
     private Component createHeader() {
         HorizontalLayout header = new HorizontalLayout();
         header.setWidthFull();
         header.setPadding(true);
-        header.addClassName("header");
+        header.setMargin(false);
+        header.setSpacing(true);
         header.setAlignItems(FlexComponent.Alignment.CENTER);
         header.setJustifyContentMode(FlexComponent.JustifyContentMode.BETWEEN);
+        header.getStyle()
+            .set("background", "rgba(255, 255, 255, 0.1)")
+            .set("backdrop-filter", "blur(10px)")
+            .set("border-bottom", "1px solid rgba(255, 255, 255, 0.2)")
+            .set("box-shadow", "0 8px 32px 0 rgba(31, 38, 135, 0.37)");
 
-        // Logo and title
-        HorizontalLayout logo = new HorizontalLayout();
-        logo.setAlignItems(FlexComponent.Alignment.CENTER);
-        logo.setSpacing(true);
+        // Logo area
+        HorizontalLayout logoArea = new HorizontalLayout();
+        logoArea.setAlignItems(FlexComponent.Alignment.CENTER);
+        logoArea.setSpacing(true);
+
         Icon vaultIcon = VaadinIcon.ARCHIVES.create();
-        vaultIcon.addClassName("logo-icon");
-        H1 title = new H1("TimeVault");
-        title.addClassName("logo-text");
-        logo.add(vaultIcon, title);
+        vaultIcon.setSize("40px");
+        vaultIcon.getStyle().set("color", "white");
 
-        // Search bar
+        H1 title = new H1("TimeVault");
+        title.getStyle()
+            .set("color", "white")
+            .set("margin", "0")
+            .set("font-size", "28px")
+            .set("font-weight", "600");
+
+        logoArea.add(vaultIcon, title);
+
+        // Search area
         TextField searchField = new TextField();
         searchField.setPlaceholder("Search your vault...");
         searchField.setPrefixComponent(VaadinIcon.SEARCH.create());
-        searchField.addClassName("header-search");
-        searchField.setWidth("400px");
+        searchField.setWidth("350px");
+        searchField.getStyle()
+            .set("background", "rgba(255, 255, 255, 0.15)")
+            .set("color", "white");
 
         searchField.addValueChangeListener(e -> {
             if (!e.getValue().isEmpty()) {
@@ -87,15 +126,9 @@ public class MainView extends VerticalLayout {
             }
         });
 
-        // Action buttons
-        Button browseBtn = new Button("Browse All", VaadinIcon.GRID.create());
-        browseBtn.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
-        browseBtn.addClassName("header-button");
+        header.add(logoArea, searchField);
+        header.setFlexGrow(1, searchField);
 
-        HorizontalLayout actions = new HorizontalLayout(searchField, browseBtn);
-        actions.setAlignItems(FlexComponent.Alignment.CENTER);
-
-        header.add(logo, actions);
         return header;
     }
 
@@ -104,15 +137,23 @@ public class MainView extends VerticalLayout {
         hero.setWidthFull();
         hero.setPadding(true);
         hero.setAlignItems(FlexComponent.Alignment.CENTER);
-        hero.addClassName("hero-section");
+        hero.setJustifyContentMode(FlexComponent.JustifyContentMode.CENTER);
+        hero.setHeight("200px");
 
         H2 heroTitle = new H2("Save Everything, Find Anything");
-        heroTitle.addClassName("hero-title");
+        heroTitle.getStyle()
+            .set("color", "white")
+            .set("text-align", "center")
+            .set("font-size", "42px")
+            .set("font-weight", "700")
+            .set("margin", "0 0 15px 0");
 
-        Paragraph heroSubtitle = new Paragraph(
-            "Your personal digital vault with AI-powered context and smart auto-tagging"
-        );
-        heroSubtitle.addClassName("hero-subtitle");
+        Paragraph heroSubtitle = new Paragraph("Your personal digital vault with AI-powered context and smart auto-tagging");
+        heroSubtitle.getStyle()
+            .set("color", "rgba(255, 255, 255, 0.9)")
+            .set("text-align", "center")
+            .set("font-size", "16px")
+            .set("margin", "0");
 
         hero.add(heroTitle, heroSubtitle);
         return hero;
@@ -121,25 +162,26 @@ public class MainView extends VerticalLayout {
     private Component createContentSection() {
         VerticalLayout section = new VerticalLayout();
         section.setWidthFull();
-        section.setMaxWidth("900px");
-        section.addClassName("content-section");
-        section.setAlignSelf(Alignment.CENTER);
+        section.setPadding(true);
+        section.getStyle()
+            .set("background", "white")
+            .set("border-radius", "16px")
+            .set("box-shadow", "0 20px 60px rgba(0, 0, 0, 0.15)");
 
         // Tab selection
-        Tab urlTab = new Tab(VaadinIcon.LINK.create(), new Span("URL"));
-        Tab imageTab = new Tab(VaadinIcon.PICTURE.create(), new Span("Image"));
-        Tab textTab = new Tab(VaadinIcon.TEXT_LABEL.create(), new Span("Text"));
+        Tab urlTab = new Tab(VaadinIcon.LINK.create(), new Span("📎 URL"));
+        Tab imageTab = new Tab(VaadinIcon.PICTURE.create(), new Span("🖼️ Image"));
+        Tab textTab = new Tab(VaadinIcon.TEXT_LABEL.create(), new Span("📝 Text"));
 
         Tabs tabs = new Tabs(urlTab, imageTab, textTab);
         tabs.setWidthFull();
-        tabs.addClassName("input-tabs");
+        tabs.getStyle().set("margin-bottom", "30px");
 
         // Content panels
         VerticalLayout urlPanel = createUrlPanel();
         VerticalLayout imagePanel = createImagePanel();
         VerticalLayout textPanel = createTextPanel();
 
-        // Show/hide panels based on selected tab
         imagePanel.setVisible(false);
         textPanel.setVisible(false);
 
@@ -156,22 +198,30 @@ public class MainView extends VerticalLayout {
     private VerticalLayout createUrlPanel() {
         VerticalLayout panel = new VerticalLayout();
         panel.setWidthFull();
-        panel.addClassName("input-panel");
+        panel.setSpacing(true);
 
-        Paragraph description = new Paragraph(
-            "Paste any URL - articles, videos, tweets, or web pages. We'll fetch and save the full content."
-        );
-        description.addClassName("panel-description");
+        Paragraph description = new Paragraph("Paste any URL and we'll save the full content with AI-generated context.");
+        description.getStyle()
+            .set("color", "#666")
+            .set("font-size", "14px")
+            .set("margin", "0 0 20px 0");
 
         TextField urlField = new TextField();
         urlField.setPlaceholder("https://example.com/article");
         urlField.setPrefixComponent(VaadinIcon.LINK.create());
         urlField.setWidthFull();
-        urlField.addClassName("url-input");
+        urlField.getStyle()
+            .set("padding", "12px")
+            .set("border-radius", "8px");
 
-        Button saveButton = new Button("Save to Vault", VaadinIcon.DOWNLOAD.create());
+        Button saveButton = new Button("💾 Save to Vault");
         saveButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_LARGE);
-        saveButton.addClassName("save-button");
+        saveButton.setWidthFull();
+        saveButton.getStyle()
+            .set("background", "linear-gradient(135deg, #667eea 0%, #764ba2 100%)")
+            .set("color", "white")
+            .set("font-weight", "600");
+
         saveButton.addClickListener(e -> {
             if (urlField.getValue().isEmpty()) {
                 Notification.show("Please enter a URL", 3000, Notification.Position.MIDDLE)
@@ -180,10 +230,9 @@ public class MainView extends VerticalLayout {
                 try {
                     String url = urlField.getValue();
                     String title = "URL: " + url.substring(0, Math.min(url.length(), 50));
-                    String aiContext = "Saved URL content. AI context will be generated automatically.";
-                    vaultItemService.saveUrl(url, title, url, aiContext);
+                    vaultItemService.saveUrl(url, title, url);
 
-                    Notification.show("✓ Content saved to database!", 3000, Notification.Position.BOTTOM_END)
+                    Notification.show("✓ Saved with AI context!", 3000, Notification.Position.BOTTOM_END)
                         .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
                     urlField.clear();
                     refreshRecentItems();
@@ -194,41 +243,46 @@ public class MainView extends VerticalLayout {
             }
         });
 
-        Div features = new Div();
-        features.addClassName("features-list");
-        features.add(
-            createFeatureItem(VaadinIcon.MAGIC, "AI-generated context in 3 sentences"),
-            createFeatureItem(VaadinIcon.TAG, "Auto-tagged by type, platform & date"),
-            createFeatureItem(VaadinIcon.DOWNLOAD, "Full content saved locally")
-        );
-
-        panel.add(description, urlField, saveButton, features);
+        panel.add(description, urlField, saveButton);
         return panel;
     }
 
     private VerticalLayout createImagePanel() {
         VerticalLayout panel = new VerticalLayout();
         panel.setWidthFull();
-        panel.addClassName("input-panel");
+        panel.setSpacing(true);
 
-        Paragraph description = new Paragraph(
-            "Upload images, screenshots, or photos. AI will analyze and tag them automatically."
-        );
-        description.addClassName("panel-description");
+        Paragraph description = new Paragraph("Upload images and let AI analyze and describe them automatically.");
+        description.getStyle()
+            .set("color", "#666")
+            .set("font-size", "14px")
+            .set("margin", "0 0 20px 0");
 
-        Upload upload = new Upload();
+        com.vaadin.flow.component.upload.receivers.MemoryBuffer buffer =
+            new com.vaadin.flow.component.upload.receivers.MemoryBuffer();
+
+        Upload upload = new Upload(buffer);
         upload.setWidthFull();
         upload.setAcceptedFileTypes("image/*");
+        upload.setMaxFiles(1);
+        upload.setMaxFileSize(10 * 1024 * 1024);
         upload.setDropLabel(new Span("Drop image here or click to browse"));
-        upload.addClassName("image-upload");
+        upload.getStyle()
+            .set("border", "2px dashed #667eea")
+            .set("border-radius", "8px")
+            .set("padding", "30px")
+            .set("text-align", "center");
 
         upload.addSucceededListener(event -> {
             try {
-                String title = "Image: " + event.getFileName();
-                String aiContext = "Image saved. AI analysis pending.";
-                vaultItemService.saveImage(title, event.getFileName(), aiContext);
+                String filename = event.getFileName();
+                String mimeType = event.getMIMEType();
+                byte[] imageData = buffer.getInputStream().readAllBytes();
 
-                Notification.show("✓ Image saved!", 3000, Notification.Position.BOTTOM_END)
+                String title = "Image: " + filename;
+                vaultItemService.saveImage(title, imageData, mimeType, filename);
+
+                Notification.show("✓ Image analyzed & saved!", 3000, Notification.Position.BOTTOM_END)
                     .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
                 refreshRecentItems();
             } catch (Exception ex) {
@@ -237,37 +291,37 @@ public class MainView extends VerticalLayout {
             }
         });
 
-        Div features = new Div();
-        features.addClassName("features-list");
-        features.add(
-            createFeatureItem(VaadinIcon.EYE, "AI visual analysis & context"),
-            createFeatureItem(VaadinIcon.TAG, "Smart auto-tagging"),
-            createFeatureItem(VaadinIcon.CALENDAR, "Date & metadata preserved")
-        );
-
-        panel.add(description, upload, features);
+        panel.add(description, upload);
         return panel;
     }
 
     private VerticalLayout createTextPanel() {
         VerticalLayout panel = new VerticalLayout();
         panel.setWidthFull();
-        panel.addClassName("input-panel");
+        panel.setSpacing(true);
 
-        Paragraph description = new Paragraph(
-            "Save notes, quotes, thoughts, or any text. Perfect for quick captures."
-        );
-        description.addClassName("panel-description");
+        Paragraph description = new Paragraph("Save notes, quotes, or any text. AI will create a smart summary.");
+        description.getStyle()
+            .set("color", "#666")
+            .set("font-size", "14px")
+            .set("margin", "0 0 20px 0");
 
         TextArea textArea = new TextArea();
         textArea.setPlaceholder("Type or paste your text here...");
         textArea.setWidthFull();
         textArea.setMinHeight("150px");
-        textArea.addClassName("text-input");
+        textArea.getStyle()
+            .set("border-radius", "8px")
+            .set("padding", "12px");
 
-        Button saveButton = new Button("Save to Vault", VaadinIcon.DOWNLOAD.create());
+        Button saveButton = new Button("💾 Save to Vault");
         saveButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_LARGE);
-        saveButton.addClassName("save-button");
+        saveButton.setWidthFull();
+        saveButton.getStyle()
+            .set("background", "linear-gradient(135deg, #667eea 0%, #764ba2 100%)")
+            .set("color", "white")
+            .set("font-weight", "600");
+
         saveButton.addClickListener(e -> {
             if (textArea.getValue().isEmpty()) {
                 Notification.show("Please enter some text", 3000, Notification.Position.MIDDLE)
@@ -276,10 +330,9 @@ public class MainView extends VerticalLayout {
                 try {
                     String content = textArea.getValue();
                     String title = "Note: " + content.substring(0, Math.min(content.length(), 50));
-                    String aiContext = "Text note saved. AI context generated.";
-                    vaultItemService.saveText(title, content, aiContext);
+                    vaultItemService.saveText(title, content);
 
-                    Notification.show("✓ Text saved to database!", 3000, Notification.Position.BOTTOM_END)
+                    Notification.show("✓ Text saved with AI context!", 3000, Notification.Position.BOTTOM_END)
                         .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
                     textArea.clear();
                     refreshRecentItems();
@@ -290,61 +343,41 @@ public class MainView extends VerticalLayout {
             }
         });
 
-        Div features = new Div();
-        features.addClassName("features-list");
-        features.add(
-            createFeatureItem(VaadinIcon.LIGHTBULB, "AI context generation"),
-            createFeatureItem(VaadinIcon.TAG, "Automatic categorization"),
-            createFeatureItem(VaadinIcon.CLOCK, "Timestamped & searchable")
-        );
-
-        panel.add(description, textArea, saveButton, features);
+        panel.add(description, textArea, saveButton);
         return panel;
-    }
-
-    private HorizontalLayout createFeatureItem(VaadinIcon iconName, String text) {
-        HorizontalLayout item = new HorizontalLayout();
-        item.setAlignItems(FlexComponent.Alignment.CENTER);
-        item.addClassName("feature-item");
-
-        Icon icon = iconName.create();
-        icon.setSize("16px");
-        icon.addClassName("feature-icon");
-
-        Span label = new Span(text);
-        label.addClassName("feature-text");
-
-        item.add(icon, label);
-        return item;
     }
 
     private Component createRecentItemsSection() {
         VerticalLayout section = new VerticalLayout();
         section.setWidthFull();
-        section.setMaxWidth("900px");
-        section.addClassName("recent-section");
-        section.setAlignSelf(Alignment.CENTER);
+        section.setPadding(true);
+        section.getStyle()
+            .set("background", "white")
+            .set("border-radius", "16px")
+            .set("box-shadow", "0 20px 60px rgba(0, 0, 0, 0.15)");
 
         HorizontalLayout sectionHeader = new HorizontalLayout();
         sectionHeader.setWidthFull();
         sectionHeader.setJustifyContentMode(FlexComponent.JustifyContentMode.BETWEEN);
         sectionHeader.setAlignItems(FlexComponent.Alignment.CENTER);
+        sectionHeader.setMargin(false);
+        sectionHeader.setPadding(false);
 
         H3 sectionTitle = new H3("Recent Saves");
-        sectionTitle.addClassName("section-title");
+        sectionTitle.getStyle()
+            .set("margin", "0")
+            .set("color", "#333");
 
-        Button refreshBtn = new Button("Refresh", VaadinIcon.REFRESH.create());
-        refreshBtn.addThemeVariants(ButtonVariant.LUMO_TERTIARY_INLINE);
+        Button refreshBtn = new Button("🔄 Refresh");
+        refreshBtn.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
         refreshBtn.addClickListener(e -> refreshRecentItems());
 
         sectionHeader.add(sectionTitle, refreshBtn);
 
-        // Items list
         itemsList = new VerticalLayout();
         itemsList.setWidthFull();
         itemsList.setPadding(false);
         itemsList.setSpacing(true);
-        itemsList.addClassName("items-list");
 
         loadRecentItems();
 
@@ -359,21 +392,45 @@ public class MainView extends VerticalLayout {
             List<VaultItem> recentItems = vaultItemService.findRecent();
 
             if (recentItems.isEmpty()) {
-                itemsList.add(createEmptyState());
+                VerticalLayout empty = new VerticalLayout();
+                empty.setAlignItems(FlexComponent.Alignment.CENTER);
+                empty.setJustifyContentMode(FlexComponent.JustifyContentMode.CENTER);
+                empty.setPadding(true);
+                empty.setHeight("200px");
+
+                H3 emptyTitle = new H3("Your vault is empty");
+                emptyTitle.getStyle()
+                    .set("color", "#999")
+                    .set("text-align", "center")
+                    .set("margin", "0");
+
+                Paragraph emptyText = new Paragraph("Start saving URLs, images, or text to see them here.");
+                emptyText.getStyle()
+                    .set("color", "#bbb")
+                    .set("text-align", "center");
+
+                empty.add(emptyTitle, emptyText);
+                itemsList.add(empty);
             } else {
                 for (VaultItem item : recentItems) {
                     itemsList.add(createVaultItemCard(item));
                 }
             }
         } catch (Exception e) {
-            itemsList.add(createErrorState(e.getMessage()));
+            Notification.show("Error loading items: " + e.getMessage(), 5000, Notification.Position.MIDDLE)
+                .addThemeVariants(NotificationVariant.LUMO_ERROR);
         }
     }
 
     private void updateItemsList(List<VaultItem> items) {
         itemsList.removeAll();
         if (items.isEmpty()) {
-            itemsList.add(new Paragraph("No results found"));
+            Paragraph noResults = new Paragraph("No results found");
+            noResults.getStyle()
+                .set("color", "#999")
+                .set("text-align", "center")
+                .set("padding", "20px");
+            itemsList.add(noResults);
         } else {
             for (VaultItem item : items) {
                 itemsList.add(createVaultItemCard(item));
@@ -385,96 +442,80 @@ public class MainView extends VerticalLayout {
         loadRecentItems();
     }
 
-    private Component createEmptyState() {
-        VerticalLayout empty = new VerticalLayout();
-        empty.setAlignItems(FlexComponent.Alignment.CENTER);
-        empty.setPadding(true);
-
-        Icon icon = VaadinIcon.INBOX.create();
-        icon.setSize("48px");
-        icon.setColor("var(--lumo-contrast-30pct)");
-
-        H4 title = new H4("Your vault is empty");
-        Paragraph text = new Paragraph("Start saving URLs, images, or text to see them here.");
-
-        empty.add(icon, title, text);
-        return empty;
-    }
-
-    private Component createErrorState(String message) {
-        VerticalLayout error = new VerticalLayout();
-        error.setAlignItems(FlexComponent.Alignment.CENTER);
-        error.setPadding(true);
-
-        Icon icon = VaadinIcon.WARNING.create();
-        icon.setSize("48px");
-        icon.setColor("var(--lumo-error-color)");
-
-        H4 title = new H4("Database Connection Error");
-        Paragraph text = new Paragraph("Check your SQL Server connection. Error: " + message);
-
-        error.add(icon, title, text);
-        return error;
-    }
-
     private Component createVaultItemCard(VaultItem vaultItem) {
         HorizontalLayout card = new HorizontalLayout();
         card.setWidthFull();
         card.setPadding(true);
-        card.addClassName("vault-item");
         card.setAlignItems(FlexComponent.Alignment.START);
+        card.setSpacing(true);
+        card.getStyle()
+            .set("background", "linear-gradient(135deg, #f5f7fa 0%, #ffffff 100%)")
+            .set("border-left", "4px solid #667eea")
+            .set("border-radius", "8px")
+            .set("transition", "transform 0.2s, box-shadow 0.2s")
+            .set("cursor", "pointer");
 
         // Icon
-        VaadinIcon iconType = switch (vaultItem.getItemType()) {
-            case "URL" -> VaadinIcon.GLOBE;
-            case "IMAGE" -> VaadinIcon.PICTURE;
-            case "TEXT" -> VaadinIcon.TEXT_LABEL;
-            default -> VaadinIcon.FILE;
+        String emoji = switch (vaultItem.getItemType()) {
+            case "URL" -> "📎";
+            case "IMAGE" -> "🖼️";
+            case "TEXT" -> "📝";
+            default -> "📌";
         };
 
-        Div iconWrapper = new Div();
-        iconWrapper.addClassName("item-icon-wrapper");
-        Icon icon = iconType.create();
-        icon.addClassName("item-icon");
-        iconWrapper.add(icon);
+        Paragraph typeEmoji = new Paragraph(emoji);
+        typeEmoji.getStyle()
+            .set("font-size", "24px")
+            .set("margin", "0")
+            .set("min-width", "40px");
 
         // Content
         VerticalLayout content = new VerticalLayout();
         content.setPadding(false);
-        content.setSpacing(false);
-        content.addClassName("item-content");
+        content.setSpacing(true);
 
         H4 itemTitle = new H4(vaultItem.getTitle());
-        itemTitle.addClassName("item-title");
+        itemTitle.getStyle()
+            .set("margin", "0")
+            .set("color", "#333")
+            .set("font-weight", "600");
 
         String contextText = vaultItem.getAiContext() != null ? vaultItem.getAiContext() :
             (vaultItem.getContent() != null ?
                 vaultItem.getContent().substring(0, Math.min(vaultItem.getContent().length(), 150)) + "..." :
                 "No content");
         Paragraph itemContext = new Paragraph(contextText);
-        itemContext.addClassName("item-context");
+        itemContext.getStyle()
+            .set("color", "#666")
+            .set("font-size", "14px")
+            .set("margin", "0")
+            .set("line-height", "1.5");
 
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm");
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM dd, yyyy");
         String metaText = vaultItem.getItemType() + " • " +
             (vaultItem.getTags() != null ? vaultItem.getTags() : "No tags") + " • " +
             (vaultItem.getCreatedAt() != null ? vaultItem.getCreatedAt().format(formatter) : "");
         Span itemMeta = new Span(metaText);
-        itemMeta.addClassName("item-meta");
+        itemMeta.getStyle()
+            .set("color", "#999")
+            .set("font-size", "12px");
 
         content.add(itemTitle, itemContext, itemMeta);
 
         // Delete button
         Button deleteBtn = new Button(VaadinIcon.TRASH.create());
         deleteBtn.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_ICON, ButtonVariant.LUMO_ERROR);
-        deleteBtn.addClassName("item-action");
+        deleteBtn.getStyle()
+            .set("min-width", "44px")
+            .set("min-height", "44px");
         deleteBtn.addClickListener(e -> {
             vaultItemService.delete(vaultItem.getId());
             Notification.show("Item deleted", 2000, Notification.Position.BOTTOM_END);
             refreshRecentItems();
         });
 
-        card.add(iconWrapper, content, deleteBtn);
-        card.expand(content);
+        card.add(typeEmoji, content, deleteBtn);
+        card.setFlexGrow(1, content);
 
         return card;
     }
