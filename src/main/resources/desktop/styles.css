@@ -278,6 +278,25 @@
     -fx-padding: 6px 0 0 0;
 }
 
+.form-error-label {
+    -fx-background-color: rgba(167, 60, 74, 0.12);
+    -fx-background-radius: 14px;
+    -fx-border-color: rgba(255, 174, 174, 0.18);
+    -fx-border-radius: 14px;
+    -fx-border-width: 1px;
+    -fx-text-fill: #ffb7bf;
+    -fx-font-size: 12px;
+    -fx-font-weight: 600;
+    -fx-padding: 10px 12px;
+}
+
+.field-error-label {
+    -fx-text-fill: #ff9da8;
+    -fx-font-size: 12px;
+    -fx-font-weight: 600;
+    -fx-padding: 2px 4px 0 8px;
+}
+
 .section-title {
     -fx-text-fill: white;
     -fx-font-size: 18px;

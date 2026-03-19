@@ -10,7 +10,13 @@ import java.util.Optional;
  */
 public interface UserDAO {
 
+    Optional<VaultUser> findById(long id) throws SQLException;
+
     Optional<VaultUser> findByEmail(String email) throws SQLException;
 
     VaultUser insert(VaultUser user) throws SQLException;
+
+    boolean updateEmail(long userId, String email) throws SQLException;
+
+    boolean updatePasswordHash(long userId, String passwordHash) throws SQLException;
 }

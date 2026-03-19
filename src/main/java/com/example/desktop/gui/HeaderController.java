@@ -7,6 +7,10 @@ import com.example.desktop.model.LanguageOption;
 import javafx.application.HostServices;
 import javafx.beans.binding.Bindings;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.geometry.Rectangle2D;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ContextMenu;
@@ -17,8 +21,12 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.VBox;
+import javafx.stage.Modality;
+import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.util.StringConverter;
+
+import java.io.IOException;
 
 /**
  * Fixed header controller for the main desktop scene.
@@ -49,6 +57,8 @@ public class HeaderController implements AppContextAware {
     private AppModel appModel;
     private VaultManager vaultManager;
     private DesktopNavigator navigator;
+    private HostServices hostServices;
+    private Stage ownerStage;
     private ContextMenu userMenu;
     private Label menuAvatarLabel;
     private Label menuEmailLabel;
@@ -66,6 +76,8 @@ public class HeaderController implements AppContextAware {
         this.appModel = appModel;
         this.vaultManager = vaultManager;
         this.navigator = navigator;
+        this.hostServices = hostServices;
+        this.ownerStage = stage;
 
         configureSearchControls();
         reloadButton.disableProperty().bind(appModel.busyProperty().or(appModel.authenticatedProperty().not()));
@@ -118,7 +130,7 @@ public class HeaderController implements AppContextAware {
 
     private void handleProfile() {
         userMenu.hide();
-        appModel.showInfoKey("status.profile.soon");
+        openProfileDialog();
     }
 
     private void handleLogout() {
@@ -222,6 +234,40 @@ public class HeaderController implements AppContextAware {
             return;
         }
         menuEmailLabel.setText(appModel.getCurrentUser().email());
+    }
+
+    private void openProfileDialog() {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/example/desktop/gui/profile-dialog.fxml"));
+            Parent root = loader.load();
+            ProfileDialogController controller = loader.getController();
+
+            Stage dialogStage = new Stage();
+            dialogStage.initOwner(ownerStage);
+            dialogStage.initModality(Modality.WINDOW_MODAL);
+            dialogStage.setResizable(true);
+
+            Scene scene = new Scene(root);
+            scene.getStylesheets().add(getClass().getResource("/desktop/styles.css").toExternalForm());
+            dialogStage.setScene(scene);
+
+            controller.setContext(appModel, vaultManager, hostServices, dialogStage, navigator);
+            Rectangle2D visualBounds = Screen.getPrimary().getVisualBounds();
+            double dialogWidth = Math.min(
+                    Math.min(760, visualBounds.getWidth()),
+                    Math.max(540, visualBounds.getWidth() - 80));
+            double dialogHeight = Math.min(
+                    Math.min(820, visualBounds.getHeight()),
+                    Math.max(580, visualBounds.getHeight() - 80));
+            dialogStage.setMinWidth(Math.min(540, visualBounds.getWidth()));
+            dialogStage.setMinHeight(Math.min(580, visualBounds.getHeight()));
+            dialogStage.setWidth(dialogWidth);
+            dialogStage.setHeight(dialogHeight);
+            dialogStage.centerOnScreen();
+            dialogStage.showAndWait();
+        } catch (IOException exception) {
+            appModel.showErrorKey("status.dialog.open.error", exception.getMessage());
+        }
     }
 
     private void refreshSearchColumnLabels() {

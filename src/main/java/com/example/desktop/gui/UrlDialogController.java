@@ -1,5 +1,7 @@
 package com.example.desktop.gui;
 
+import com.example.desktop.model.DialogActionResult;
+import com.example.desktop.model.DialogFieldIds;
 import com.example.desktop.model.VaultItemFx;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
@@ -8,6 +10,9 @@ import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * Add/edit dialog for URL items.
@@ -22,6 +27,9 @@ public class UrlDialogController extends BaseItemDialogController {
 
     @FXML
     private TextField urlField;
+
+    @FXML
+    private Label urlErrorLabel;
 
     @FXML
     private TextField titleField;
@@ -71,6 +79,7 @@ public class UrlDialogController extends BaseItemDialogController {
         titleField.clear();
         notesArea.clear();
         prepareLockStateForCreate(lockToggle, lockPasswordField, confirmLockPasswordField);
+        clearDialogFeedback(fieldErrorLabels());
         refreshModeText();
     }
 
@@ -81,12 +90,13 @@ public class UrlDialogController extends BaseItemDialogController {
         titleField.setText(appModel.getResolvedTitle(item));
         notesArea.setText(appModel.getResolvedContent(item));
         prepareLockStateForEdit(lockToggle, lockPasswordField, confirmLockPasswordField, item);
+        clearDialogFeedback(fieldErrorLabels());
         refreshModeText();
     }
 
     @FXML
     private void handleSave() {
-        boolean saved = editMode
+        DialogActionResult result = editMode
                 ? vaultManager.updateUrl(
                         appModel,
                         editingItem,
@@ -100,9 +110,7 @@ public class UrlDialogController extends BaseItemDialogController {
                         titleField.getText(),
                         notesArea.getText(),
                         readLockOptions(lockToggle, lockPasswordField, confirmLockPasswordField));
-        if (saved) {
-            closeDialog();
-        }
+        handleDialogActionResult(result, fieldErrorLabels(), true);
     }
 
     @FXML
@@ -118,5 +126,12 @@ public class UrlDialogController extends BaseItemDialogController {
         dialogCopyLabel.textProperty().bind(appModel.textBinding(editMode ? "dialog.url.edit.copy" : "dialog.url.create.copy"));
         primaryButton.textProperty().unbind();
         primaryButton.textProperty().bind(appModel.textBinding(editMode ? "dialog.url.submit.edit" : "dialog.url.submit.create"));
+    }
+
+    private Map<String, Label> fieldErrorLabels() {
+        Map<String, Label> fieldErrorLabels = new LinkedHashMap<>();
+        fieldErrorLabels.put(DialogFieldIds.URL, urlErrorLabel);
+        addLockFieldErrorLabels(fieldErrorLabels);
+        return fieldErrorLabels;
     }
 }

@@ -1,5 +1,7 @@
 package com.example.desktop.gui;
 
+import com.example.desktop.model.DialogActionResult;
+import com.example.desktop.model.DialogFieldIds;
 import com.example.desktop.model.VaultItemFx;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
@@ -8,6 +10,9 @@ import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * Add/edit dialog for text items.
@@ -24,7 +29,13 @@ public class TextDialogController extends BaseItemDialogController {
     private TextField titleField;
 
     @FXML
+    private Label titleErrorLabel;
+
+    @FXML
     private TextArea contentArea;
+
+    @FXML
+    private Label contentErrorLabel;
 
     @FXML
     private CheckBox lockToggle;
@@ -66,6 +77,7 @@ public class TextDialogController extends BaseItemDialogController {
         titleField.clear();
         contentArea.clear();
         prepareLockStateForCreate(lockToggle, lockPasswordField, confirmLockPasswordField);
+        clearDialogFeedback(fieldErrorLabels());
         refreshModeText();
     }
 
@@ -75,12 +87,13 @@ public class TextDialogController extends BaseItemDialogController {
         titleField.setText(appModel.getResolvedTitle(item));
         contentArea.setText(appModel.getResolvedContent(item));
         prepareLockStateForEdit(lockToggle, lockPasswordField, confirmLockPasswordField, item);
+        clearDialogFeedback(fieldErrorLabels());
         refreshModeText();
     }
 
     @FXML
     private void handleSave() {
-        boolean saved = editMode
+        DialogActionResult result = editMode
                 ? vaultManager.updateText(
                         appModel,
                         editingItem,
@@ -92,9 +105,7 @@ public class TextDialogController extends BaseItemDialogController {
                         titleField.getText(),
                         contentArea.getText(),
                         readLockOptions(lockToggle, lockPasswordField, confirmLockPasswordField));
-        if (saved) {
-            closeDialog();
-        }
+        handleDialogActionResult(result, fieldErrorLabels(), true);
     }
 
     @FXML
@@ -110,5 +121,13 @@ public class TextDialogController extends BaseItemDialogController {
         dialogCopyLabel.textProperty().bind(appModel.textBinding(editMode ? "dialog.text.edit.copy" : "dialog.text.create.copy"));
         primaryButton.textProperty().unbind();
         primaryButton.textProperty().bind(appModel.textBinding(editMode ? "dialog.text.submit.edit" : "dialog.text.submit.create"));
+    }
+
+    private Map<String, Label> fieldErrorLabels() {
+        Map<String, Label> fieldErrorLabels = new LinkedHashMap<>();
+        fieldErrorLabels.put(DialogFieldIds.TITLE, titleErrorLabel);
+        fieldErrorLabels.put(DialogFieldIds.CONTENT, contentErrorLabel);
+        addLockFieldErrorLabels(fieldErrorLabels);
+        return fieldErrorLabels;
     }
 }

@@ -1,5 +1,8 @@
 package com.example.desktop.gui;
 
+import com.example.desktop.model.DialogActionResult;
+import com.example.desktop.model.DialogFieldIds;
+import com.example.desktop.model.ToastNotificationType;
 import com.example.desktop.model.VaultItemFx;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
@@ -11,6 +14,8 @@ import javafx.stage.FileChooser;
 
 import java.io.File;
 import java.nio.file.Path;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * Add/edit dialog for image items.
@@ -28,6 +33,9 @@ public class ImageDialogController extends BaseItemDialogController {
 
     @FXML
     private TextField pathField;
+
+    @FXML
+    private Label pathErrorLabel;
 
     @FXML
     private Button browseButton;
@@ -75,6 +83,7 @@ public class ImageDialogController extends BaseItemDialogController {
         titleField.clear();
         pathField.clear();
         prepareLockStateForCreate(lockToggle, lockPasswordField, confirmLockPasswordField);
+        clearDialogFeedback(fieldErrorLabels());
         refreshModeText();
     }
 
@@ -85,6 +94,7 @@ public class ImageDialogController extends BaseItemDialogController {
         titleField.setText(appModel.getResolvedTitle(item));
         pathField.setText(appModel.getResolvedContent(item));
         prepareLockStateForEdit(lockToggle, lockPasswordField, confirmLockPasswordField, item);
+        clearDialogFeedback(fieldErrorLabels());
         refreshModeText();
     }
 
@@ -102,13 +112,15 @@ public class ImageDialogController extends BaseItemDialogController {
             if (titleField.getText().isBlank()) {
                 titleField.setText(selectedFile.getName());
             }
-            appModel.showSuccessKey("status.save.image.selected", selectedFile.getName());
+            clearFieldMessage(pathErrorLabel);
+            clearFormMessage();
+            showDialogToast(ToastNotificationType.SUCCESS, appModel.text("status.save.image.selected", selectedFile.getName()));
         }
     }
 
     @FXML
     private void handleSave() {
-        boolean saved = editMode
+        DialogActionResult result = editMode
                 ? vaultManager.updateImage(
                         appModel,
                         editingItem,
@@ -120,9 +132,7 @@ public class ImageDialogController extends BaseItemDialogController {
                         titleField.getText(),
                         selectedImagePath,
                         readLockOptions(lockToggle, lockPasswordField, confirmLockPasswordField));
-        if (saved) {
-            closeDialog();
-        }
+        handleDialogActionResult(result, fieldErrorLabels(), true);
     }
 
     @FXML
@@ -138,5 +148,12 @@ public class ImageDialogController extends BaseItemDialogController {
         dialogCopyLabel.textProperty().bind(appModel.textBinding(editMode ? "dialog.image.edit.copy" : "dialog.image.create.copy"));
         primaryButton.textProperty().unbind();
         primaryButton.textProperty().bind(appModel.textBinding(editMode ? "dialog.image.submit.edit" : "dialog.image.submit.create"));
+    }
+
+    private Map<String, Label> fieldErrorLabels() {
+        Map<String, Label> fieldErrorLabels = new LinkedHashMap<>();
+        fieldErrorLabels.put(DialogFieldIds.PATH, pathErrorLabel);
+        addLockFieldErrorLabels(fieldErrorLabels);
+        return fieldErrorLabels;
     }
 }

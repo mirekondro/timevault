@@ -3,22 +3,28 @@ package com.example.desktop.gui;
 import com.example.desktop.DesktopNavigator;
 import com.example.desktop.bll.VaultManager;
 import com.example.desktop.model.AppModel;
+import com.example.desktop.model.DialogFieldIds;
 import com.example.desktop.model.ItemLockOptions;
 import com.example.desktop.model.VaultItemFx;
 import javafx.application.HostServices;
+import javafx.fxml.FXML;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
 import javafx.stage.Stage;
 
+import java.util.Map;
+
 /**
  * Shared desktop dialog context for item editors.
  */
-public abstract class BaseItemDialogController implements AppContextAware {
+public abstract class BaseItemDialogController extends BaseDialogController {
 
-    protected AppModel appModel;
-    protected VaultManager vaultManager;
-    protected Stage dialogStage;
+    @FXML
+    protected Label lockPasswordErrorLabel;
+
+    @FXML
+    protected Label confirmLockPasswordErrorLabel;
 
     @Override
     public void setContext(AppModel appModel,
@@ -26,23 +32,7 @@ public abstract class BaseItemDialogController implements AppContextAware {
                            HostServices hostServices,
                            Stage stage,
                            DesktopNavigator navigator) {
-        this.appModel = appModel;
-        this.vaultManager = vaultManager;
-        this.dialogStage = stage;
-    }
-
-    protected void closeDialog() {
-        if (dialogStage != null) {
-            dialogStage.close();
-        }
-    }
-
-    protected void bindWindowTitle(String key) {
-        if (dialogStage == null) {
-            return;
-        }
-        dialogStage.titleProperty().unbind();
-        dialogStage.titleProperty().bind(appModel.textBinding(key));
+        super.setContext(appModel, vaultManager, hostServices, stage, navigator);
     }
 
     protected void configureLockControls(CheckBox lockToggle,
@@ -64,6 +54,8 @@ public abstract class BaseItemDialogController implements AppContextAware {
             if (!isSelected) {
                 passwordField.clear();
                 confirmPasswordField.clear();
+                clearFieldMessage(lockPasswordErrorLabel);
+                clearFieldMessage(confirmLockPasswordErrorLabel);
             }
         });
 
@@ -98,5 +90,13 @@ public abstract class BaseItemDialogController implements AppContextAware {
                 lockToggle != null && lockToggle.isSelected(),
                 passwordField == null ? "" : passwordField.getText(),
                 confirmPasswordField == null ? "" : confirmPasswordField.getText());
+    }
+
+    protected void addLockFieldErrorLabels(Map<String, Label> fieldErrorLabels) {
+        if (fieldErrorLabels == null) {
+            return;
+        }
+        fieldErrorLabels.put(DialogFieldIds.LOCK_PASSWORD, lockPasswordErrorLabel);
+        fieldErrorLabels.put(DialogFieldIds.LOCK_CONFIRM, confirmLockPasswordErrorLabel);
     }
 }

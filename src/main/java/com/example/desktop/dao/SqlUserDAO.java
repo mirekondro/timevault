@@ -23,6 +23,27 @@ public class SqlUserDAO implements UserDAO {
     }
 
     @Override
+    public Optional<VaultUser> findById(long id) throws SQLException {
+        String sql = """
+                SELECT id, email, password_hash, created_at, updated_at
+                FROM dbo.vault_users
+                WHERE id = ?
+                """;
+
+        try (Connection connection = connectionManager.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setLong(1, id);
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (!resultSet.next()) {
+                    return Optional.empty();
+                }
+                return Optional.of(mapRow(resultSet));
+            }
+        }
+    }
+
+    @Override
     public Optional<VaultUser> findByEmail(String email) throws SQLException {
         String sql = """
                 SELECT id, email, password_hash, created_at, updated_at
@@ -71,6 +92,40 @@ public class SqlUserDAO implements UserDAO {
         user.setCreatedAt(createdAt);
         user.setUpdatedAt(updatedAt);
         return user;
+    }
+
+    @Override
+    public boolean updateEmail(long userId, String email) throws SQLException {
+        String sql = """
+                UPDATE dbo.vault_users
+                SET email = ?, updated_at = ?
+                WHERE id = ?
+                """;
+
+        try (Connection connection = connectionManager.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, email);
+            statement.setTimestamp(2, Timestamp.valueOf(LocalDateTime.now()));
+            statement.setLong(3, userId);
+            return statement.executeUpdate() > 0;
+        }
+    }
+
+    @Override
+    public boolean updatePasswordHash(long userId, String passwordHash) throws SQLException {
+        String sql = """
+                UPDATE dbo.vault_users
+                SET password_hash = ?, updated_at = ?
+                WHERE id = ?
+                """;
+
+        try (Connection connection = connectionManager.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, passwordHash);
+            statement.setTimestamp(2, Timestamp.valueOf(LocalDateTime.now()));
+            statement.setLong(3, userId);
+            return statement.executeUpdate() > 0;
+        }
     }
 
     private VaultUser mapRow(ResultSet resultSet) throws SQLException {

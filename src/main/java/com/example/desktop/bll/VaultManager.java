@@ -4,10 +4,13 @@ import com.example.desktop.dao.SchemaInitializer;
 import com.example.desktop.dao.UserDAO;
 import com.example.desktop.dao.VaultItemDAO;
 import com.example.desktop.model.AppModel;
+import com.example.desktop.model.DialogActionResult;
+import com.example.desktop.model.DialogFieldIds;
 import com.example.desktop.model.ImageAssetData;
 import com.example.desktop.model.ItemLockOptions;
 import com.example.desktop.model.ProtectedItemData;
 import com.example.desktop.model.StoredImageRecord;
+import com.example.desktop.model.ToastNotificationType;
 import com.example.desktop.model.UnlockedItemSession;
 import com.example.desktop.model.VaultItemFx;
 import com.example.desktop.security.ProtectedItemCrypto;
@@ -174,6 +177,101 @@ public class VaultManager {
         appModel.showSuccessKey("status.auth.logged.out", currentUser.email());
     }
 
+    public DialogActionResult updateProfileEmail(AppModel appModel, String newEmailInput, String currentPasswordInput) {
+        UserSession currentUser = currentDialogUser(appModel);
+        if (currentUser == null) {
+            return authRequiredDialogResult(appModel);
+        }
+
+        String newEmail = AccountValidator.normalizeEmail(newEmailInput);
+        String currentPassword = safePasswordValue(currentPasswordInput);
+
+        if (newEmail.isBlank()) {
+            return dialogFieldError(appModel, DialogFieldIds.PROFILE_EMAIL, "dialog.validation.profile.email.required");
+        }
+        if (!AccountValidator.isValidEmail(newEmail)) {
+            return dialogFieldError(appModel, DialogFieldIds.PROFILE_EMAIL, "status.profile.email.invalid");
+        }
+        if (currentPassword.isBlank()) {
+            return dialogFieldError(appModel, DialogFieldIds.PROFILE_EMAIL_CURRENT_PASSWORD, "dialog.validation.profile.currentPassword.required");
+        }
+
+        appModel.setBusy(true);
+        try {
+            Optional<VaultUser> currentUserRecord = userDAO.findById(currentUser.id());
+            if (currentUserRecord.isEmpty()) {
+                return dialogFormError(appModel, "status.profile.account.missing");
+            }
+
+            VaultUser user = currentUserRecord.get();
+            if (!PasswordHasher.matches(currentPassword, user.getPasswordHash())) {
+                return dialogFieldError(appModel, DialogFieldIds.PROFILE_EMAIL_CURRENT_PASSWORD, "status.profile.current.password.invalid");
+            }
+            if (newEmail.equals(user.getEmail())) {
+                return dialogFieldError(appModel, DialogFieldIds.PROFILE_EMAIL, "status.profile.email.same");
+            }
+
+            Optional<VaultUser> existingUser = userDAO.findByEmail(newEmail);
+            if (existingUser.isPresent() && existingUser.get().getId() != user.getId()) {
+                return dialogFieldError(appModel, DialogFieldIds.PROFILE_EMAIL, "status.profile.email.exists");
+            }
+
+            if (!userDAO.updateEmail(user.getId(), newEmail)) {
+                return dialogFormError(appModel, "status.profile.account.missing");
+            }
+
+            appModel.setCurrentUser(new UserSession(user.getId(), newEmail));
+            return DialogActionResult.successLocalToast(appModel.text("status.profile.email.updated", newEmail));
+        } catch (SQLException exception) {
+            return dialogFormError(appModel, "status.profile.email.error", safeMessage(exception));
+        } finally {
+            appModel.setBusy(false);
+        }
+    }
+
+    public DialogActionResult updateProfilePassword(AppModel appModel,
+                                                    String currentPasswordInput,
+                                                    String newPasswordInput,
+                                                    String confirmPasswordInput) {
+        UserSession currentUser = currentDialogUser(appModel);
+        if (currentUser == null) {
+            return authRequiredDialogResult(appModel);
+        }
+
+        String currentPassword = safePasswordValue(currentPasswordInput);
+        String newPassword = safePasswordValue(newPasswordInput);
+        String confirmPassword = safePasswordValue(confirmPasswordInput);
+
+        DialogActionResult validationResult = validateProfilePasswordInputs(appModel, currentPassword, newPassword, confirmPassword);
+        if (validationResult != null) {
+            return validationResult;
+        }
+
+        appModel.setBusy(true);
+        try {
+            Optional<VaultUser> currentUserRecord = userDAO.findById(currentUser.id());
+            if (currentUserRecord.isEmpty()) {
+                return dialogFormError(appModel, "status.profile.account.missing");
+            }
+
+            VaultUser user = currentUserRecord.get();
+            if (!PasswordHasher.matches(currentPassword, user.getPasswordHash())) {
+                return dialogFieldError(appModel, DialogFieldIds.PROFILE_PASSWORD_CURRENT, "status.profile.current.password.invalid");
+            }
+
+            String newPasswordHash = PasswordHasher.hash(newPassword);
+            if (!userDAO.updatePasswordHash(user.getId(), newPasswordHash)) {
+                return dialogFormError(appModel, "status.profile.account.missing");
+            }
+
+            return DialogActionResult.successLocalToast(appModel.text("status.profile.password.updated"));
+        } catch (SQLException exception) {
+            return dialogFormError(appModel, "status.profile.password.error", safeMessage(exception));
+        } finally {
+            appModel.setBusy(false);
+        }
+    }
+
     public String getEmptyDetailMessage(AppModel appModel) {
         if (!appModel.isAuthenticated()) {
             return appModel.text("detail.meta.empty.unauth");
@@ -181,16 +279,15 @@ public class VaultManager {
         return appModel.text("detail.meta.empty.auth");
     }
 
-    public boolean createUrl(AppModel appModel, String urlInput, String titleInput, String notesInput, ItemLockOptions lockOptions) {
-        UserSession currentUser = requireAuthenticatedUser(appModel);
+    public DialogActionResult createUrl(AppModel appModel, String urlInput, String titleInput, String notesInput, ItemLockOptions lockOptions) {
+        UserSession currentUser = currentDialogUser(appModel);
         if (currentUser == null) {
-            return false;
+            return authRequiredDialogResult(appModel);
         }
 
         String url = sanitize(urlInput);
         if (url.isBlank()) {
-            appModel.showErrorKey("status.save.url.missing");
-            return false;
+            return dialogFieldError(appModel, DialogFieldIds.URL, "dialog.validation.url.required");
         }
 
         String title = firstNonBlank(titleInput, appModel.text("save.default.urlTitle"));
@@ -207,31 +304,29 @@ public class VaultManager {
         item.setUpdatedAt(item.getCreatedAt());
         LockConfigurationResult lockResult = applyLockConfiguration(appModel, item, null, lockOptions, null);
         if (!lockResult.success()) {
-            return false;
+            return lockResult.failureResult();
         }
 
         return saveNewItem(appModel, currentUser, item, lockResult.imageRecord(), "status.save.url.saved");
     }
 
-    public boolean updateUrl(AppModel appModel,
-                             VaultItemFx existingItem,
-                             String urlInput,
-                             String titleInput,
-                             String notesInput,
-                             ItemLockOptions lockOptions) {
-        UserSession currentUser = requireAuthenticatedUser(appModel);
+    public DialogActionResult updateUrl(AppModel appModel,
+                                        VaultItemFx existingItem,
+                                        String urlInput,
+                                        String titleInput,
+                                        String notesInput,
+                                        ItemLockOptions lockOptions) {
+        UserSession currentUser = currentDialogUser(appModel);
         if (currentUser == null) {
-            return false;
+            return authRequiredDialogResult(appModel);
         }
         if (existingItem == null) {
-            appModel.showErrorKey("status.edit.select");
-            return false;
+            return dialogFormError(appModel, "status.edit.select");
         }
 
         String url = sanitize(urlInput);
         if (url.isBlank()) {
-            appModel.showErrorKey("status.save.url.missing");
-            return false;
+            return dialogFieldError(appModel, DialogFieldIds.URL, "dialog.validation.url.required");
         }
 
         String title = firstNonBlank(titleInput, appModel.text("save.default.urlTitle"));
@@ -246,23 +341,23 @@ public class VaultManager {
         updatedItem.setUpdatedAt(LocalDateTime.now());
         LockConfigurationResult lockResult = applyLockConfiguration(appModel, updatedItem, existingItem, lockOptions, null);
         if (!lockResult.success()) {
-            return false;
+            return lockResult.failureResult();
         }
 
         return updateExistingItem(appModel, currentUser, updatedItem, lockResult.imageRecord(), "status.edit.url.updated");
     }
 
-    public boolean createText(AppModel appModel, String titleInput, String contentInput, ItemLockOptions lockOptions) {
-        UserSession currentUser = requireAuthenticatedUser(appModel);
+    public DialogActionResult createText(AppModel appModel, String titleInput, String contentInput, ItemLockOptions lockOptions) {
+        UserSession currentUser = currentDialogUser(appModel);
         if (currentUser == null) {
-            return false;
+            return authRequiredDialogResult(appModel);
         }
 
         String title = sanitize(titleInput);
         String content = sanitize(contentInput);
-        if (title.isBlank() || content.isBlank()) {
-            appModel.showErrorKey("status.save.text.missing");
-            return false;
+        DialogActionResult validationResult = validateTextInputs(appModel, title, content);
+        if (validationResult != null) {
+            return validationResult;
         }
 
         VaultItemFx item = new VaultItemFx();
@@ -276,31 +371,30 @@ public class VaultManager {
         item.setUpdatedAt(item.getCreatedAt());
         LockConfigurationResult lockResult = applyLockConfiguration(appModel, item, null, lockOptions, null);
         if (!lockResult.success()) {
-            return false;
+            return lockResult.failureResult();
         }
 
         return saveNewItem(appModel, currentUser, item, lockResult.imageRecord(), "status.save.text.saved");
     }
 
-    public boolean updateText(AppModel appModel,
-                              VaultItemFx existingItem,
-                              String titleInput,
-                              String contentInput,
-                              ItemLockOptions lockOptions) {
-        UserSession currentUser = requireAuthenticatedUser(appModel);
+    public DialogActionResult updateText(AppModel appModel,
+                                         VaultItemFx existingItem,
+                                         String titleInput,
+                                         String contentInput,
+                                         ItemLockOptions lockOptions) {
+        UserSession currentUser = currentDialogUser(appModel);
         if (currentUser == null) {
-            return false;
+            return authRequiredDialogResult(appModel);
         }
         if (existingItem == null) {
-            appModel.showErrorKey("status.edit.select");
-            return false;
+            return dialogFormError(appModel, "status.edit.select");
         }
 
         String title = sanitize(titleInput);
         String content = sanitize(contentInput);
-        if (title.isBlank() || content.isBlank()) {
-            appModel.showErrorKey("status.save.text.missing");
-            return false;
+        DialogActionResult validationResult = validateTextInputs(appModel, title, content);
+        if (validationResult != null) {
+            return validationResult;
         }
 
         VaultItemFx updatedItem = copyItem(existingItem);
@@ -313,85 +407,86 @@ public class VaultManager {
         updatedItem.setUpdatedAt(LocalDateTime.now());
         LockConfigurationResult lockResult = applyLockConfiguration(appModel, updatedItem, existingItem, lockOptions, null);
         if (!lockResult.success()) {
-            return false;
+            return lockResult.failureResult();
         }
 
         return updateExistingItem(appModel, currentUser, updatedItem, lockResult.imageRecord(), "status.edit.text.updated");
     }
 
-    public boolean createImage(AppModel appModel, String titleInput, Path selectedImagePath, ItemLockOptions lockOptions) {
-        UserSession currentUser = requireAuthenticatedUser(appModel);
+    public DialogActionResult createImage(AppModel appModel, String titleInput, Path selectedImagePath, ItemLockOptions lockOptions) {
+        UserSession currentUser = currentDialogUser(appModel);
         if (currentUser == null) {
-            return false;
+            return authRequiredDialogResult(appModel);
         }
 
-        Optional<ImageAssetData> imageAsset = readImageAsset(appModel, selectedImagePath);
-        if (imageAsset.isEmpty()) {
-            return false;
+        ImageAssetLoadResult imageAssetResult = readImageAsset(appModel, selectedImagePath);
+        if (!imageAssetResult.success()) {
+            return imageAssetResult.failureResult();
         }
 
-        String title = firstNonBlank(titleInput, imageAsset.get().fileName());
-        String aiContext = analyzeImageContext(imageAsset.get());
+        ImageAssetData imageAsset = imageAssetResult.imageAsset();
+        String title = firstNonBlank(titleInput, imageAsset.fileName());
+        String aiContext = analyzeImageContext(imageAsset);
         VaultItemFx item = new VaultItemFx();
         item.setTitle(title);
-        item.setContent(imageAsset.get().fileName());
+        item.setContent(imageAsset.fileName());
         item.setAiContext(aiContext);
         item.setItemType(AppModel.TYPE_IMAGE);
-        item.setTags(buildTags(AppModel.TYPE_IMAGE, title + " " + imageAsset.get().fileName()));
+        item.setTags(buildTags(AppModel.TYPE_IMAGE, title + " " + imageAsset.fileName()));
         item.setOwnerId(currentUser.id());
         item.setCreatedAt(LocalDateTime.now());
         item.setUpdatedAt(item.getCreatedAt());
-        item.setImageMimeType(imageAsset.get().mimeType());
-        item.setImageByteCount(imageAsset.get().size());
-        item.setCachedImageBytes(imageAsset.get().bytes());
+        item.setImageMimeType(imageAsset.mimeType());
+        item.setImageByteCount(imageAsset.size());
+        item.setCachedImageBytes(imageAsset.bytes());
 
-        LockConfigurationResult lockResult = applyLockConfiguration(appModel, item, null, lockOptions, imageAsset.get());
+        LockConfigurationResult lockResult = applyLockConfiguration(appModel, item, null, lockOptions, imageAsset);
         if (!lockResult.success()) {
-            return false;
+            return lockResult.failureResult();
         }
 
         return saveNewItem(appModel, currentUser, item, lockResult.imageRecord(), "status.save.image.saved");
     }
 
-    public boolean updateImage(AppModel appModel,
-                               VaultItemFx existingItem,
-                               String titleInput,
-                               Path replacementImagePath,
-                               ItemLockOptions lockOptions) {
-        UserSession currentUser = requireAuthenticatedUser(appModel);
+    public DialogActionResult updateImage(AppModel appModel,
+                                          VaultItemFx existingItem,
+                                          String titleInput,
+                                          Path replacementImagePath,
+                                          ItemLockOptions lockOptions) {
+        UserSession currentUser = currentDialogUser(appModel);
         if (currentUser == null) {
-            return false;
+            return authRequiredDialogResult(appModel);
         }
         if (existingItem == null) {
-            appModel.showErrorKey("status.edit.select");
-            return false;
+            return dialogFormError(appModel, "status.edit.select");
         }
 
-        Optional<ImageAssetData> imageAsset = resolveImageAssetForUpdate(appModel, currentUser, existingItem, replacementImagePath);
-        if (imageAsset.isEmpty()) {
-            return false;
+        ImageAssetLoadResult imageAssetResult = resolveImageAssetForUpdate(appModel, currentUser, existingItem, replacementImagePath);
+        if (!imageAssetResult.success()) {
+            return imageAssetResult.failureResult();
         }
 
+        ImageAssetData imageAsset = imageAssetResult.imageAsset();
         String title = firstNonBlank(titleInput, appModel.getResolvedTitle(existingItem));
         String aiContext = replacementImagePath == null
-                ? firstNonBlank(appModel.getResolvedContext(existingItem), analyzeImageContext(imageAsset.get()))
-                : analyzeImageContext(imageAsset.get());
+                ? firstNonBlank(appModel.getResolvedContext(existingItem), analyzeImageContext(imageAsset))
+                : analyzeImageContext(imageAsset);
 
         VaultItemFx updatedItem = copyItem(existingItem);
         updatedItem.setTitle(title);
-        updatedItem.setContent(imageAsset.get().fileName());
+        updatedItem.setContent(imageAsset.fileName());
         updatedItem.setAiContext(aiContext);
         updatedItem.setItemType(AppModel.TYPE_IMAGE);
-        updatedItem.setTags(buildTags(AppModel.TYPE_IMAGE, title + " " + imageAsset.get().fileName()));
+        updatedItem.setTags(buildTags(AppModel.TYPE_IMAGE, title + " " + imageAsset.fileName()));
         updatedItem.setSourceUrl(null);
         updatedItem.setUpdatedAt(LocalDateTime.now());
-        updatedItem.setImageMimeType(imageAsset.get().mimeType());
-        updatedItem.setImageByteCount(imageAsset.get().size());
-        updatedItem.setCachedImageBytes(imageAsset.get().bytes());
+        updatedItem.setImageMimeType(imageAsset.mimeType());
+        updatedItem.setImageByteCount(imageAsset.size());
+        updatedItem.setCachedImageBytes(imageAsset.bytes());
 
-        LockConfigurationResult lockResult = applyLockConfiguration(appModel, updatedItem, existingItem, lockOptions, imageAsset.get());
+        LockConfigurationResult lockResult = applyLockConfiguration(appModel, updatedItem, existingItem, lockOptions, imageAsset);
         if (!lockResult.success()) {
-            return false;
+            return lockResult.failureResult();
         }
 
         return updateExistingItem(appModel, currentUser, updatedItem, lockResult.imageRecord(), "status.edit.image.updated");
@@ -503,63 +598,59 @@ public class VaultManager {
         }
     }
 
-    private boolean saveNewItem(AppModel appModel,
-                                UserSession currentUser,
-                                VaultItemFx item,
-                                StoredImageRecord imageRecord,
-                                String successKey) {
+    private DialogActionResult saveNewItem(AppModel appModel,
+                                           UserSession currentUser,
+                                           VaultItemFx item,
+                                           StoredImageRecord imageRecord,
+                                           String successKey) {
         appModel.setBusy(true);
         try {
             VaultItemFx savedItem = vaultItemDAO.insert(currentUser.id(), item, imageRecord);
             appModel.addItem(savedItem);
-            appModel.showSuccessKey(successKey, savedItem.getId(), currentUser.id());
-            return true;
+            return DialogActionResult.successMainToast(appModel.text(successKey, savedItem.getId(), currentUser.id()));
         } catch (SQLException exception) {
-            appModel.showErrorKey("status.save.error", safeMessage(exception));
-            return false;
+            return dialogFormError(appModel, "status.save.error", safeMessage(exception));
         } finally {
             appModel.setBusy(false);
         }
     }
 
-    private boolean updateExistingItem(AppModel appModel,
-                                       UserSession currentUser,
-                                       VaultItemFx item,
-                                       StoredImageRecord imageRecord,
-                                       String successKey) {
+    private DialogActionResult updateExistingItem(AppModel appModel,
+                                                  UserSession currentUser,
+                                                  VaultItemFx item,
+                                                  StoredImageRecord imageRecord,
+                                                  String successKey) {
         appModel.setBusy(true);
         try {
             boolean updated = vaultItemDAO.update(currentUser.id(), item, imageRecord);
             if (!updated) {
-                appModel.showErrorKey("status.edit.missing");
-                return false;
+                return dialogFormError(appModel, "status.edit.missing");
             }
             appModel.updateItem(item);
-            appModel.showSuccessKey(successKey, item.getId());
-            return true;
+            return DialogActionResult.successMainToast(appModel.text(successKey, item.getId()));
         } catch (SQLException exception) {
-            appModel.showErrorKey("status.edit.error", safeMessage(exception));
-            return false;
+            return dialogFormError(appModel, "status.edit.error", safeMessage(exception));
         } finally {
             appModel.setBusy(false);
         }
     }
 
-    private Optional<ImageAssetData> readImageAsset(AppModel appModel, Path imagePath) {
+    private ImageAssetLoadResult readImageAsset(AppModel appModel, Path imagePath) {
         if (imagePath == null) {
-            appModel.showErrorKey("status.save.image.missing");
-            return Optional.empty();
+            return ImageAssetLoadResult.failed(dialogFieldError(appModel, DialogFieldIds.PATH, "dialog.validation.image.path.required"));
         }
 
         try {
             byte[] bytes = Files.readAllBytes(imagePath);
             if (bytes.length == 0) {
-                appModel.showErrorKey("status.save.image.read.error");
-                return Optional.empty();
+                return ImageAssetLoadResult.failed(dialogFieldError(appModel, DialogFieldIds.PATH, "status.save.image.read.error"));
             }
             if (bytes.length > MAX_IMAGE_BYTES) {
-                appModel.showErrorKey("status.save.image.too.large", MAX_IMAGE_BYTES / (1024 * 1024));
-                return Optional.empty();
+                return ImageAssetLoadResult.failed(dialogFieldError(
+                        appModel,
+                        DialogFieldIds.PATH,
+                        "status.save.image.too.large",
+                        MAX_IMAGE_BYTES / (1024 * 1024)));
             }
 
             String mimeType = Files.probeContentType(imagePath);
@@ -567,17 +658,16 @@ public class VaultManager {
                 mimeType = "image/png";
             }
 
-            return Optional.of(new ImageAssetData(imagePath.getFileName().toString(), mimeType, bytes));
+            return ImageAssetLoadResult.success(new ImageAssetData(imagePath.getFileName().toString(), mimeType, bytes));
         } catch (IOException exception) {
-            appModel.showErrorKey("status.save.image.read.error");
-            return Optional.empty();
+            return ImageAssetLoadResult.failed(dialogFieldError(appModel, DialogFieldIds.PATH, "status.save.image.read.error"));
         }
     }
 
-    private Optional<ImageAssetData> resolveImageAssetForUpdate(AppModel appModel,
-                                                                UserSession currentUser,
-                                                                VaultItemFx existingItem,
-                                                                Path replacementImagePath) {
+    private ImageAssetLoadResult resolveImageAssetForUpdate(AppModel appModel,
+                                                            UserSession currentUser,
+                                                            VaultItemFx existingItem,
+                                                            Path replacementImagePath) {
         if (replacementImagePath != null) {
             return readImageAsset(appModel, replacementImagePath);
         }
@@ -585,28 +675,113 @@ public class VaultManager {
         String fileName = firstNonBlank(appModel.getResolvedContent(existingItem), existingItem.getTitle());
         if (existingItem.isUnlockedInSession() && existingItem.getUnlockedSession() != null
                 && existingItem.getUnlockedSession().imageBytes().length > 0) {
-            return Optional.of(new ImageAssetData(fileName, existingItem.getImageMimeType(), existingItem.getUnlockedSession().imageBytes()));
+            return ImageAssetLoadResult.success(new ImageAssetData(
+                    fileName,
+                    existingItem.getImageMimeType(),
+                    existingItem.getUnlockedSession().imageBytes()));
         }
 
         byte[] cachedImageBytes = existingItem.getCachedImageBytes();
         if (cachedImageBytes.length > 0) {
-            return Optional.of(new ImageAssetData(fileName, existingItem.getImageMimeType(), cachedImageBytes));
+            return ImageAssetLoadResult.success(new ImageAssetData(fileName, existingItem.getImageMimeType(), cachedImageBytes));
         }
 
         try {
             Optional<StoredImageRecord> storedImageRecord = loadStoredImageRecord(currentUser.id(), existingItem.getId());
             if (storedImageRecord.isEmpty() || storedImageRecord.get().imageData().length == 0) {
-                appModel.showErrorKey("status.image.load.missing");
-                return Optional.empty();
+                return ImageAssetLoadResult.failed(dialogFormError(appModel, "status.image.load.missing"));
             }
             existingItem.setCachedImageBytes(storedImageRecord.get().imageData());
             existingItem.setImageMimeType(firstNonBlank(storedImageRecord.get().mimeType(), existingItem.getImageMimeType()));
             existingItem.setImageByteCount(Math.max(existingItem.getImageByteCount(), storedImageRecord.get().byteCount()));
-            return Optional.of(new ImageAssetData(fileName, existingItem.getImageMimeType(), existingItem.getCachedImageBytes()));
+            return ImageAssetLoadResult.success(new ImageAssetData(
+                    fileName,
+                    existingItem.getImageMimeType(),
+                    existingItem.getCachedImageBytes()));
         } catch (SQLException exception) {
-            appModel.showErrorKey("status.image.load.error", safeMessage(exception));
-            return Optional.empty();
+            return ImageAssetLoadResult.failed(dialogFormError(appModel, "status.image.load.error", safeMessage(exception)));
         }
+    }
+
+    private DialogActionResult validateTextInputs(AppModel appModel, String title, String content) {
+        DialogActionResult result = null;
+        if (title.isBlank()) {
+            result = addFieldError(result, appModel, DialogFieldIds.TITLE, "dialog.validation.text.title.required");
+        }
+        if (content.isBlank()) {
+            result = addFieldError(result, appModel, DialogFieldIds.CONTENT, "dialog.validation.text.content.required");
+        }
+        return result;
+    }
+
+    private DialogActionResult validateProfilePasswordInputs(AppModel appModel,
+                                                             String currentPassword,
+                                                             String newPassword,
+                                                             String confirmPassword) {
+        DialogActionResult result = null;
+        if (currentPassword.isBlank()) {
+            result = addFieldError(result, appModel, DialogFieldIds.PROFILE_PASSWORD_CURRENT, "dialog.validation.profile.currentPassword.required");
+        }
+        if (newPassword.isBlank()) {
+            result = addFieldError(result, appModel, DialogFieldIds.PROFILE_PASSWORD_NEW, "dialog.validation.profile.newPassword.required");
+        }
+        if (confirmPassword.isBlank()) {
+            result = addFieldError(result, appModel, DialogFieldIds.PROFILE_PASSWORD_CONFIRM, "dialog.validation.profile.confirmPassword.required");
+        }
+        if (result != null) {
+            return result;
+        }
+        if (!AccountValidator.isValidPassword(newPassword)) {
+            return dialogFieldError(appModel, DialogFieldIds.PROFILE_PASSWORD_NEW, "status.profile.password.min");
+        }
+        if (!newPassword.equals(confirmPassword)) {
+            return dialogFieldError(appModel, DialogFieldIds.PROFILE_PASSWORD_CONFIRM, "status.profile.password.confirm");
+        }
+        return null;
+    }
+
+    private DialogActionResult validateLockInputs(AppModel appModel, String password, String confirmPassword) {
+        DialogActionResult result = null;
+        if (password.isBlank()) {
+            result = addFieldError(result, appModel, DialogFieldIds.LOCK_PASSWORD, "dialog.validation.lock.password.required");
+        }
+        if (confirmPassword.isBlank()) {
+            result = addFieldError(result, appModel, DialogFieldIds.LOCK_CONFIRM, "dialog.validation.lock.confirm.required");
+        }
+        if (result != null) {
+            return result;
+        }
+        if (!AccountValidator.isValidPassword(password)) {
+            return dialogFieldError(appModel, DialogFieldIds.LOCK_PASSWORD, "status.lock.password.min");
+        }
+        if (!password.equals(confirmPassword)) {
+            return dialogFieldError(appModel, DialogFieldIds.LOCK_CONFIRM, "status.lock.password.confirm");
+        }
+        return null;
+    }
+
+    private DialogActionResult dialogFieldError(AppModel appModel, String fieldId, String key, Object... args) {
+        return DialogActionResult.fieldError(fieldId, appModel.text(key, args));
+    }
+
+    private DialogActionResult addFieldError(DialogActionResult currentResult,
+                                             AppModel appModel,
+                                             String fieldId,
+                                             String key,
+                                             Object... args) {
+        DialogActionResult baseResult = currentResult == null ? DialogActionResult.failure() : currentResult;
+        return baseResult.withFieldError(fieldId, appModel.text(key, args));
+    }
+
+    private DialogActionResult dialogFormError(AppModel appModel, String key, Object... args) {
+        String message = appModel.text(key, args);
+        return DialogActionResult.failure()
+                .withFormMessage(message)
+                .withLocalToast(ToastNotificationType.ERROR, message);
+    }
+
+    private DialogActionResult authRequiredDialogResult(AppModel appModel) {
+        return dialogFormError(appModel, "status.auth.required");
     }
 
     private String analyzeImageContext(ImageAssetData imageAsset) {
@@ -652,8 +827,7 @@ public class VaultManager {
 
         if (!safeLockOptions.enabled()) {
             if (existingItem != null && existingItem.isLocked() && !existingItem.isUnlockedInSession()) {
-                appModel.showErrorKey("status.lock.unlock.required");
-                return LockConfigurationResult.failed();
+                return LockConfigurationResult.failed(dialogFormError(appModel, "status.lock.unlock.required"));
             }
             clearLockState(item);
             return LockConfigurationResult.success(buildPlainImageRecord(item, imageAsset));
@@ -671,8 +845,7 @@ public class VaultManager {
 
         if (existingItem != null && existingItem.isLocked() && password.isBlank() && confirmPassword.isBlank()) {
             if (!existingItem.isUnlockedInSession()) {
-                appModel.showErrorKey("status.lock.unlock.required");
-                return LockConfigurationResult.failed();
+                return LockConfigurationResult.failed(dialogFormError(appModel, "status.lock.unlock.required"));
             }
             ProtectedItemCrypto.LockedItemEnvelope envelope = protectedItemCrypto.relockWithExistingSession(
                     protectedItemData,
@@ -682,17 +855,9 @@ public class VaultManager {
             return LockConfigurationResult.success(buildProtectedImageRecord(item, envelope.encryptedImageData()));
         }
 
-        if (password.isBlank() || confirmPassword.isBlank()) {
-            appModel.showErrorKey("status.lock.password.required");
-            return LockConfigurationResult.failed();
-        }
-        if (!AccountValidator.isValidPassword(password)) {
-            appModel.showErrorKey("status.lock.password.min");
-            return LockConfigurationResult.failed();
-        }
-        if (!password.equals(confirmPassword)) {
-            appModel.showErrorKey("status.lock.password.confirm");
-            return LockConfigurationResult.failed();
+        DialogActionResult validationResult = validateLockInputs(appModel, password, confirmPassword);
+        if (validationResult != null) {
+            return LockConfigurationResult.failed(validationResult);
         }
 
         byte[] rawImageBytes = imageAsset == null ? new byte[0] : imageAsset.bytes();
@@ -753,6 +918,14 @@ public class VaultManager {
         return value == null ? "" : value.trim();
     }
 
+    private UserSession currentDialogUser(AppModel appModel) {
+        UserSession currentUser = appModel.getCurrentUser();
+        if (currentUser == null) {
+            appModel.clearVault();
+        }
+        return currentUser;
+    }
+
     private UserSession requireAuthenticatedUser(AppModel appModel) {
         UserSession currentUser = appModel.getCurrentUser();
         if (currentUser == null) {
@@ -808,14 +981,29 @@ public class VaultManager {
         return exception.getMessage() == null ? exception.getClass().getSimpleName() : exception.getMessage();
     }
 
-    private record LockConfigurationResult(boolean success, StoredImageRecord imageRecord) {
+    private record ImageAssetLoadResult(ImageAssetData imageAsset, DialogActionResult failureResult) {
 
-        private static LockConfigurationResult success(StoredImageRecord imageRecord) {
-            return new LockConfigurationResult(true, imageRecord);
+        private static ImageAssetLoadResult success(ImageAssetData imageAsset) {
+            return new ImageAssetLoadResult(imageAsset, null);
         }
 
-        private static LockConfigurationResult failed() {
-            return new LockConfigurationResult(false, null);
+        private static ImageAssetLoadResult failed(DialogActionResult failureResult) {
+            return new ImageAssetLoadResult(null, failureResult);
+        }
+
+        private boolean success() {
+            return imageAsset != null;
+        }
+    }
+
+    private record LockConfigurationResult(boolean success, StoredImageRecord imageRecord, DialogActionResult failureResult) {
+
+        private static LockConfigurationResult success(StoredImageRecord imageRecord) {
+            return new LockConfigurationResult(true, imageRecord, null);
+        }
+
+        private static LockConfigurationResult failed(DialogActionResult failureResult) {
+            return new LockConfigurationResult(false, null, failureResult);
         }
     }
 }

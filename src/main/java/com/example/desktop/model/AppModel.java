@@ -251,12 +251,24 @@ public class AppModel {
         showNotification(text(key, args), ToastNotificationType.SUCCESS);
     }
 
+    public void showSuccessMessage(String message) {
+        showNotification(message, ToastNotificationType.SUCCESS);
+    }
+
     public void showErrorKey(String key, Object... args) {
         showNotification(text(key, args), ToastNotificationType.ERROR);
     }
 
+    public void showErrorMessage(String message) {
+        showNotification(message, ToastNotificationType.ERROR);
+    }
+
     public void showInfoKey(String key, Object... args) {
         showNotification(text(key, args), ToastNotificationType.INFO);
+    }
+
+    public void showInfoMessage(String message) {
+        showNotification(message, ToastNotificationType.INFO);
     }
 
     public BooleanProperty busyProperty() {
