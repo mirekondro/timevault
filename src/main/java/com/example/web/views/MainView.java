@@ -33,6 +33,10 @@ public class MainView extends VerticalLayout {
 
     private final VaultItemService vaultItemService;
     private final Div itemsGrid = new Div();
+    private final Div currentView = new Div();
+
+    // Navigation state
+    private String currentViewState = "home"; // "home" or "vault"
 
     @Autowired
     public MainView(VaultItemService vaultItemService) {
@@ -44,8 +48,12 @@ public class MainView extends VerticalLayout {
         setMargin(false);
         addClassName("main-view");
 
+        // Force white text styling
+        getStyle().set("color", "#ffffff");
+
         itemsGrid.addClassName("vault-grid");
         itemsGrid.setWidthFull();
+        currentView.setSizeFull();
 
         // Create main container with proper centering
         VerticalLayout main = new VerticalLayout();
@@ -55,15 +63,18 @@ public class MainView extends VerticalLayout {
         main.setMargin(false);
         main.setAlignItems(Alignment.CENTER);
 
+        // Force white text on main layout
+        main.getStyle().set("color", "#ffffff");
+
         // Header spans full width
         Component header = createHeader();
         main.add(header);
         main.setHorizontalComponentAlignment(Alignment.STRETCH, header);
 
-        // Hero section centered
-        Component hero = createHeroSection();
-        main.add(hero);
-        main.setHorizontalComponentAlignment(Alignment.CENTER, hero);
+        // Navigation tabs
+        Component navTabs = createNavigationTabs();
+        main.add(navTabs);
+        main.setHorizontalComponentAlignment(Alignment.CENTER, navTabs);
 
         // Content wrapper with max width and centered
         VerticalLayout contentWrapper = new VerticalLayout();
@@ -73,10 +84,11 @@ public class MainView extends VerticalLayout {
         contentWrapper.setMargin(false);
         contentWrapper.setSpacing(true);
 
-        contentWrapper.add(
-                createContentSection(),
-                createRecentItemsSection()
-        );
+        // Add current view container
+        contentWrapper.add(currentView);
+
+        // Initialize with home view
+        showHomeView();
 
         main.add(contentWrapper);
         main.setHorizontalComponentAlignment(Alignment.CENTER, contentWrapper);
@@ -126,6 +138,123 @@ public class MainView extends VerticalLayout {
 
         header.add(logoArea, searchField);
         return header;
+    }
+
+    private Component createNavigationTabs() {
+        Tab homeTab = new Tab(VaadinIcon.HOME.create(), new Span("Home"));
+        Tab vaultTab = new Tab(VaadinIcon.ARCHIVES.create(), new Span("Your Vault"));
+
+        Tabs navTabs = new Tabs(homeTab, vaultTab);
+        navTabs.addClassName("nav-tabs");
+        navTabs.addThemeVariants(TabsVariant.LUMO_CENTERED);
+
+        navTabs.addSelectedChangeListener(event -> {
+            Tab selectedTab = navTabs.getSelectedTab();
+            if (selectedTab == homeTab) {
+                showHomeView();
+            } else if (selectedTab == vaultTab) {
+                showVaultView();
+            }
+        });
+
+        return navTabs;
+    }
+
+    private void showHomeView() {
+        currentViewState = "home";
+        currentView.removeAll();
+
+        VerticalLayout homeContent = new VerticalLayout();
+        homeContent.setSpacing(true);
+        homeContent.setPadding(false);
+        homeContent.setAlignItems(Alignment.CENTER);
+
+        // Add hero section
+        homeContent.add(createHeroSection());
+
+        // Add input section
+        homeContent.add(createContentSection());
+
+        // Add recent items (limited to 3)
+        homeContent.add(createRecentItemsPreview());
+
+        currentView.add(homeContent);
+    }
+
+    private void showVaultView() {
+        currentViewState = "vault";
+        currentView.removeAll();
+
+        VerticalLayout vaultContent = new VerticalLayout();
+        vaultContent.setSpacing(true);
+        vaultContent.setPadding(false);
+
+        // Add vault header
+        H2 vaultTitle = new H2("Your Digital Vault");
+        vaultTitle.addClassName("section-title");
+        vaultContent.add(vaultTitle);
+
+        // Add search functionality specific to vault
+        TextField vaultSearch = new TextField();
+        vaultSearch.setPlaceholder("Search your vault...");
+        vaultSearch.setPrefixComponent(VaadinIcon.SEARCH.create());
+        vaultSearch.addClassName("vault-search");
+        vaultSearch.setWidthFull();
+        vaultSearch.setMaxWidth("600px");
+        vaultSearch.setClearButtonVisible(true);
+
+        vaultSearch.addValueChangeListener(e -> {
+            if (e.getValue() != null && !e.getValue().trim().isEmpty()) {
+                updateItemsList(vaultItemService.searchComprehensive(e.getValue().trim()));
+            } else {
+                loadAllItems();
+            }
+        });
+
+        vaultContent.add(vaultSearch);
+        vaultContent.setHorizontalComponentAlignment(Alignment.CENTER, vaultSearch);
+
+        // Add all items grid
+        itemsGrid.removeAll();
+        loadAllItems();
+        vaultContent.add(itemsGrid);
+
+        currentView.add(vaultContent);
+    }
+
+    private String fetchWebpageContent(String url) {
+        try {
+            java.net.http.HttpClient client = java.net.http.HttpClient.newBuilder()
+                .connectTimeout(java.time.Duration.ofSeconds(10))
+                .build();
+
+            java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
+                .uri(java.net.URI.create(url))
+                .header("User-Agent", "Mozilla/5.0 (TimeVault/1.0)")
+                .timeout(java.time.Duration.ofSeconds(15))
+                .build();
+
+            java.net.http.HttpResponse<String> response = client.send(request,
+                java.net.http.HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() == 200) {
+                // Extract text content from HTML
+                String content = response.body();
+                // Remove HTML tags for cleaner analysis
+                content = content.replaceAll("<script[^>]*>.*?</script>", "")
+                                .replaceAll("<style[^>]*>.*?</style>", "")
+                                .replaceAll("<[^>]+>", " ")
+                                .replaceAll("\\s+", " ")
+                                .trim();
+
+                // Limit content size
+                return content.length() > 5000 ? content.substring(0, 5000) + "..." : content;
+            } else {
+                return "Unable to fetch content from: " + url;
+            }
+        } catch (Exception e) {
+            return "Error fetching content: " + e.getMessage() + " URL: " + url;
+        }
     }
 
     private Component createHeroSection() {
@@ -183,6 +312,9 @@ public class MainView extends VerticalLayout {
         panel.setAlignItems(FlexComponent.Alignment.CENTER);
         panel.setDefaultHorizontalComponentAlignment(FlexComponent.Alignment.CENTER);
 
+        // Only force white text color, let CSS handle background
+        panel.getStyle().set("color", "#ffffff");
+
         TextField urlField = new TextField();
         urlField.setPlaceholder("Paste any link (e.g. https://github.com/...)");
         urlField.setPrefixComponent(VaadinIcon.LINK.create());
@@ -199,9 +331,19 @@ public class MainView extends VerticalLayout {
             } else {
                 try {
                     String url = urlField.getValue().trim();
-                    String title = "URL: " + url.substring(0, Math.min(url.length(), 40));
-                    vaultItemService.saveUrl(url, title, url);
-                    showNeonNotification("URL saved & analyzed by AI!", true);
+                    // Add protocol if missing
+                    if (!url.startsWith("http://") && !url.startsWith("https://")) {
+                        url = "https://" + url;
+                    }
+
+                    showNeonNotification("Fetching webpage content...", true);
+
+                    // Fetch webpage content for better analysis
+                    String pageContent = fetchWebpageContent(url);
+
+                    // Save with AI-generated title and context
+                    vaultItemService.saveUrl(url, pageContent);
+                    showNeonNotification("Webpage saved & analyzed by AI!", true);
                     urlField.clear();
                     loadRecentItems();
                 } catch (Exception ex) {
@@ -210,7 +352,16 @@ public class MainView extends VerticalLayout {
             }
         });
 
-        panel.add(new Paragraph("AI will automatically fetch the webpage, read the content, and generate a contextual summary."), urlField, saveButton);
+        Paragraph description = new Paragraph("AI will automatically fetch the webpage, read the content, and generate a contextual summary.");
+        description.getStyle().set("color", "#ffffff");
+
+        panel.add(description, urlField, saveButton);
+
+        // Force white text on all components
+        panel.getChildren().forEach(component -> {
+            component.getElement().getStyle().set("color", "#ffffff");
+        });
+
         return panel;
     }
 
@@ -220,6 +371,9 @@ public class MainView extends VerticalLayout {
         panel.addClassName("input-panel");
         panel.setAlignItems(FlexComponent.Alignment.CENTER);
         panel.setDefaultHorizontalComponentAlignment(FlexComponent.Alignment.CENTER);
+
+        // Only force white text color, let CSS handle background
+        panel.getStyle().set("color", "#ffffff");
 
         MemoryBuffer buffer = new MemoryBuffer();
         Upload upload = new Upload(buffer);
@@ -239,7 +393,16 @@ public class MainView extends VerticalLayout {
             }
         });
 
-        panel.add(new Paragraph("Upload an image. The AI Vision model will deeply analyze its contents and context."), upload);
+        Paragraph description = new Paragraph("Upload an image. The AI Vision model will deeply analyze its contents and context.");
+        description.getStyle().set("color", "#ffffff");
+
+        panel.add(description, upload);
+
+        // Force white text on all components
+        panel.getChildren().forEach(component -> {
+            component.getElement().getStyle().set("color", "#ffffff");
+        });
+
         return panel;
     }
 
@@ -249,6 +412,9 @@ public class MainView extends VerticalLayout {
         panel.addClassName("input-panel");
         panel.setAlignItems(FlexComponent.Alignment.CENTER);
         panel.setDefaultHorizontalComponentAlignment(FlexComponent.Alignment.CENTER);
+
+        // Only force white text color, let CSS handle background
+        panel.getStyle().set("color", "#ffffff");
 
         TextArea textArea = new TextArea();
         textArea.setPlaceholder("Dump your thoughts, meeting notes, or raw text here...");
@@ -276,7 +442,16 @@ public class MainView extends VerticalLayout {
             }
         });
 
-        panel.add(new Paragraph("AI will extract key points, generate tags, and create a permanent memory of your text."), textArea, saveButton);
+        Paragraph description = new Paragraph("AI will extract key points, generate tags, and create a permanent memory of your text.");
+        description.getStyle().set("color", "#ffffff");
+
+        panel.add(description, textArea, saveButton);
+
+        // Force white text on all components
+        panel.getChildren().forEach(component -> {
+            component.getElement().getStyle().set("color", "#ffffff");
+        });
+
         return panel;
     }
 
@@ -309,11 +484,76 @@ public class MainView extends VerticalLayout {
         return section;
     }
 
-    private void loadRecentItems() {
+    private Component createRecentItemsPreview() {
+        VerticalLayout section = new VerticalLayout();
+        section.setSpacing(false);
+        section.setPadding(false);
+        section.setMaxWidth("1000px");
+        section.setWidthFull();
+
+        HorizontalLayout headerLayout = new HorizontalLayout();
+        headerLayout.setWidthFull();
+        headerLayout.setJustifyContentMode(FlexComponent.JustifyContentMode.BETWEEN);
+        headerLayout.setAlignItems(FlexComponent.Alignment.CENTER);
+
+        H3 title = new H3("Recent Memories");
+        title.addClassName("section-title");
+        title.getStyle().set("color", "white");
+        title.getStyle().set("font-weight", "800");
+        title.getStyle().set("margin", "0");
+
+        Button viewAllButton = new Button("View All", VaadinIcon.ARROW_RIGHT.create());
+        viewAllButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
+        viewAllButton.getStyle().set("color", "#A78BFA");
+        viewAllButton.addClickListener(e -> showVaultView());
+
+        headerLayout.add(title, viewAllButton);
+        section.add(headerLayout);
+
+        // Create preview grid for 3 recent items
+        Div previewGrid = new Div();
+        previewGrid.addClassName("vault-grid-preview");
+
         try {
-            updateItemsList(vaultItemService.findRecent());
+            List<VaultItem> recentItems = vaultItemService.findTop3Recent();
+            if (recentItems.isEmpty()) {
+                Div emptyState = new Div();
+                emptyState.addClassName("empty-state-preview");
+                emptyState.add(new H4("No memories yet..."));
+                emptyState.add(new Paragraph("Start saving URLs, images, and notes above to build your digital vault."));
+                previewGrid.add(emptyState);
+            } else {
+                for (VaultItem item : recentItems) {
+                    previewGrid.add(createVaultItemCard(item));
+                }
+            }
+        } catch (Exception e) {
+            showNeonNotification("Error loading recent items: " + e.getMessage(), false);
+        }
+
+        section.add(previewGrid);
+        return section;
+    }
+
+    private void loadAllItems() {
+        try {
+            updateItemsList(vaultItemService.findAll());
         } catch (Exception e) {
             showNeonNotification("Error loading items: " + e.getMessage(), false);
+        }
+    }
+
+    private void loadRecentItems() {
+        if (currentViewState.equals("home")) {
+            // Refresh the home view
+            showHomeView();
+        } else {
+            // Refresh the vault view
+            try {
+                updateItemsList(vaultItemService.findRecent());
+            } catch (Exception e) {
+                showNeonNotification("Error loading items: " + e.getMessage(), false);
+            }
         }
     }
 
@@ -398,16 +638,139 @@ public class MainView extends VerticalLayout {
         HorizontalLayout cardFooter = new HorizontalLayout();
         cardFooter.addClassName("card-footer");
         cardFooter.setWidthFull();
+        cardFooter.setJustifyContentMode(FlexComponent.JustifyContentMode.BETWEEN);
+        cardFooter.setAlignItems(FlexComponent.Alignment.CENTER);
 
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM dd, yyyy");
         String dateString = vaultItem.getCreatedAt() != null ? vaultItem.getCreatedAt().format(formatter) : "Unknown Date";
         Span dateStr = new Span(dateString);
         dateStr.addClassName("card-date");
 
-        cardFooter.add(dateStr);
+        // Speak button for text-to-speech
+        Button speakBtn = new Button(VaadinIcon.VOLUME_UP.create());
+        speakBtn.addClassName("speak-btn");
+        speakBtn.setTooltipText("Listen to AI summary");
+        speakBtn.getStyle().set("color", "#A78BFA");
+        speakBtn.getStyle().set("background", "transparent");
+        speakBtn.getStyle().set("border", "none");
+        speakBtn.getStyle().set("cursor", "pointer");
+        speakBtn.getStyle().set("padding", "8px");
+        speakBtn.getStyle().set("border-radius", "50%");
+        speakBtn.getStyle().set("transition", "all 0.3s ease");
+
+        // Add hover effect
+        speakBtn.addClickListener(e -> {
+            speakText(safeContext);
+        });
+
+        // Button group for actions
+        HorizontalLayout buttonGroup = new HorizontalLayout(speakBtn);
+        buttonGroup.setSpacing(false);
+        buttonGroup.setAlignItems(FlexComponent.Alignment.CENTER);
+
+        cardFooter.add(dateStr, buttonGroup);
 
         card.add(cardHeader, title, contextWrapper, cardFooter);
         return card;
+    }
+
+    /**
+     * Use ElevenLabs to speak the AI summary text
+     */
+    private void speakText(String text) {
+        if (text == null || text.trim().isEmpty() || "Awaiting AI analysis...".equals(text)) {
+            showNeonNotification("No AI summary available to read", false);
+            return;
+        }
+
+        // Add JavaScript to call the speech API and play audio
+        getElement().executeJs("""
+            async function speakText(text) {
+                try {
+                    // Show loading notification
+                    const notification = document.createElement('div');
+                    notification.style.cssText = `
+                        position: fixed;
+                        top: 20px;
+                        right: 20px;
+                        background: linear-gradient(135deg, #60A5FA 0%, #A78BFA 50%, #F472B6 100%);
+                        color: white;
+                        padding: 15px 20px;
+                        border-radius: 12px;
+                        z-index: 10000;
+                        font-family: 'Plus Jakarta Sans', sans-serif;
+                        font-weight: 600;
+                        box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+                    `;
+                    notification.textContent = '🗣️ Generating speech...';
+                    document.body.appendChild(notification);
+
+                    const response = await fetch('/api/speech/synthesize', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ text: text })
+                    });
+
+                    const result = await response.json();
+                    
+                    // Remove loading notification
+                    document.body.removeChild(notification);
+
+                    if (result.success) {
+                        // Create and play audio
+                        const audio = new Audio(result.audio);
+                        
+                        // Show playing notification
+                        const playNotification = document.createElement('div');
+                        playNotification.style.cssText = notification.style.cssText;
+                        playNotification.textContent = '🔊 Playing AI summary...';
+                        document.body.appendChild(playNotification);
+                        
+                        audio.onended = () => {
+                            document.body.removeChild(playNotification);
+                        };
+                        
+                        audio.onerror = () => {
+                            document.body.removeChild(playNotification);
+                            const errorNotification = document.createElement('div');
+                            errorNotification.style.cssText = notification.style.cssText.replace('60A5FA 0%, #A78BFA 50%, #F472B6', 'EF4444 0%, #DC2626 50%, #B91C1C');
+                            errorNotification.textContent = '❌ Audio playback failed';
+                            document.body.appendChild(errorNotification);
+                            setTimeout(() => document.body.removeChild(errorNotification), 3000);
+                        };
+                        
+                        await audio.play();
+                    } else {
+                        throw new Error(result.error || 'Speech synthesis failed');
+                    }
+                } catch (error) {
+                    console.error('Speech error:', error);
+                    
+                    // Show error notification
+                    const errorNotification = document.createElement('div');
+                    errorNotification.style.cssText = `
+                        position: fixed;
+                        top: 20px;
+                        right: 20px;
+                        background: linear-gradient(135deg, #EF4444 0%, #DC2626 50%, #B91C1C 100%);
+                        color: white;
+                        padding: 15px 20px;
+                        border-radius: 12px;
+                        z-index: 10000;
+                        font-family: 'Plus Jakarta Sans', sans-serif;
+                        font-weight: 600;
+                        box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+                    `;
+                    errorNotification.textContent = '❌ Speech generation failed: ' + error.message;
+                    document.body.appendChild(errorNotification);
+                    setTimeout(() => document.body.removeChild(errorNotification), 5000);
+                }
+            }
+            
+            speakText($0);
+            """, text);
     }
 
     private void showNeonNotification(String text, boolean success) {
