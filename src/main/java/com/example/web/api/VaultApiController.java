@@ -40,7 +40,7 @@ public class VaultApiController {
     }
 
     /**
-     * Save URL endpoint for Chrome extension
+     * Save URL endpoint for Chrome extension with content-aware analysis
      */
     @PostMapping("/save-url")
     public ResponseEntity<Map<String, Object>> saveUrl(@RequestBody ChromeExtensionRequest request) {
@@ -51,16 +51,20 @@ public class VaultApiController {
                     .body(createErrorResponse("URL is required"));
             }
 
-            // Use the enhanced URL saving method
+            // Use the enhanced URL saving method with content-aware summary
             VaultItem savedItem = vaultItemService.saveUrl(request.getUrl(), request.getContent());
 
-            // Return success response
+            // Generate a content-aware summary for the popup preview
+            String popupSummary = generateContentSummary(request.getContent(), request.getContentType(), savedItem.getAiContext());
+
+            // Return success response with content summary
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("message", "Page saved successfully");
             response.put("id", savedItem.getId());
             response.put("title", savedItem.getTitle());
             response.put("aiContext", savedItem.getAiContext());
+            response.put("popupSummary", popupSummary); // For popup display
             response.put("tags", savedItem.getTags());
             response.put("timestamp", savedItem.getCreatedAt());
 
@@ -70,6 +74,42 @@ public class VaultApiController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(createErrorResponse("Failed to save URL: " + e.getMessage()));
         }
+    }
+
+    /**
+     * Generate content-aware summary for popup display
+     */
+    private String generateContentSummary(String content, String contentType, String aiContext) {
+        if (aiContext != null && !aiContext.trim().isEmpty()) {
+            // Use AI-generated context as the summary
+            return aiContext;
+        }
+
+        if (content == null || content.trim().isEmpty()) {
+            return "Content saved successfully. AI analysis will be available shortly.";
+        }
+
+        // Fallback: create content-type specific summary
+        String cleanContent = content.trim();
+        if (cleanContent.length() > 300) {
+            // Try to get first few sentences
+            String[] sentences = cleanContent.split("\\. ");
+            if (sentences.length > 1) {
+                StringBuilder summary = new StringBuilder();
+                for (int i = 0; i < Math.min(3, sentences.length); i++) {
+                    summary.append(sentences[i]);
+                    if (i < sentences.length - 1 && !sentences[i].endsWith(".")) {
+                        summary.append(".");
+                    }
+                    summary.append(" ");
+                }
+                return summary.toString().trim();
+            } else {
+                return cleanContent.substring(0, 300) + "...";
+            }
+        }
+
+        return cleanContent;
     }
 
     /**
@@ -186,6 +226,7 @@ public class VaultApiController {
         private String content;
         private String description;
         private String source;
+        private String contentType;
 
         // Constructors
         public ChromeExtensionRequest() {}
@@ -205,5 +246,8 @@ public class VaultApiController {
 
         public String getSource() { return source; }
         public void setSource(String source) { this.source = source; }
+
+        public String getContentType() { return contentType; }
+        public void setContentType(String contentType) { this.contentType = contentType; }
     }
 }

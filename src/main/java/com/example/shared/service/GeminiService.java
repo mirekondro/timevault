@@ -82,16 +82,28 @@ public class GeminiService {
 
         try {
             String prompt = """
-                Analyze this webpage content and create a clean, user-friendly summary. Provide your response in this EXACT format:
+                Read this webpage content and create a clear, informative summary. Provide your response in this EXACT format:
                 
-                TITLE: [Generate a clear, descriptive title for this webpage - NO URLs, just describe what it is]
-                DESCRIPTION: [Provide exactly 3 comprehensive sentences describing the content, purpose, and value as before]
+                TITLE: [Generate a clear, descriptive title - NO URLs, just describe what it is]
+                DESCRIPTION: [Provide exactly 3 sentences that summarize the actual CONTENT/INFORMATION, not the page itself]
                 
-                Focus on:
-                1. TITLE should be clear and descriptive (e.g., "React Navigation Tutorial", "Python API Documentation", "Design System Guidelines")
-                2. DESCRIPTION should explain what's on the page, why it's useful, and what the user can do with it
+                Focus on WHAT THE CONTENT SAYS, not what type of page it is:
                 
-                Do not include the URL in the title. Make it sound like a proper document or article title.
+                For NEWS: Summarize the main story, key facts, and important details
+                For TUTORIALS: Explain what you'll learn and the main steps/concepts covered
+                For ARTICLES: Summarize the main arguments, insights, or information presented
+                For DOCUMENTATION: Explain the key features, functions, or concepts documented
+                For RESEARCH: Summarize the findings, methodology, or conclusions
+                For PRODUCTS: Describe what the product does, key features, and benefits
+                
+                Write as if you're telling someone what you just read, not describing the webpage.
+                
+                Examples:
+                - Instead of: "This news article discusses Apple's latest announcement"
+                - Write: "Apple announced new iPhone 15 models featuring titanium bodies, improved cameras with 5x optical zoom, and USB-C connectivity replacing Lightning ports"
+                
+                - Instead of: "This tutorial covers React development"
+                - Write: "Learn to build React components using hooks, manage application state with useState and useEffect, and create interactive user interfaces with event handling"
                 
                 URL: %s
                 Content:
@@ -210,15 +222,25 @@ public class GeminiService {
 
         try {
             String prompt = """
-                Analyze this text content and create a detailed, meaningful summary that helps the user understand exactly what they saved and why it's valuable. Provide exactly 3 comprehensive sentences:
+                Read this text content carefully and create a summary that captures the key information and main points. Provide exactly 3 sentences that tell someone WHAT THE TEXT SAYS, not what type of text it is.
                 
-                1. CONTENT TYPE & TOPIC: What kind of text is this and what is it about? Is it notes, ideas, instructions, a quote, important information, a draft, or something else? Describe the specific subject matter and context.
+                Focus on the actual CONTENT and INFORMATION:
                 
-                2. KEY POINTS & INSIGHTS: What are the most important ideas, facts, conclusions, or actionable items? Summarize the core message, main arguments, or essential information that makes this text worth saving.
+                For NOTES: Summarize the main points, ideas, and key information
+                For IDEAS: Explain the core concepts, proposals, or insights
+                For INSTRUCTIONS: Describe what needs to be done and key steps
+                For QUOTES: Explain the main message and context
+                For DRAFTS: Summarize the main arguments or content being developed
+                For MEETING NOTES: Cover key decisions, action items, and important discussion points
                 
-                3. VALUE & APPLICATION: Why would someone want to keep this text? What can they do with this information? Is it reference material, inspiration, instructions to follow, important reminders, or knowledge to apply later?
+                Write as if you're explaining to someone what you just read. Be specific and informative.
                 
-                Create a summary that clearly answers "What is this text about?" and "Why is it worth keeping?" with specific details that make it memorable and findable.
+                Examples:
+                - Instead of: "These are meeting notes about project planning"
+                - Write: "The team decided to launch the new feature in Q2, assigned Sarah to lead UI design, and set weekly check-ins every Thursday to track progress"
+                
+                - Instead of: "This is an idea about improving workflow"
+                - Write: "Implement automated testing in the CI pipeline to catch bugs earlier, reduce manual QA time by 40%, and deploy releases twice weekly instead of monthly"
                 
                 Text to analyze:
                 %s
