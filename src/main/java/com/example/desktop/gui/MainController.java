@@ -32,18 +32,18 @@ public class MainController {
     private DetailController detailViewController;
 
     @FXML
-    private Label statusLabel;
+    private Label footerCreditLabel;
 
     @FXML
-    private Label footerCreditLabel;
+    private ToastHostController toastHostViewController;
 
     public void setContext(AppModel appModel,
                            VaultManager vaultManager,
                            HostServices hostServices,
                            Stage stage,
                            DesktopNavigator navigator) {
-        statusLabel.textProperty().bind(appModel.statusMessageProperty());
         appModel.bindText(footerCreditLabel, "footer.credit");
+        toastHostViewController.setTopOffset(74);
 
         initializeChild(headerViewController, appModel, vaultManager, hostServices, stage, navigator);
         initializeChild(topBarViewController, appModel, vaultManager, hostServices, stage, navigator);
@@ -51,6 +51,7 @@ public class MainController {
         initializeChild(typeSidebarViewController, appModel, vaultManager, hostServices, stage, navigator);
         initializeChild(archiveViewController, appModel, vaultManager, hostServices, stage, navigator);
         initializeChild(detailViewController, appModel, vaultManager, hostServices, stage, navigator);
+        initializeChild(toastHostViewController, appModel, vaultManager, hostServices, stage, navigator);
     }
 
     private void initializeChild(AppContextAware controller,

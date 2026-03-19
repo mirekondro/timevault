@@ -154,7 +154,7 @@ public class SaveController implements AppContextAware {
             if (appModel.imageTitleInputProperty().get().isBlank()) {
                 appModel.imageTitleInputProperty().set(selectedFile.getName());
             }
-            appModel.setStatusKey("status.save.image.selected", selectedFile.getName());
+            appModel.showSuccessKey("status.save.image.selected", selectedFile.getName());
         }
     }
 

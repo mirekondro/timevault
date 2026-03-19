@@ -106,7 +106,7 @@ public class HeaderController implements AppContextAware {
 
     private void handleProfile() {
         userMenu.hide();
-        appModel.setStatusKey("status.profile.soon");
+        appModel.showInfoKey("status.profile.soon");
     }
 
     private void handleLogout() {
@@ -170,13 +170,13 @@ public class HeaderController implements AppContextAware {
 
     private void handleLanguageSelection(LanguageOption option) {
         if (!option.available()) {
-            appModel.setStatusKey("status.language.unavailable", appModel.getLanguageDisplayName(option));
+            appModel.showInfoKey("status.language.unavailable", appModel.getLanguageDisplayName(option));
             return;
         }
 
         if (!option.locale().equals(appModel.getLocale())) {
             appModel.setLocale(option.locale());
-            appModel.setStatusKey("status.language.changed", appModel.getLanguageDisplayName(option));
+            appModel.showSuccessKey("status.language.changed", appModel.getLanguageDisplayName(option));
         }
     }
 

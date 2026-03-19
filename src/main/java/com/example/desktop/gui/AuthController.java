@@ -74,7 +74,7 @@ public class AuthController implements AppContextAware {
     private Hyperlink showLoginLink;
 
     @FXML
-    private Label authStatusLabel;
+    private ToastHostController toastHostViewController;
 
     private AppModel appModel;
     private VaultManager vaultManager;
@@ -113,10 +113,12 @@ public class AuthController implements AppContextAware {
         appModel.bindText(registerSwitchLabel, "auth.register.switch.copy");
         appModel.bindText(showLoginLink, "auth.register.switch.link");
 
-        authStatusLabel.textProperty().bind(appModel.statusMessageProperty());
+        toastHostViewController.setTopOffset(26);
         loginButton.disableProperty().bind(appModel.busyProperty());
         registerButton.disableProperty().bind(appModel.busyProperty());
         showLoginView();
+
+        toastHostViewController.setContext(appModel, vaultManager, hostServices, stage, navigator);
     }
 
     @FXML

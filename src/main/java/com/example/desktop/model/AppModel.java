@@ -1,6 +1,8 @@
 package com.example.desktop.model;
 
 import com.example.shared.model.UserSession;
+import javafx.animation.PauseTransition;
+import javafx.application.Platform;
 import javafx.beans.Observable;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.StringBinding;
@@ -31,6 +33,8 @@ import java.util.MissingResourceException;
 import java.util.ResourceBundle;
 import java.util.function.Supplier;
 
+import javafx.util.Duration;
+
 /**
  * Central observable state for the desktop application.
  * Controllers bind to this model instead of calling each other.
@@ -52,6 +56,9 @@ public class AppModel {
     );
     private final ObservableList<LanguageOption> readOnlyLanguageOptions =
             FXCollections.unmodifiableObservableList(languageOptions);
+    private final ObservableList<ToastNotification> notifications = FXCollections.observableArrayList();
+    private final ObservableList<ToastNotification> readOnlyNotifications =
+            FXCollections.unmodifiableObservableList(notifications);
 
     private final ObservableList<VaultItemFx> allItems = FXCollections.observableArrayList();
     private final FilteredList<VaultItemFx> filteredItems = new FilteredList<>(allItems);
@@ -61,7 +68,6 @@ public class AppModel {
     private final ObjectProperty<Locale> locale = new SimpleObjectProperty<>(Locale.ENGLISH);
     private final StringProperty searchText = new SimpleStringProperty("");
     private final StringProperty selectedType = new SimpleStringProperty(TYPE_ALL);
-    private final StringProperty statusMessage = new SimpleStringProperty();
     private final BooleanProperty busy = new SimpleBooleanProperty(false);
     private final BooleanProperty authenticated = new SimpleBooleanProperty(false);
 
@@ -83,20 +89,16 @@ public class AppModel {
     private final StringProperty textContentInput = new SimpleStringProperty("");
     private final StringProperty imageTitleInput = new SimpleStringProperty("");
     private final StringProperty imagePathInput = new SimpleStringProperty("");
-
-    private String statusKey = "status.auth.prompt";
-    private Object[] statusArguments = new Object[0];
+    private long nextNotificationId = 1L;
 
     public AppModel() {
         searchText.addListener((obs, oldValue, newValue) -> updateFilter());
         selectedType.addListener((obs, oldValue, newValue) -> updateFilter());
         allItems.addListener((ListChangeListener<VaultItemFx>) change -> updateCounts());
         currentUser.addListener((obs, oldUser, newUser) -> authenticated.set(newUser != null));
-        locale.addListener((obs, oldLocale, newLocale) -> updateStatusMessage());
 
         updateFilter();
         updateCounts();
-        updateStatusMessage();
     }
 
     public ObservableList<String> getTypeOptions() {
@@ -105,6 +107,10 @@ public class AppModel {
 
     public ObservableList<LanguageOption> getLanguageOptions() {
         return readOnlyLanguageOptions;
+    }
+
+    public ObservableList<ToastNotification> getNotifications() {
+        return readOnlyNotifications;
     }
 
     public ObservableList<VaultItemFx> getFilteredItems() {
@@ -179,14 +185,16 @@ public class AppModel {
         return selectedType;
     }
 
-    public StringProperty statusMessageProperty() {
-        return statusMessage;
+    public void showSuccessKey(String key, Object... args) {
+        showNotification(text(key, args), ToastNotificationType.SUCCESS);
     }
 
-    public void setStatusKey(String key, Object... args) {
-        statusKey = key;
-        statusArguments = args == null ? new Object[0] : args.clone();
-        updateStatusMessage();
+    public void showErrorKey(String key, Object... args) {
+        showNotification(text(key, args), ToastNotificationType.ERROR);
+    }
+
+    public void showInfoKey(String key, Object... args) {
+        showNotification(text(key, args), ToastNotificationType.INFO);
     }
 
     public BooleanProperty busyProperty() {
@@ -423,8 +431,21 @@ public class AppModel {
         return allDependencies;
     }
 
-    private void updateStatusMessage() {
-        statusMessage.set(text(statusKey, statusArguments));
+    private void showNotification(String message, ToastNotificationType type) {
+        Runnable enqueue = () -> {
+            ToastNotification notification = new ToastNotification(nextNotificationId++, message, type);
+            notifications.add(notification);
+
+            PauseTransition delay = new PauseTransition(Duration.seconds(3));
+            delay.setOnFinished(event -> notifications.remove(notification));
+            delay.play();
+        };
+
+        if (Platform.isFxApplicationThread()) {
+            enqueue.run();
+            return;
+        }
+        Platform.runLater(enqueue);
     }
 
     private void updateFilter() {

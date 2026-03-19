@@ -20,6 +20,11 @@
     -fx-background-color: linear-gradient(to bottom, #0b1016, #0f141b 42%, #101922 100%);
 }
 
+.toast-layer,
+.toast-container {
+    -fx-background-color: transparent;
+}
+
 .auth-scene-root {
     -fx-background-color:
         radial-gradient(center 20% 15%, radius 45%, rgba(88, 196, 221, 0.16), transparent),
@@ -129,6 +134,35 @@
 .footer-credit {
     -fx-text-fill: -color-muted;
     -fx-font-size: 12px;
+    -fx-font-weight: 700;
+}
+
+.toast-card {
+    -fx-background-radius: 18px;
+    -fx-border-radius: 18px;
+    -fx-border-width: 1px;
+    -fx-padding: 14px 18px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.35), 24, 0.18, 0, 10);
+}
+
+.toast-success {
+    -fx-background-color: linear-gradient(to bottom right, rgba(42, 112, 74, 0.95), rgba(26, 78, 50, 0.96));
+    -fx-border-color: rgba(137, 232, 181, 0.34);
+}
+
+.toast-error {
+    -fx-background-color: linear-gradient(to bottom right, rgba(122, 40, 45, 0.97), rgba(92, 24, 30, 0.98));
+    -fx-border-color: rgba(255, 174, 174, 0.32);
+}
+
+.toast-info {
+    -fx-background-color: linear-gradient(to bottom right, rgba(32, 86, 108, 0.96), rgba(26, 62, 86, 0.98));
+    -fx-border-color: rgba(143, 226, 242, 0.3);
+}
+
+.toast-message {
+    -fx-text-fill: white;
+    -fx-font-size: 13px;
     -fx-font-weight: 700;
 }
 

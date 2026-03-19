@@ -50,7 +50,6 @@
                            styleClass="auth-link"/>
             </HBox>
         </VBox>
-
-        <Label fx:id="authStatusLabel" styleClass="auth-status-label" wrapText="true"/>
     </VBox>
+    <fx:include fx:id="toastHostView" source="toast-host.fxml" StackPane.alignment="TOP_CENTER"/>
 </StackPane>
