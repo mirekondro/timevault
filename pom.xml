@@ -10,14 +10,25 @@
     <properties>
         <java.version>21</java.version>
         <vaadin.version>25.0.7</vaadin.version>
+<<<<<<< Updated upstream
     </properties>
     
+=======
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <jackson.version>2.18.3</jackson.version>
+    </properties>
+
+>>>>>>> Stashed changes
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
         <version>4.0.3</version>
         <relativePath/>
     </parent>
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes
     <dependencyManagement>
         <dependencies>
             <dependency>
@@ -29,11 +40,18 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
+<<<<<<< Updated upstream
     
     <dependencies>
         <dependency>
             <groupId>com.vaadin</groupId>
             <!-- Replace artifactId with vaadin-core to use only free components -->
+=======
+
+    <dependencies>
+        <dependency>
+            <groupId>com.vaadin</groupId>
+>>>>>>> Stashed changes
             <artifactId>vaadin</artifactId>
         </dependency>
         <dependency>
@@ -44,11 +62,40 @@
         <dependency>
             <groupId>com.vaadin</groupId>
             <artifactId>vaadin-spring-boot-starter</artifactId>
+<<<<<<< Updated upstream
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
+=======
+        </dependency>
+        <!-- Spring Data JPA -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+        <!-- MS SQL Server Driver -->
+        <dependency>
+            <groupId>com.microsoft.sqlserver</groupId>
+            <artifactId>mssql-jdbc</artifactId>
+            <version>12.8.1.jre11</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>1.18.3</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${jackson.version}</version>
+>>>>>>> Stashed changes
         </dependency>
     </dependencies>
     
@@ -66,7 +113,11 @@
                 <executions>
                     <execution>
                         <goals>
+<<<<<<< Updated upstream
                             <goal>build-frontend</goal>
+=======
+                            <goal>prepare-frontend</goal>
+>>>>>>> Stashed changes
                         </goals>
                     </execution>
                 </executions>

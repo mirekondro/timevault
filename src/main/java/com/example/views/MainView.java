@@ -1,5 +1,7 @@
 package com.example.views;
 
+import com.example.model.VaultItem;
+import com.example.service.VaultItemService;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
@@ -18,12 +20,22 @@ import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.component.upload.Upload;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 @PageTitle("TimeVault - Your Digital Memory")
 @Route("")
 public class MainView extends VerticalLayout {
 
-    public MainView() {
+    private final VaultItemService vaultItemService;
+    private VerticalLayout itemsList;
+
+    @Autowired
+    public MainView(VaultItemService vaultItemService) {
+        this.vaultItemService = vaultItemService;
+
         setSizeFull();
         setPadding(false);
         setSpacing(false);
@@ -150,13 +162,24 @@ public class MainView extends VerticalLayout {
                 Notification.show("Please enter a URL", 3000, Notification.Position.MIDDLE)
                     .addThemeVariants(NotificationVariant.LUMO_ERROR);
             } else {
-                Notification notification = Notification.show(
-                    "✓ Content saved! AI is generating context...",
-                    3000,
-                    Notification.Position.BOTTOM_END
-                );
-                notification.addThemeVariants(NotificationVariant.LUMO_SUCCESS);
-                urlField.clear();
+                try {
+                    String url = urlField.getValue();
+                    String title = "URL: " + url.substring(0, Math.min(url.length(), 50));
+                    String aiContext = "Saved URL content. AI context will be generated automatically.";
+                    vaultItemService.saveUrl(url, title, url, aiContext);
+
+                    Notification notification = Notification.show(
+                        "✓ Content saved to database! AI is generating context...",
+                        3000,
+                        Notification.Position.BOTTOM_END
+                    );
+                    notification.addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+                    urlField.clear();
+                    refreshRecentItems();
+                } catch (Exception ex) {
+                    Notification.show("Error saving: " + ex.getMessage(), 5000, Notification.Position.MIDDLE)
+                        .addThemeVariants(NotificationVariant.LUMO_ERROR);
+                }
             }
         });
 
@@ -233,13 +256,24 @@ public class MainView extends VerticalLayout {
                 Notification.show("Please enter some text", 3000, Notification.Position.MIDDLE)
                     .addThemeVariants(NotificationVariant.LUMO_ERROR);
             } else {
-                Notification notification = Notification.show(
-                    "✓ Text saved! AI context generated.",
-                    3000,
-                    Notification.Position.BOTTOM_END
-                );
-                notification.addThemeVariants(NotificationVariant.LUMO_SUCCESS);
-                textArea.clear();
+                try {
+                    String content = textArea.getValue();
+                    String title = "Note: " + content.substring(0, Math.min(content.length(), 50));
+                    String aiContext = "Text note saved. AI context will be generated automatically.";
+                    vaultItemService.saveText(title, content, aiContext);
+
+                    Notification notification = Notification.show(
+                        "✓ Text saved to database! AI context generated.",
+                        3000,
+                        Notification.Position.BOTTOM_END
+                    );
+                    notification.addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+                    textArea.clear();
+                    refreshRecentItems();
+                } catch (Exception ex) {
+                    Notification.show("Error saving: " + ex.getMessage(), 5000, Notification.Position.MIDDLE)
+                        .addThemeVariants(NotificationVariant.LUMO_ERROR);
+                }
             }
         });
 
@@ -292,36 +326,120 @@ public class MainView extends VerticalLayout {
 
         sectionHeader.add(sectionTitle, viewAllBtn);
 
-        // Sample items (placeholder)
-        VerticalLayout itemsList = new VerticalLayout();
+        // Items list - loads from database
+        itemsList = new VerticalLayout();
         itemsList.setWidthFull();
         itemsList.setPadding(false);
         itemsList.setSpacing(true);
         itemsList.addClassName("items-list");
 
-        itemsList.add(
-            createSampleItem(
-                VaadinIcon.GLOBE,
-                "Article: The Future of AI",
-                "An in-depth analysis of artificial intelligence trends and predictions for 2026. Covers machine learning, neural networks, and ethical considerations.",
-                "Article • Medium • Today"
-            ),
-            createSampleItem(
-                VaadinIcon.PICTURE,
-                "Screenshot: Design Inspiration",
-                "A beautiful dashboard design showcasing modern UI patterns. Features gradient backgrounds, glassmorphism effects, and intuitive navigation elements.",
-                "Image • Screenshot • Yesterday"
-            ),
-            createSampleItem(
-                VaadinIcon.TEXT_LABEL,
-                "Note: Project Ideas",
-                "Brainstorming session notes about potential side projects. Includes ideas for productivity tools, creative applications, and developer utilities.",
-                "Text • Note • 2 days ago"
-            )
-        );
+        // Load items from database
+        loadRecentItems();
 
         section.add(sectionHeader, itemsList);
         return section;
+    }
+
+    private void loadRecentItems() {
+        itemsList.removeAll();
+
+        List<VaultItem> recentItems = vaultItemService.findRecent();
+
+        if (recentItems.isEmpty()) {
+            // Show placeholder items when database is empty
+            itemsList.add(
+                createSampleItem(
+                    VaadinIcon.INFO_CIRCLE,
+                    "No items yet",
+                    "Start saving URLs, images, or text to see them here. Your vault is empty - add your first item above!",
+                    "Tip • Get started"
+                )
+            );
+        } else {
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM dd, yyyy");
+            for (VaultItem item : recentItems) {
+                VaadinIcon icon = switch (item.getItemType()) {
+                    case "URL" -> VaadinIcon.GLOBE;
+                    case "IMAGE" -> VaadinIcon.PICTURE;
+                    case "TEXT" -> VaadinIcon.TEXT_LABEL;
+                    default -> VaadinIcon.FILE;
+                };
+
+                String meta = item.getItemType() + " • " +
+                    (item.getTags() != null ? item.getTags() : "") + " • " +
+                    (item.getCreatedAt() != null ? item.getCreatedAt().format(formatter) : "Unknown date");
+
+                itemsList.add(createDatabaseItem(icon, item));
+            }
+        }
+    }
+
+    private void refreshRecentItems() {
+        if (itemsList != null) {
+            loadRecentItems();
+        }
+    }
+
+    private Component createDatabaseItem(VaadinIcon iconName, VaultItem vaultItem) {
+        HorizontalLayout item = new HorizontalLayout();
+        item.setWidthFull();
+        item.setPadding(true);
+        item.addClassName("vault-item");
+        item.setAlignItems(FlexComponent.Alignment.START);
+
+        // Icon
+        Div iconWrapper = new Div();
+        iconWrapper.addClassName("item-icon-wrapper");
+        Icon icon = iconName.create();
+        icon.addClassName("item-icon");
+        iconWrapper.add(icon);
+
+        // Content
+        VerticalLayout content = new VerticalLayout();
+        content.setPadding(false);
+        content.setSpacing(false);
+        content.addClassName("item-content");
+
+        H4 itemTitle = new H4(vaultItem.getTitle());
+        itemTitle.addClassName("item-title");
+
+        String contextText = vaultItem.getAiContext() != null ? vaultItem.getAiContext() :
+            (vaultItem.getContent() != null ? vaultItem.getContent().substring(0, Math.min(vaultItem.getContent().length(), 150)) + "..." : "No content");
+        Paragraph itemContext = new Paragraph(contextText);
+        itemContext.addClassName("item-context");
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm");
+        String metaText = vaultItem.getItemType() + " • " +
+            (vaultItem.getTags() != null ? vaultItem.getTags() : "No tags") + " • " +
+            (vaultItem.getCreatedAt() != null ? vaultItem.getCreatedAt().format(formatter) : "");
+        Span itemMeta = new Span(metaText);
+        itemMeta.addClassName("item-meta");
+
+        content.add(itemTitle, itemContext, itemMeta);
+
+        // Actions
+        Button deleteBtn = new Button(VaadinIcon.TRASH.create());
+        deleteBtn.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_ICON, ButtonVariant.LUMO_ERROR);
+        deleteBtn.addClassName("item-action");
+        deleteBtn.getElement().setAttribute("aria-label", "Delete item");
+        deleteBtn.addClickListener(e -> {
+            vaultItemService.delete(vaultItem.getId());
+            Notification.show("Item deleted", 2000, Notification.Position.BOTTOM_END);
+            refreshRecentItems();
+        });
+
+        Button openBtn = new Button(VaadinIcon.EXTERNAL_LINK.create());
+        openBtn.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_ICON);
+        openBtn.addClassName("item-action");
+        openBtn.getElement().setAttribute("aria-label", "Open item");
+
+        HorizontalLayout actions = new HorizontalLayout(openBtn, deleteBtn);
+        actions.setSpacing(false);
+
+        item.add(iconWrapper, content, actions);
+        item.expand(content);
+
+        return item;
     }
 
     private Component createSampleItem(VaadinIcon iconName, String title, String context, String meta) {
