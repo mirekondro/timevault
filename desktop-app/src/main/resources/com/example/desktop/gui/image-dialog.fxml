@@ -57,13 +57,18 @@
                                 <StackPane styleClass="image-preview-shell gallery-preview-shell">
                                     <Label fx:id="previewPlaceholderLabel" styleClass="muted-copy" wrapText="true"/>
                                     <ImageView fx:id="previewImageView" fitWidth="460.0" fitHeight="320.0" preserveRatio="true"/>
-                                    <HBox alignment="CENTER" spacing="0.0" StackPane.alignment="CENTER">
-                                        <Button fx:id="previewPreviousButton" mnemonicParsing="false" onAction="#handlePreviewPrevious"
-                                                styleClass="preview-nav-button" text="&lt;"/>
-                                        <Pane HBox.hgrow="ALWAYS"/>
-                                        <Button fx:id="previewNextButton" mnemonicParsing="false" onAction="#handlePreviewNext"
-                                                styleClass="preview-nav-button" text="&gt;"/>
-                                    </HBox>
+                                    <Button fx:id="previewPreviousButton" mnemonicParsing="false" onAction="#handlePreviewPrevious"
+                                            styleClass="preview-nav-button" text="&lt;" StackPane.alignment="CENTER_LEFT">
+                                        <StackPane.margin>
+                                            <Insets left="16.0"/>
+                                        </StackPane.margin>
+                                    </Button>
+                                    <Button fx:id="previewNextButton" mnemonicParsing="false" onAction="#handlePreviewNext"
+                                            styleClass="preview-nav-button" text="&gt;" StackPane.alignment="CENTER_RIGHT">
+                                        <StackPane.margin>
+                                            <Insets right="16.0"/>
+                                        </StackPane.margin>
+                                    </Button>
                                     <Label fx:id="previewCounterLabel" styleClass="preview-counter-chip" text="0 / 0"
                                            StackPane.alignment="BOTTOM_CENTER"/>
                                 </StackPane>
