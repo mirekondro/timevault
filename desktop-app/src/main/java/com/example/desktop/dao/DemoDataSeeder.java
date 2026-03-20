@@ -18,7 +18,6 @@ public class DemoDataSeeder {
 
     private static final String TYPE_URL = "URL";
     private static final String TYPE_TEXT = "TEXT";
-    private static final String TYPE_IMAGE = "IMAGE";
 
     public void seed(Connection connection) throws SQLException {
         boolean originalAutoCommit = connection.getAutoCommit();
@@ -114,19 +113,7 @@ public class DemoDataSeeder {
                         "The header search feels stronger now that filters live in the top bar. Next iteration should focus on the profile menu and icon polish.",
                         "This text entry preserves feedback from a design pass so the same ideas are easy to revisit later.",
                         "TEXT, Feedback, UX, Review",
-                        baseTime.minusHours(4)),
-                imageItem(
-                        "Landing page wireframe",
-                        "C:\\TimeVault\\demo\\asim\\landing-wireframe.png",
-                        "Saved as an image reference so Asim can keep early layout explorations alongside live app content.",
-                        "IMAGE, Wireframe, Design, Desktop",
-                        baseTime.minusHours(3)),
-                imageItem(
-                        "Moodboard for vault colors",
-                        "C:\\TimeVault\\demo\\asim\\vault-moodboard.jpg",
-                        "Saved as an image reference because the color palette and glow treatment are part of the app's visual identity discussion.",
-                        "IMAGE, Moodboard, Branding, Color",
-                        baseTime.minusHours(1))
+                        baseTime.minusHours(4))
         );
     }
 
@@ -158,19 +145,7 @@ public class DemoDataSeeder {
                         "Start with login and registration, then show separate account data, then switch to Danish, then explain how reset mode seeds a clean demo every launch.",
                         "This draft helps Mirek rehearse the story of the application from first launch to multi-language demo data.",
                         "TEXT, Demo, Presentation, Script",
-                        baseTime.minusHours(5)),
-                imageItem(
-                        "Schema whiteboard photo",
-                        "C:\\TimeVault\\demo\\mirek\\schema-whiteboard.png",
-                        "Saved as an image reference because the schema planning session is part of the project's technical history.",
-                        "IMAGE, Schema, Whiteboard, Database",
-                        baseTime.minusHours(2)),
-                imageItem(
-                        "Archive card inspiration",
-                        "C:\\TimeVault\\demo\\mirek\\archive-card-inspiration.webp",
-                        "Saved as an image reference for later polish work on the archive card treatment and spacing.",
-                        "IMAGE, Inspiration, Archive, UI",
-                        baseTime.minusMinutes(30))
+                        baseTime.minusHours(5))
         );
     }
 
@@ -189,14 +164,6 @@ public class DemoDataSeeder {
                               String tags,
                               LocalDateTime createdAt) {
         return new DemoItem(title, content, aiContext, TYPE_TEXT, tags, null, createdAt, createdAt);
-    }
-
-    private DemoItem imageItem(String title,
-                               String content,
-                               String aiContext,
-                               String tags,
-                               LocalDateTime createdAt) {
-        return new DemoItem(title, content, aiContext, TYPE_IMAGE, tags, null, createdAt, createdAt);
     }
 
     private record DemoItem(String title,

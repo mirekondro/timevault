@@ -51,6 +51,18 @@ public class ImageDialogController extends BaseItemDialogController {
     private Label galleryCountLabel;
 
     @FXML
+    private Label sharedTitleLabel;
+
+    @FXML
+    private Label sharedNotesLabel;
+
+    @FXML
+    private Label sharedSummaryLabel;
+
+    @FXML
+    private Label sharedTagsLabel;
+
+    @FXML
     private TextField titleField;
 
     @FXML
@@ -82,6 +94,15 @@ public class ImageDialogController extends BaseItemDialogController {
 
     @FXML
     private Button analyzeButton;
+
+    @FXML
+    private Button previewPreviousButton;
+
+    @FXML
+    private Button previewNextButton;
+
+    @FXML
+    private Label previewCounterLabel;
 
     @FXML
     private ImageView previewImageView;
@@ -131,6 +152,10 @@ public class ImageDialogController extends BaseItemDialogController {
         appModel.bindPrompt(tagsField, "dialog.image.tags.prompt");
 
         appModel.bindText(gallerySectionLabel, "dialog.image.gallery.section");
+        appModel.bindText(sharedTitleLabel, "dialog.image.shared.title");
+        appModel.bindText(sharedNotesLabel, "dialog.image.shared.notes");
+        appModel.bindText(sharedSummaryLabel, "dialog.image.shared.summary");
+        appModel.bindText(sharedTagsLabel, "dialog.image.shared.tags");
         appModel.bindText(addImagesButton, "dialog.image.files.add");
         appModel.bindText(removeImageButton, "dialog.image.files.remove");
         appModel.bindText(moveUpButton, "dialog.image.files.moveUp");
@@ -158,6 +183,17 @@ public class ImageDialogController extends BaseItemDialogController {
                 Bindings.size(workingImages)));
         analyzeButton.disableProperty().bind(Bindings.isEmpty(workingImages));
         primaryButton.disableProperty().bind(Bindings.isEmpty(workingImages));
+        previewPreviousButton.disableProperty().bind(Bindings.createBooleanBinding(
+                () -> galleryListView.getSelectionModel().getSelectedIndex() <= 0,
+                galleryListView.getSelectionModel().selectedIndexProperty(),
+                Bindings.size(workingImages)));
+        previewNextButton.disableProperty().bind(Bindings.createBooleanBinding(
+                () -> {
+                    int index = galleryListView.getSelectionModel().getSelectedIndex();
+                    return index < 0 || index >= workingImages.size() - 1;
+                },
+                galleryListView.getSelectionModel().selectedIndexProperty(),
+                Bindings.size(workingImages)));
 
         workingImages.addListener((javafx.collections.ListChangeListener<GalleryImageFx>) change -> {
             updateGalleryCount();
@@ -321,6 +357,24 @@ public class ImageDialogController extends BaseItemDialogController {
     }
 
     @FXML
+    private void handlePreviewPrevious() {
+        int selectedIndex = galleryListView.getSelectionModel().getSelectedIndex();
+        if (selectedIndex > 0) {
+            galleryListView.getSelectionModel().select(selectedIndex - 1);
+            galleryListView.scrollTo(selectedIndex - 1);
+        }
+    }
+
+    @FXML
+    private void handlePreviewNext() {
+        int selectedIndex = galleryListView.getSelectionModel().getSelectedIndex();
+        if (selectedIndex >= 0 && selectedIndex < workingImages.size() - 1) {
+            galleryListView.getSelectionModel().select(selectedIndex + 1);
+            galleryListView.scrollTo(selectedIndex + 1);
+        }
+    }
+
+    @FXML
     private void handleSave() {
         ensureSuggestedTitle();
         DialogActionResult result = editMode
@@ -390,6 +444,7 @@ public class ImageDialogController extends BaseItemDialogController {
         if (selectedImage == null) {
             previewImageView.setImage(null);
             previewMetaLabel.setText("");
+            previewCounterLabel.setText("0 / 0");
             previewPlaceholderLabel.setText(appModel.text("dialog.image.preview.empty"));
             selectedImageContextArea.setText(appModel.text("dialog.image.selected.analysis.empty"));
             return;
@@ -405,6 +460,8 @@ public class ImageDialogController extends BaseItemDialogController {
         String fileName = selectedImage.getFileName() == null || selectedImage.getFileName().isBlank()
                 ? appModel.text("item.untitled")
                 : selectedImage.getFileName();
+        int selectedIndex = Math.max(galleryListView.getSelectionModel().getSelectedIndex(), 0) + 1;
+        previewCounterLabel.setText(selectedIndex + " / " + workingImages.size());
         previewMetaLabel.setText(appModel.text(
                 "dialog.image.preview.meta",
                 fileName,

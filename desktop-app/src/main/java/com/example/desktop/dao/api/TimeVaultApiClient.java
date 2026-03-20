@@ -2,6 +2,7 @@ package com.example.desktop.dao.api;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -31,7 +32,10 @@ public class TimeVaultApiClient {
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(Math.max(1, connectTimeoutSeconds)))
                 .build();
-        this.objectMapper = new ObjectMapper().findAndRegisterModules();
+        this.objectMapper = new ObjectMapper()
+                .findAndRegisterModules()
+                // Keep the desktop client tolerant while the backend is being restarted or upgraded.
+                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     }
 
     public void ping() throws SQLException {

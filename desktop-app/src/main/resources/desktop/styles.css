@@ -693,6 +693,38 @@
     -fx-min-height: 180px;
 }
 
+.gallery-preview-shell {
+    -fx-min-height: 360px;
+    -fx-padding: 18px;
+}
+
+.preview-nav-button {
+    -fx-background-color: rgba(15, 20, 28, 0.72);
+    -fx-border-color: rgba(255, 255, 255, 0.12);
+    -fx-border-width: 1px;
+    -fx-background-radius: 999px;
+    -fx-border-radius: 999px;
+    -fx-text-fill: white;
+    -fx-font-size: 20px;
+    -fx-font-weight: 700;
+    -fx-min-width: 40px;
+    -fx-min-height: 40px;
+    -fx-padding: 0;
+}
+
+.preview-nav-button:hover {
+    -fx-background-color: rgba(88, 196, 221, 0.22);
+}
+
+.preview-counter-chip {
+    -fx-background-color: rgba(15, 20, 28, 0.76);
+    -fx-background-radius: 999px;
+    -fx-padding: 6px 12px;
+    -fx-text-fill: white;
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+}
+
 .gallery-list-view {
     -fx-background-color: rgba(255, 255, 255, 0.03);
     -fx-border-color: rgba(255, 255, 255, 0.08);

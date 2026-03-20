@@ -1,5 +1,6 @@
 @echo off
 setlocal
-call "%~dp0mvnw.cmd" -q -DskipTests -pl shared-core -am install
+call "%~dp0prepare-desktop-launch.cmd"
 if errorlevel 1 exit /b %errorlevel%
-call "%~dp0mvnw.cmd" -f "%~dp0desktop-app\pom.xml" javafx:run
+echo Desktop launch is prepared.
+echo Start the VS Code "Run Desktop App" launch configuration to open the JavaFX app.
