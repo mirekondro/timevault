@@ -1,6 +1,6 @@
 package com.example.desktop.bll;
 
-import com.example.desktop.dao.SchemaInitializer;
+import com.example.desktop.dao.AppInitializer;
 import com.example.desktop.dao.UserDAO;
 import com.example.desktop.dao.VaultItemDAO;
 import com.example.desktop.model.AppModel;
@@ -15,9 +15,7 @@ import com.example.desktop.model.UnlockedItemSession;
 import com.example.desktop.model.VaultItemFx;
 import com.example.desktop.security.ProtectedItemCrypto;
 import com.example.shared.model.UserSession;
-import com.example.shared.model.VaultUser;
 import com.example.shared.security.AccountValidator;
-import com.example.shared.security.PasswordHasher;
 import com.example.shared.service.GeminiService;
 
 import java.io.IOException;
@@ -39,24 +37,24 @@ public class VaultManager {
 
     private final VaultItemDAO vaultItemDAO;
     private final UserDAO userDAO;
-    private final SchemaInitializer schemaInitializer;
+    private final AppInitializer appInitializer;
     private final GeminiService geminiService;
     private final ProtectedItemCrypto protectedItemCrypto = new ProtectedItemCrypto();
 
     public VaultManager(VaultItemDAO vaultItemDAO,
                         UserDAO userDAO,
-                        SchemaInitializer schemaInitializer,
+                        AppInitializer appInitializer,
                         GeminiService geminiService) {
         this.vaultItemDAO = vaultItemDAO;
         this.userDAO = userDAO;
-        this.schemaInitializer = schemaInitializer;
+        this.appInitializer = appInitializer;
         this.geminiService = geminiService;
     }
 
     public void initialize(AppModel appModel) {
         appModel.setBusy(true);
         try {
-            schemaInitializer.initializeSchema();
+            appInitializer.initialize();
             appModel.clearVault();
         } catch (SQLException exception) {
             appModel.showErrorKey("status.db.init.error", safeMessage(exception));
@@ -104,21 +102,15 @@ public class VaultManager {
 
         appModel.setBusy(true);
         try {
-            if (userDAO.findByEmail(email).isPresent()) {
-                appModel.showErrorKey("status.auth.email.exists");
-                return;
-            }
-
-            VaultUser newUser = new VaultUser(email, PasswordHasher.hash(password));
-            VaultUser savedUser = userDAO.insert(newUser);
-            UserSession session = toSession(savedUser);
-
+            UserSession session = userDAO.register(email, password);
             appModel.setCurrentUser(session);
             resetVaultFilters(appModel);
             appModel.clearRegisterForm();
             appModel.clearLoginForm();
             int itemCount = loadCurrentUserItems(appModel, session);
             appModel.showSuccessKey("status.auth.account.created", session.email(), itemCount);
+        } catch (IllegalArgumentException exception) {
+            handleRegisterError(appModel, exception);
         } catch (SQLException exception) {
             appModel.showErrorKey("status.auth.create.error", safeMessage(exception));
         } finally {
@@ -142,19 +134,15 @@ public class VaultManager {
 
         appModel.setBusy(true);
         try {
-            Optional<VaultUser> existingUser = userDAO.findByEmail(email);
-            if (existingUser.isEmpty() || !PasswordHasher.matches(password, existingUser.get().getPasswordHash())) {
-                appModel.showErrorKey("status.auth.invalid.credentials");
-                return;
-            }
-
-            UserSession session = toSession(existingUser.get());
+            UserSession session = userDAO.authenticate(email, password);
             appModel.setCurrentUser(session);
             resetVaultFilters(appModel);
             appModel.clearLoginForm();
             appModel.clearRegisterForm();
             int itemCount = loadCurrentUserItems(appModel, session);
             appModel.showSuccessKey("status.auth.logged.in", session.email(), itemCount);
+        } catch (IllegalArgumentException exception) {
+            handleLoginError(appModel, exception);
         } catch (SQLException exception) {
             appModel.showErrorKey("status.auth.login.error", safeMessage(exception));
         } finally {
@@ -167,6 +155,12 @@ public class VaultManager {
         if (currentUser == null) {
             appModel.showInfoKey("status.auth.no.current.user");
             return;
+        }
+
+        try {
+            userDAO.logout();
+        } catch (SQLException ignored) {
+            // Local logout should still complete even if the backend is unavailable.
         }
 
         appModel.setCurrentUser(null);
@@ -198,30 +192,11 @@ public class VaultManager {
 
         appModel.setBusy(true);
         try {
-            Optional<VaultUser> currentUserRecord = userDAO.findById(currentUser.id());
-            if (currentUserRecord.isEmpty()) {
-                return dialogFormError(appModel, "status.profile.account.missing");
-            }
-
-            VaultUser user = currentUserRecord.get();
-            if (!PasswordHasher.matches(currentPassword, user.getPasswordHash())) {
-                return dialogFieldError(appModel, DialogFieldIds.PROFILE_EMAIL_CURRENT_PASSWORD, "status.profile.current.password.invalid");
-            }
-            if (newEmail.equals(user.getEmail())) {
-                return dialogFieldError(appModel, DialogFieldIds.PROFILE_EMAIL, "status.profile.email.same");
-            }
-
-            Optional<VaultUser> existingUser = userDAO.findByEmail(newEmail);
-            if (existingUser.isPresent() && existingUser.get().getId() != user.getId()) {
-                return dialogFieldError(appModel, DialogFieldIds.PROFILE_EMAIL, "status.profile.email.exists");
-            }
-
-            if (!userDAO.updateEmail(user.getId(), newEmail)) {
-                return dialogFormError(appModel, "status.profile.account.missing");
-            }
-
-            appModel.setCurrentUser(new UserSession(user.getId(), newEmail));
+            UserSession updatedSession = userDAO.updateEmail(currentUser.id(), newEmail, currentPassword);
+            appModel.setCurrentUser(updatedSession);
             return DialogActionResult.successLocalToast(appModel.text("status.profile.email.updated", newEmail));
+        } catch (IllegalArgumentException exception) {
+            return mapProfileEmailValidationError(appModel, exception);
         } catch (SQLException exception) {
             return dialogFormError(appModel, "status.profile.email.error", safeMessage(exception));
         } finally {
@@ -249,22 +224,10 @@ public class VaultManager {
 
         appModel.setBusy(true);
         try {
-            Optional<VaultUser> currentUserRecord = userDAO.findById(currentUser.id());
-            if (currentUserRecord.isEmpty()) {
-                return dialogFormError(appModel, "status.profile.account.missing");
-            }
-
-            VaultUser user = currentUserRecord.get();
-            if (!PasswordHasher.matches(currentPassword, user.getPasswordHash())) {
-                return dialogFieldError(appModel, DialogFieldIds.PROFILE_PASSWORD_CURRENT, "status.profile.current.password.invalid");
-            }
-
-            String newPasswordHash = PasswordHasher.hash(newPassword);
-            if (!userDAO.updatePasswordHash(user.getId(), newPasswordHash)) {
-                return dialogFormError(appModel, "status.profile.account.missing");
-            }
-
+            userDAO.updatePassword(currentUser.id(), currentPassword, newPassword, confirmPassword);
             return DialogActionResult.successLocalToast(appModel.text("status.profile.password.updated"));
+        } catch (IllegalArgumentException exception) {
+            return mapProfilePasswordValidationError(appModel, exception);
         } catch (SQLException exception) {
             return dialogFormError(appModel, "status.profile.password.error", safeMessage(exception));
         } finally {
@@ -1041,10 +1004,6 @@ public class VaultManager {
         return (int) items.stream().filter(item -> !item.isDeleted()).count();
     }
 
-    private UserSession toSession(VaultUser user) {
-        return new UserSession(user.getId(), user.getEmail());
-    }
-
     private void resetVaultFilters(AppModel appModel) {
         appModel.resetArchiveFilters();
     }
@@ -1075,6 +1034,55 @@ public class VaultManager {
 
     private String safePasswordValue(String value) {
         return value == null ? "" : value;
+    }
+
+    private void handleRegisterError(AppModel appModel, IllegalArgumentException exception) {
+        if (containsIgnoreCase(exception.getMessage(), "already exists")) {
+            appModel.showErrorKey("status.auth.email.exists");
+            return;
+        }
+        appModel.showErrorKey("status.auth.create.error", safeMessage(exception));
+    }
+
+    private void handleLoginError(AppModel appModel, IllegalArgumentException exception) {
+        String message = exception.getMessage();
+        if (containsIgnoreCase(message, "incorrect") || containsIgnoreCase(message, "found")) {
+            appModel.showErrorKey("status.auth.invalid.credentials");
+            return;
+        }
+        appModel.showErrorKey("status.auth.login.error", safeMessage(exception));
+    }
+
+    private DialogActionResult mapProfileEmailValidationError(AppModel appModel, IllegalArgumentException exception) {
+        String message = exception.getMessage();
+        if (containsIgnoreCase(message, "current password")) {
+            return dialogFieldError(appModel, DialogFieldIds.PROFILE_EMAIL_CURRENT_PASSWORD, "status.profile.current.password.invalid");
+        }
+        if (containsIgnoreCase(message, "already exists")) {
+            return dialogFieldError(appModel, DialogFieldIds.PROFILE_EMAIL, "status.profile.email.exists");
+        }
+        if (containsIgnoreCase(message, "current email")) {
+            return dialogFieldError(appModel, DialogFieldIds.PROFILE_EMAIL, "status.profile.email.same");
+        }
+        if (containsIgnoreCase(message, "account not found")) {
+            return dialogFormError(appModel, "status.profile.account.missing");
+        }
+        return dialogFormError(appModel, "status.profile.email.error", safeMessage(exception));
+    }
+
+    private DialogActionResult mapProfilePasswordValidationError(AppModel appModel, IllegalArgumentException exception) {
+        String message = exception.getMessage();
+        if (containsIgnoreCase(message, "current password")) {
+            return dialogFieldError(appModel, DialogFieldIds.PROFILE_PASSWORD_CURRENT, "status.profile.current.password.invalid");
+        }
+        if (containsIgnoreCase(message, "account not found")) {
+            return dialogFormError(appModel, "status.profile.account.missing");
+        }
+        return dialogFormError(appModel, "status.profile.password.error", safeMessage(exception));
+    }
+
+    private boolean containsIgnoreCase(String value, String needle) {
+        return value != null && needle != null && value.toLowerCase(Locale.ROOT).contains(needle.toLowerCase(Locale.ROOT));
     }
 
     private String safeMessage(Exception exception) {

@@ -28,4 +28,21 @@ public class DesktopApplicationConfig {
     public String geminiModel() {
         return properties.getProperty("gemini.model", "gemini-2.0-flash").trim();
     }
+
+    public String backendMode() {
+        return properties.getProperty("desktop.backend.mode", "api").trim().toLowerCase();
+    }
+
+    public String apiBaseUrl() {
+        return properties.getProperty("timevault.api.baseUrl", "http://localhost:8081").trim();
+    }
+
+    public int apiConnectTimeoutSeconds() {
+        String value = properties.getProperty("timevault.api.connectTimeoutSeconds", "10").trim();
+        try {
+            return Math.max(1, Integer.parseInt(value));
+        } catch (NumberFormatException exception) {
+            return 10;
+        }
+    }
 }

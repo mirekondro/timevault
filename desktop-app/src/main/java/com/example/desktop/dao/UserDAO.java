@@ -1,22 +1,21 @@
 package com.example.desktop.dao;
 
-import com.example.shared.model.VaultUser;
+import com.example.shared.model.UserSession;
 
 import java.sql.SQLException;
-import java.util.Optional;
 
 /**
  * DAO contract for desktop user accounts.
  */
 public interface UserDAO {
 
-    Optional<VaultUser> findById(long id) throws SQLException;
+    UserSession register(String email, String rawPassword) throws SQLException;
 
-    Optional<VaultUser> findByEmail(String email) throws SQLException;
+    UserSession authenticate(String email, String rawPassword) throws SQLException;
 
-    VaultUser insert(VaultUser user) throws SQLException;
+    UserSession updateEmail(long userId, String email, String currentPassword) throws SQLException;
 
-    boolean updateEmail(long userId, String email) throws SQLException;
+    void updatePassword(long userId, String currentPassword, String newPassword, String confirmPassword) throws SQLException;
 
-    boolean updatePasswordHash(long userId, String passwordHash) throws SQLException;
+    void logout() throws SQLException;
 }

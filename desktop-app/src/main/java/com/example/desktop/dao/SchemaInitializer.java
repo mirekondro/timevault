@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 /**
  * Ensures the desktop database schema exists before the GUI starts using it.
  */
-public class SchemaInitializer {
+public class SchemaInitializer implements AppInitializer {
 
     private static final String LEGACY_USER_EMAIL = "legacy-import@timevault.local";
 
@@ -49,6 +49,11 @@ public class SchemaInitializer {
                 demoDataSeeder.seed(connection);
             }
         }
+    }
+
+    @Override
+    public void initialize() throws SQLException {
+        initializeSchema();
     }
 
     private void dropTables(Statement statement) throws SQLException {

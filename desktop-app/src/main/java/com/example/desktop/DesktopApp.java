@@ -2,11 +2,18 @@ package com.example.desktop;
 
 import com.example.desktop.bll.VaultManager;
 import com.example.desktop.config.DesktopApplicationConfig;
+import com.example.desktop.dao.AppInitializer;
 import com.example.desktop.dao.ConnectionManager;
 import com.example.desktop.dao.DatabaseConfig;
 import com.example.desktop.dao.SchemaInitializer;
 import com.example.desktop.dao.SqlUserDAO;
 import com.example.desktop.dao.SqlVaultItemDAO;
+import com.example.desktop.dao.UserDAO;
+import com.example.desktop.dao.VaultItemDAO;
+import com.example.desktop.dao.api.ApiBackendInitializer;
+import com.example.desktop.dao.api.ApiUserDAO;
+import com.example.desktop.dao.api.ApiVaultItemDAO;
+import com.example.desktop.dao.api.TimeVaultApiClient;
 import com.example.desktop.gui.AuthController;
 import com.example.desktop.gui.MainController;
 import com.example.desktop.model.AppModel;
@@ -33,13 +40,28 @@ public class DesktopApp extends Application {
     @Override
     public void start(Stage stage) throws IOException {
         DesktopApplicationConfig applicationConfig = new DesktopApplicationConfig();
-        DatabaseConfig databaseConfig = new DatabaseConfig();
-        ConnectionManager connectionManager = new ConnectionManager(databaseConfig);
-        SchemaInitializer schemaInitializer = new SchemaInitializer(connectionManager, databaseConfig);
-        SqlVaultItemDAO vaultItemDAO = new SqlVaultItemDAO(connectionManager);
-        SqlUserDAO userDAO = new SqlUserDAO(connectionManager);
+        UserDAO userDAO;
+        VaultItemDAO vaultItemDAO;
+        AppInitializer appInitializer;
+
+        if ("sql".equalsIgnoreCase(applicationConfig.backendMode())) {
+            DatabaseConfig databaseConfig = new DatabaseConfig();
+            ConnectionManager connectionManager = new ConnectionManager(databaseConfig);
+            SchemaInitializer schemaInitializer = new SchemaInitializer(connectionManager, databaseConfig);
+            vaultItemDAO = new SqlVaultItemDAO(connectionManager);
+            userDAO = new SqlUserDAO(connectionManager);
+            appInitializer = schemaInitializer;
+        } else {
+            TimeVaultApiClient apiClient = new TimeVaultApiClient(
+                    applicationConfig.apiBaseUrl(),
+                    applicationConfig.apiConnectTimeoutSeconds());
+            vaultItemDAO = new ApiVaultItemDAO(apiClient);
+            userDAO = new ApiUserDAO(apiClient);
+            appInitializer = new ApiBackendInitializer(apiClient);
+        }
+
         GeminiService geminiService = new GeminiService(applicationConfig.geminiApiKey(), applicationConfig.geminiModel());
-        VaultManager vaultManager = new VaultManager(vaultItemDAO, userDAO, schemaInitializer, geminiService);
+        VaultManager vaultManager = new VaultManager(vaultItemDAO, userDAO, appInitializer, geminiService);
         AppModel appModel = new AppModel();
 
         Rectangle2D visualBounds = Screen.getPrimary().getVisualBounds();

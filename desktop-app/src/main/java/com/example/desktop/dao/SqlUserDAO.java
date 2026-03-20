@@ -1,6 +1,8 @@
 package com.example.desktop.dao;
 
+import com.example.shared.model.UserSession;
 import com.example.shared.model.VaultUser;
+import com.example.shared.security.PasswordHasher;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -23,7 +25,80 @@ public class SqlUserDAO implements UserDAO {
     }
 
     @Override
-    public Optional<VaultUser> findById(long id) throws SQLException {
+    public UserSession register(String email, String rawPassword) throws SQLException {
+        if (findUserByEmail(email).isPresent()) {
+            throw new IllegalArgumentException("An account with that email already exists.");
+        }
+
+        VaultUser savedUser = insertUser(new VaultUser(email, PasswordHasher.hash(rawPassword)));
+        return toSession(savedUser);
+    }
+
+    @Override
+    public UserSession authenticate(String email, String rawPassword) throws SQLException {
+        Optional<VaultUser> existingUser = findUserByEmail(email);
+        if (existingUser.isEmpty()) {
+            throw new IllegalArgumentException("No account was found for that email.");
+        }
+        if (!PasswordHasher.matches(rawPassword, existingUser.get().getPasswordHash())) {
+            throw new IllegalArgumentException("Email or password is incorrect.");
+        }
+        return toSession(existingUser.get());
+    }
+
+    @Override
+    public UserSession updateEmail(long userId, String email, String currentPassword) throws SQLException {
+        Optional<VaultUser> currentUser = findUserById(userId);
+        if (currentUser.isEmpty()) {
+            throw new IllegalArgumentException("Account not found.");
+        }
+
+        VaultUser user = currentUser.get();
+        if (!PasswordHasher.matches(currentPassword, user.getPasswordHash())) {
+            throw new IllegalArgumentException("Current password is incorrect.");
+        }
+        if (user.getEmail().equalsIgnoreCase(email)) {
+            throw new IllegalArgumentException("New email matches the current email.");
+        }
+
+        Optional<VaultUser> existingUser = findUserByEmail(email);
+        if (existingUser.isPresent() && existingUser.get().getId() != userId) {
+            throw new IllegalArgumentException("An account with that email already exists.");
+        }
+
+        boolean updated = updateEmailInternal(userId, email);
+        if (!updated) {
+            throw new IllegalArgumentException("Account not found.");
+        }
+
+        return new UserSession(userId, email);
+    }
+
+    @Override
+    public void updatePassword(long userId, String currentPassword, String newPassword, String confirmPassword) throws SQLException {
+        Optional<VaultUser> currentUser = findUserById(userId);
+        if (currentUser.isEmpty()) {
+            throw new IllegalArgumentException("Account not found.");
+        }
+        if (!PasswordHasher.matches(currentPassword, currentUser.get().getPasswordHash())) {
+            throw new IllegalArgumentException("Current password is incorrect.");
+        }
+        if (!newPassword.equals(confirmPassword)) {
+            throw new IllegalArgumentException("New password and confirmation do not match.");
+        }
+
+        boolean updated = updatePasswordHashInternal(userId, PasswordHasher.hash(newPassword));
+        if (!updated) {
+            throw new IllegalArgumentException("Account not found.");
+        }
+    }
+
+    @Override
+    public void logout() {
+        // No server-side session to invalidate in SQL mode.
+    }
+
+    private Optional<VaultUser> findUserById(long id) throws SQLException {
         String sql = """
                 SELECT id, email, password_hash, created_at, updated_at
                 FROM dbo.vault_users
@@ -43,8 +118,7 @@ public class SqlUserDAO implements UserDAO {
         }
     }
 
-    @Override
-    public Optional<VaultUser> findByEmail(String email) throws SQLException {
+    private Optional<VaultUser> findUserByEmail(String email) throws SQLException {
         String sql = """
                 SELECT id, email, password_hash, created_at, updated_at
                 FROM dbo.vault_users
@@ -64,8 +138,7 @@ public class SqlUserDAO implements UserDAO {
         }
     }
 
-    @Override
-    public VaultUser insert(VaultUser user) throws SQLException {
+    private VaultUser insertUser(VaultUser user) throws SQLException {
         String sql = """
                 INSERT INTO dbo.vault_users (email, password_hash, created_at, updated_at)
                 VALUES (?, ?, ?, ?)
@@ -94,8 +167,7 @@ public class SqlUserDAO implements UserDAO {
         return user;
     }
 
-    @Override
-    public boolean updateEmail(long userId, String email) throws SQLException {
+    private boolean updateEmailInternal(long userId, String email) throws SQLException {
         String sql = """
                 UPDATE dbo.vault_users
                 SET email = ?, updated_at = ?
@@ -111,8 +183,7 @@ public class SqlUserDAO implements UserDAO {
         }
     }
 
-    @Override
-    public boolean updatePasswordHash(long userId, String passwordHash) throws SQLException {
+    private boolean updatePasswordHashInternal(long userId, String passwordHash) throws SQLException {
         String sql = """
                 UPDATE dbo.vault_users
                 SET password_hash = ?, updated_at = ?
@@ -139,5 +210,9 @@ public class SqlUserDAO implements UserDAO {
         user.setCreatedAt(createdAt == null ? null : createdAt.toLocalDateTime());
         user.setUpdatedAt(updatedAt == null ? null : updatedAt.toLocalDateTime());
         return user;
+    }
+
+    private UserSession toSession(VaultUser user) {
+        return new UserSession(user.getId(), user.getEmail());
     }
 }
