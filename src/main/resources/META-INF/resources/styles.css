@@ -1368,3 +1368,424 @@ body * {
   color: inherit !important;
 }
 
+/* ============================================
+   VAULT MODAL STYLING - FORCE DARK THEME
+   ============================================ */
+
+/* Force Vaadin Dialog to Dark Theme */
+vaadin-dialog-overlay {
+  background: rgba(5, 5, 10, 0.8) !important;
+  backdrop-filter: blur(8px) !important;
+}
+
+vaadin-dialog-overlay::part(content) {
+  background: var(--glass-bg) !important;
+  backdrop-filter: blur(20px) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--radius-xl) !important;
+  box-shadow: var(--shadow-float) !important;
+  color: var(--text-primary) !important;
+  padding: 0 !important;
+}
+
+/* Force modal content to be dark */
+vaadin-dialog {
+  --lumo-base-color: var(--bg-deep) !important;
+  --lumo-body-text-color: var(--text-primary) !important;
+  --lumo-contrast: var(--text-primary) !important;
+}
+
+/* Override any white backgrounds */
+vaadin-dialog [style*="background: white"],
+vaadin-dialog [style*="background-color: white"],
+vaadin-dialog [style*="background: #fff"],
+vaadin-dialog [style*="background-color: #fff"] {
+  background: var(--glass-bg) !important;
+  background-color: var(--glass-bg) !important;
+}
+
+/* Modal Dialog - Dark Theme */
+.vault-modal {
+  background: var(--glass-bg) !important;
+  backdrop-filter: blur(20px) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--radius-xl) !important;
+  box-shadow: var(--shadow-float) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Modal Overlay - Dark Background */
+vaadin-dialog-overlay::part(overlay) {
+  background: rgba(5, 5, 10, 0.8) !important;
+  backdrop-filter: blur(8px) !important;
+}
+
+/* Modal Content Container */
+.vault-modal vaadin-vertical-layout {
+  background: transparent !important;
+  color: var(--text-primary) !important;
+}
+
+/* Modal Header */
+.vault-modal .modal-header {
+  background: rgba(255, 255, 255, 0.02) !important;
+  border-bottom: 1px solid var(--glass-border) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Modal Body */
+.vault-modal .modal-body {
+  background: transparent !important;
+  color: var(--text-primary) !important;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(167, 139, 250, 0.5) transparent;
+}
+
+.vault-modal .modal-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.vault-modal .modal-body::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+.vault-modal .modal-body::-webkit-scrollbar-thumb {
+  background: rgba(167, 139, 250, 0.5);
+  border-radius: 4px;
+}
+
+.vault-modal .modal-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(167, 139, 250, 0.7);
+}
+
+/* Modal Footer */
+.vault-modal .modal-footer {
+  background: rgba(255, 255, 255, 0.02) !important;
+  border-top: 1px solid var(--glass-border) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Modal Close Button */
+.modal-close-btn {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid var(--glass-border) !important;
+  color: var(--text-primary) !important;
+  border-radius: 50% !important;
+  transition: all 0.3s ease !important;
+}
+
+.modal-close-btn:hover {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-color: rgba(167, 139, 250, 0.5) !important;
+  color: #A78BFA !important;
+  transform: scale(1.1) !important;
+  box-shadow: 0 0 15px rgba(167, 139, 250, 0.3) !important;
+}
+
+/* Type Badge in Modal */
+.vault-modal .type-badge {
+  background: var(--ai-gradient) !important;
+  color: white !important;
+  border: none !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 1px !important;
+}
+
+/* Modal Title */
+.vault-modal h2 {
+  color: var(--text-primary) !important;
+  background: var(--ai-gradient) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+}
+
+/* Modal Metadata */
+.vault-modal .metadata span {
+  color: var(--text-secondary) !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: 20px !important;
+  padding: 6px 12px !important;
+  font-size: 13px !important;
+}
+
+/* Modal Links */
+.vault-modal a {
+  color: #60A5FA !important;
+  text-decoration: none !important;
+  transition: all 0.3s ease !important;
+}
+
+.vault-modal a:hover {
+  color: #A78BFA !important;
+  text-shadow: 0 0 10px rgba(167, 139, 250, 0.5) !important;
+}
+
+/* AI Section in Modal - Enhanced Glassmorphism */
+.modal-ai-section {
+  background: rgba(167, 139, 250, 0.1) !important;
+  border: 1px solid rgba(167, 139, 250, 0.2) !important;
+  border-radius: var(--radius-lg) !important;
+  padding: 20px !important;
+  margin: 20px 0 !important;
+  backdrop-filter: blur(10px) !important;
+  position: relative !important;
+}
+
+.modal-ai-section::before {
+  content: '' !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  height: 2px !important;
+  background: var(--ai-gradient) !important;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0 !important;
+}
+
+.modal-ai-section h4 {
+  color: #A78BFA !important;
+  margin: 0 0 12px 0 !important;
+  font-weight: 700 !important;
+}
+
+.modal-ai-section p {
+  color: var(--text-secondary) !important;
+  line-height: 1.6 !important;
+  margin: 0 0 12px 0 !important;
+}
+
+/* Content Section in Modal */
+.modal-content-section {
+  background: var(--glass-bg) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--radius-lg) !important;
+  padding: 20px !important;
+  margin: 20px 0 !important;
+  backdrop-filter: blur(10px) !important;
+}
+
+.modal-content-section h4 {
+  color: var(--text-primary) !important;
+  margin: 0 0 12px 0 !important;
+  font-weight: 700 !important;
+}
+
+.modal-content-section .content-area {
+  background: rgba(0, 0, 0, 0.3) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: var(--radius-md) !important;
+  color: var(--text-secondary) !important;
+}
+
+/* Modal Button Styling */
+.modal-speak-btn {
+  background: rgba(167, 139, 250, 0.2) !important;
+  border: 1px solid rgba(167, 139, 250, 0.3) !important;
+  color: #A78BFA !important;
+  border-radius: 25px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  padding: 10px 16px !important;
+  transition: all 0.3s ease !important;
+  backdrop-filter: blur(10px) !important;
+}
+
+.modal-speak-btn:hover {
+  background: rgba(167, 139, 250, 0.3) !important;
+  border-color: rgba(167, 139, 250, 0.5) !important;
+  color: white !important;
+  transform: scale(1.05) !important;
+  box-shadow: 0 5px 15px rgba(167, 139, 250, 0.4) !important;
+}
+
+.modal-delete-btn {
+  background: rgba(239, 68, 68, 0.2) !important;
+  border: 1px solid rgba(239, 68, 68, 0.3) !important;
+  color: #EF4444 !important;
+  border-radius: var(--radius-md) !important;
+  font-weight: 600 !important;
+  transition: all 0.3s ease !important;
+  backdrop-filter: blur(10px) !important;
+}
+
+.modal-delete-btn:hover {
+  background: rgba(239, 68, 68, 0.3) !important;
+  border-color: rgba(239, 68, 68, 0.5) !important;
+  color: white !important;
+  transform: scale(1.05) !important;
+  box-shadow: 0 5px 15px rgba(239, 68, 68, 0.4) !important;
+}
+
+/* Card Hover Effect for Clickability - Enhanced */
+.vault-card {
+  transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1) !important;
+  cursor: pointer !important;
+}
+
+.vault-card:hover {
+  transform: translateY(-8px) scale(1.02) !important;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.4), 0 10px 20px rgba(167, 139, 250, 0.3) !important;
+  border-color: rgba(167, 139, 250, 0.5) !important;
+  background: linear-gradient(180deg, rgba(30, 30, 40, 0.9) 0%, rgba(20, 20, 30, 0.8) 100%) !important;
+}
+
+.vault-card:active {
+  transform: translateY(-4px) scale(1.01) !important;
+  transition: all 0.1s ease !important;
+}
+
+/* Modal Animation - Smooth Entrance */
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(20px);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    filter: blur(0);
+  }
+}
+
+.vault-modal[opening] {
+  animation: modalFadeIn 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+/* Mobile Responsive Modal - Dark Theme */
+@media (max-width: 768px) {
+  .vault-modal {
+    width: 95vw !important;
+    height: 90vh !important;
+    margin: 0 !important;
+    border-radius: var(--radius-lg) !important;
+  }
+
+  .vault-modal .modal-header,
+  .vault-modal .modal-footer {
+    padding: 16px !important;
+  }
+
+  .vault-modal .modal-body {
+    padding: 0 16px !important;
+  }
+
+  .modal-ai-section,
+  .modal-content-section {
+    margin: 16px 0 !important;
+    padding: 16px !important;
+  }
+}
+
+/* Ensure all modal text is properly colored */
+.vault-modal * {
+  color: inherit !important;
+}
+
+.vault-modal h1, .vault-modal h2, .vault-modal h3,
+.vault-modal h4, .vault-modal h5, .vault-modal h6 {
+  color: var(--text-primary) !important;
+}
+
+.vault-modal p, .vault-modal span, .vault-modal div {
+  color: var(--text-secondary) !important;
+}
+
+/* Modal glassmorphism enhancement */
+.vault-modal::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at 30% 20%, rgba(167, 139, 250, 0.1), transparent 50%);
+  border-radius: var(--radius-xl);
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* ============================================
+   NUCLEAR OPTION - FORCE DARK MODAL THEME
+   ============================================ */
+
+/* Force absolutely all dialog elements to be dark */
+vaadin-dialog-overlay,
+vaadin-dialog-overlay::part(overlay),
+vaadin-dialog-overlay::part(content),
+vaadin-dialog-overlay::part(header),
+vaadin-dialog-overlay::part(footer) {
+  background: rgba(5, 5, 10, 0.95) !important;
+  background-color: rgba(5, 5, 10, 0.95) !important;
+}
+
+vaadin-dialog-overlay::part(content) {
+  background: rgba(20, 20, 30, 0.8) !important;
+  background-color: rgba(20, 20, 30, 0.8) !important;
+  backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 24px !important;
+  box-shadow: 0 20px 40px -10px rgba(0,0,0,0.5), 0 0 20px rgba(99, 102, 241, 0.15) !important;
+}
+
+/* Force all vaadin-vertical-layout inside dialog to be transparent */
+vaadin-dialog-overlay vaadin-vertical-layout,
+vaadin-dialog-overlay vaadin-horizontal-layout,
+vaadin-dialog-overlay div,
+vaadin-dialog-overlay span,
+vaadin-dialog-overlay p,
+vaadin-dialog-overlay h1,
+vaadin-dialog-overlay h2,
+vaadin-dialog-overlay h3,
+vaadin-dialog-overlay h4 {
+  background: transparent !important;
+  background-color: transparent !important;
+  color: #ffffff !important;
+}
+
+/* Override any Lumo theme defaults */
+vaadin-dialog-overlay {
+  --lumo-base-color: #05050A !important;
+  --lumo-body-text-color: #ffffff !important;
+  --lumo-header-text-color: #ffffff !important;
+  --lumo-secondary-text-color: #cbd5e1 !important;
+  --lumo-contrast: #ffffff !important;
+  --lumo-contrast-10pct: rgba(255, 255, 255, 0.1) !important;
+  --lumo-contrast-20pct: rgba(255, 255, 255, 0.2) !important;
+  --lumo-contrast-30pct: rgba(255, 255, 255, 0.3) !important;
+  --lumo-contrast-40pct: rgba(255, 255, 255, 0.4) !important;
+  --lumo-contrast-50pct: rgba(255, 255, 255, 0.5) !important;
+  --lumo-contrast-60pct: rgba(255, 255, 255, 0.6) !important;
+  --lumo-contrast-70pct: rgba(255, 255, 255, 0.7) !important;
+  --lumo-contrast-80pct: rgba(255, 255, 255, 0.8) !important;
+  --lumo-contrast-90pct: rgba(255, 255, 255, 0.9) !important;
+}
+
+/* Force buttons inside dialog to have proper styling */
+vaadin-dialog-overlay vaadin-button {
+  background: transparent !important;
+  color: #ffffff !important;
+}
+
+/* Force text areas and text fields to be dark */
+vaadin-dialog-overlay vaadin-text-field,
+vaadin-dialog-overlay vaadin-text-area {
+  --lumo-base-color: rgba(0, 0, 0, 0.3) !important;
+  --lumo-body-text-color: #ffffff !important;
+}
+
+/* Absolutely force white backgrounds to become dark */
+vaadin-dialog-overlay [style*="background-color: rgb(255, 255, 255)"],
+vaadin-dialog-overlay [style*="background-color: white"],
+vaadin-dialog-overlay [style*="background-color: #fff"],
+vaadin-dialog-overlay [style*="background: white"],
+vaadin-dialog-overlay [style*="background: #fff"],
+vaadin-dialog-overlay [style*="background: rgb(255, 255, 255)"] {
+  background: rgba(20, 20, 30, 0.8) !important;
+  background-color: rgba(20, 20, 30, 0.8) !important;
+}
+
