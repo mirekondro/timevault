@@ -381,16 +381,24 @@
     -fx-border-radius: 14px;
     -fx-padding: 12px 14px;
     -fx-font-size: 13px;
+    -fx-font-weight: 700;
+    -fx-text-fill: rgba(244, 247, 251, 0.78);
 }
 
 .type-nav-button:hover {
     -fx-background-color: rgba(255, 255, 255, 0.08);
+    -fx-text-fill: rgba(255, 255, 255, 0.92);
 }
 
 .type-nav-button:selected {
     -fx-background-color: linear-gradient(to right, rgba(88, 196, 221, 0.28), rgba(88, 196, 221, 0.16));
     -fx-border-color: rgba(143, 226, 242, 0.32);
     -fx-text-fill: white;
+}
+
+.type-nav-button:disabled {
+    -fx-text-fill: rgba(244, 247, 251, 0.34);
+    -fx-opacity: 0.75;
 }
 
 .combo-box,
