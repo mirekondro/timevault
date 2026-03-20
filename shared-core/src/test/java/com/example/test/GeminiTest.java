@@ -19,7 +19,7 @@ public class GeminiTest {
 
     public static void testGeminiAPI() {
         String apiKey = "AIzaSyBoNPRhLSHJn6BFLMt6fZeNqTDWNn-jwrc";
-        String model = "gemini-1.5-flash";
+        String model = "gemini-2.5-flash";
 
         try {
             HttpClient httpClient = HttpClient.newBuilder()

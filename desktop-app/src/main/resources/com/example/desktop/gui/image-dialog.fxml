@@ -59,10 +59,10 @@
                                     <ImageView fx:id="previewImageView" fitWidth="460.0" fitHeight="320.0" preserveRatio="true"/>
                                     <HBox alignment="CENTER" spacing="0.0" StackPane.alignment="CENTER">
                                         <Button fx:id="previewPreviousButton" mnemonicParsing="false" onAction="#handlePreviewPrevious"
-                                                styleClass="preview-nav-button" text="<"/>
+                                                styleClass="preview-nav-button" text="&lt;"/>
                                         <Pane HBox.hgrow="ALWAYS"/>
                                         <Button fx:id="previewNextButton" mnemonicParsing="false" onAction="#handlePreviewNext"
-                                                styleClass="preview-nav-button" text=">"/>
+                                                styleClass="preview-nav-button" text="&gt;"/>
                                     </HBox>
                                     <Label fx:id="previewCounterLabel" styleClass="preview-counter-chip" text="0 / 0"
                                            StackPane.alignment="BOTTOM_CENTER"/>

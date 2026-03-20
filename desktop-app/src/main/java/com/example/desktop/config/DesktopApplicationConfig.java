@@ -26,7 +26,7 @@ public class DesktopApplicationConfig {
     }
 
     public String geminiModel() {
-        return properties.getProperty("gemini.model", "gemini-2.0-flash").trim();
+        return properties.getProperty("gemini.model", "gemini-2.5-flash").trim();
     }
 
     public String backendMode() {

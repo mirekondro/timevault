@@ -332,6 +332,46 @@ public class SchemaInitializer implements AppInitializer {
                     ADD updated_at DATETIME2 NOT NULL CONSTRAINT df_vault_item_images_updated_at DEFAULT SYSDATETIME()
                 END
                 """);
+
+        statement.executeUpdate("""
+                IF OBJECT_ID('dbo.vault_item_images', 'U') IS NOT NULL
+                BEGIN
+                    DECLARE @legacyPrimaryKeyName NVARCHAR(128);
+                    SELECT @legacyPrimaryKeyName = kc.name
+                    FROM sys.key_constraints kc
+                    INNER JOIN sys.index_columns ic
+                        ON kc.parent_object_id = ic.object_id
+                       AND kc.unique_index_id = ic.index_id
+                    INNER JOIN sys.columns c
+                        ON c.object_id = ic.object_id
+                       AND c.column_id = ic.column_id
+                    WHERE kc.parent_object_id = OBJECT_ID('dbo.vault_item_images')
+                      AND kc.type = 'PK'
+                    GROUP BY kc.name
+                    HAVING COUNT(*) = 1
+                       AND MAX(c.name) = 'item_id';
+
+                    IF @legacyPrimaryKeyName IS NOT NULL
+                    BEGIN
+                        EXEC(N'ALTER TABLE dbo.vault_item_images DROP CONSTRAINT [' + @legacyPrimaryKeyName + N']');
+                    END
+                END
+                """);
+
+        statement.executeUpdate("""
+                IF OBJECT_ID('dbo.vault_item_images', 'U') IS NOT NULL
+                   AND COL_LENGTH('dbo.vault_item_images', 'id') IS NOT NULL
+                   AND NOT EXISTS (
+                       SELECT 1
+                       FROM sys.key_constraints
+                       WHERE parent_object_id = OBJECT_ID('dbo.vault_item_images')
+                         AND type = 'PK'
+                   )
+                BEGIN
+                    ALTER TABLE dbo.vault_item_images
+                    ADD CONSTRAINT pk_vault_item_images_id PRIMARY KEY (id)
+                END
+                """);
     }
 
     private void migrateLegacyItems(Connection connection) throws SQLException {

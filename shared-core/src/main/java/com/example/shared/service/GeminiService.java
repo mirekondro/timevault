@@ -25,7 +25,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 /**
  * SHARED SERVICE - Gemini AI Integration
  *
- * Uses Gemini 2.0 Flash for:
+ * Uses Gemini Flash for:
  * - Image analysis and embedding
  * - Text context generation (3 sentences)
  * - URL content summarization
@@ -59,7 +59,7 @@ public class GeminiService {
     @Value("${gemini.api.key:}")
     private String apiKey;
 
-    @Value("${gemini.model:gemini-2.0-flash}")
+    @Value("${gemini.model:gemini-2.5-flash}")
     private String model;
 
     private final HttpClient httpClient;
@@ -68,12 +68,12 @@ public class GeminiService {
     private static final String GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s";
 
     public GeminiService() {
-        this("", "gemini-2.0-flash");
+        this("", "gemini-2.5-flash");
     }
 
     public GeminiService(String apiKey, String model) {
         this.apiKey = apiKey == null ? "" : apiKey.trim();
-        this.model = model == null || model.isBlank() ? "gemini-2.0-flash" : model.trim();
+        this.model = model == null || model.isBlank() ? "gemini-2.5-flash" : model.trim();
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(30))
                 .build();

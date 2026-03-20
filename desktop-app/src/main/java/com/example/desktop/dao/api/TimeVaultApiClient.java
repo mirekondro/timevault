@@ -176,7 +176,18 @@ public class TimeVaultApiClient {
                 return root.get("message").asText();
             }
             if (root.hasNonNull("error")) {
-                return root.get("error").asText();
+                String error = root.get("error").asText();
+                if (root.hasNonNull("status") || root.hasNonNull("path")) {
+                    StringBuilder message = new StringBuilder(error);
+                    if (root.hasNonNull("status")) {
+                        message.append(" (").append(root.get("status").asText()).append(")");
+                    }
+                    if (root.hasNonNull("path")) {
+                        message.append(" at ").append(root.get("path").asText());
+                    }
+                    return message.toString();
+                }
+                return error;
             }
         } catch (IOException ignored) {
             // Fall through to raw body.

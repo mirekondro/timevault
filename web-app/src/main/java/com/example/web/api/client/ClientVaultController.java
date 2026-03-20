@@ -7,6 +7,8 @@ import com.example.shared.api.ApiVaultItemMutationRequest;
 import com.example.shared.model.UserSession;
 import com.example.shared.service.ApiSessionService;
 import com.example.shared.service.DesktopVaultApiService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -31,6 +33,8 @@ import java.util.List;
 @RequestMapping("/api/client/vault")
 @CrossOrigin(origins = "*")
 public class ClientVaultController extends ClientApiSupport {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(ClientVaultController.class);
 
     private final DesktopVaultApiService desktopVaultApiService;
 
@@ -63,6 +67,8 @@ public class ClientVaultController extends ClientApiSupport {
             return ResponseEntity.status(HttpStatus.CREATED).body(createdItem);
         } catch (IllegalArgumentException exception) {
             return ResponseEntity.badRequest().body(new ApiMessageResponse(exception.getMessage()));
+        } catch (Exception exception) {
+            return internalServerError("create", exception);
         }
     }
 
@@ -78,6 +84,8 @@ public class ClientVaultController extends ClientApiSupport {
                             .body(new ApiMessageResponse("Item not found.")));
         } catch (IllegalArgumentException exception) {
             return ResponseEntity.badRequest().body(new ApiMessageResponse(exception.getMessage()));
+        } catch (Exception exception) {
+            return internalServerError("update", exception);
         }
     }
 
@@ -126,5 +134,23 @@ public class ClientVaultController extends ClientApiSupport {
     private UserSession requireAuthorizedSession(String authorizationHeader) {
         String token = requireBearerToken(authorizationHeader);
         return requireSession(token);
+    }
+
+    private ResponseEntity<ApiMessageResponse> internalServerError(String action, Exception exception) {
+        LOGGER.error("Client vault API failed to {} item.", action, exception);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ApiMessageResponse(resolveRootCauseMessage(exception)));
+    }
+
+    private String resolveRootCauseMessage(Throwable throwable) {
+        Throwable current = throwable;
+        String message = "The backend could not process the vault item request.";
+        while (current != null) {
+            if (current.getMessage() != null && !current.getMessage().isBlank()) {
+                message = current.getMessage().trim();
+            }
+            current = current.getCause();
+        }
+        return message;
     }
 }

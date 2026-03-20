@@ -14,10 +14,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.Base64;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -127,6 +129,11 @@ public class DesktopVaultApiService {
                                    List<ApiStoredImageDto> storedImages,
                                    LocalDateTime createdAt,
                                    LocalDateTime updatedAt) {
+        Map<Long, VaultItemImage> existingImagesById = new HashMap<>();
+        item.getImages().stream()
+                .filter(existingImage -> existingImage.getId() != null)
+                .forEach(existingImage -> existingImagesById.put(existingImage.getId(), existingImage));
+
         item.clearImages();
         if (storedImages == null || storedImages.isEmpty()) {
             return;
@@ -144,8 +151,10 @@ public class DesktopVaultApiService {
                         return;
                     }
 
-                    VaultItemImage image = new VaultItemImage();
-                    if (storedImage.id() != null && storedImage.id() > 0L) {
+                    VaultItemImage image = storedImage.id() == null || storedImage.id() <= 0L
+                            ? new VaultItemImage()
+                            : existingImagesById.getOrDefault(storedImage.id(), new VaultItemImage());
+                    if (storedImage.id() != null && storedImage.id() > 0L && image.getId() == null) {
                         image.setId(storedImage.id());
                     }
                     image.setItem(item);
