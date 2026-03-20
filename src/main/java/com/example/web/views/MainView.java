@@ -985,287 +985,197 @@ public class MainView extends VerticalLayout {
     }
 
     /**
-     * Open a modal dialog to view full vault item details
+     * Open a modal dialog to view full vault item details - CUSTOM HTML MODAL (NO VAADIN)
      */
     private void openCardModal(VaultItem item) {
-        // Create modal dialog
-        Dialog modal = new Dialog();
-        modal.setModal(true);
-        modal.setDraggable(false);
-        modal.setResizable(false);
-        modal.setWidth("800px");
-        modal.setMaxWidth("90vw");
-        modal.setHeight("600px");
-        modal.setMaxHeight("90vh");
+        // Create modal HTML content
+        String modalHtml = createModalHtml(item);
 
-        // Add modal styling
-        modal.addClassName("vault-modal");
-
-        // Force dark theme on modal
-        modal.getElement().getStyle().set("background", "var(--glass-bg)");
-        modal.getElement().getStyle().set("backdrop-filter", "blur(20px)");
-        modal.getElement().getStyle().set("border", "1px solid var(--glass-border)");
-        modal.getElement().getStyle().set("border-radius", "var(--radius-xl)");
-        modal.getElement().getStyle().set("color", "#ffffff");
-        modal.getElement().getStyle().set("--lumo-base-color", "var(--bg-deep)");
-        modal.getElement().getStyle().set("--lumo-body-text-color", "#ffffff");
-        modal.getElement().getStyle().set("--lumo-contrast", "#ffffff");
-
-        // Create modal content
-        VerticalLayout modalContent = new VerticalLayout();
-        modalContent.setPadding(false);
-        modalContent.setSpacing(false);
-        modalContent.setSizeFull();
-
-        // Modal Header
-        HorizontalLayout modalHeader = new HorizontalLayout();
-        modalHeader.setWidthFull();
-        modalHeader.setJustifyContentMode(FlexComponent.JustifyContentMode.BETWEEN);
-        modalHeader.setAlignItems(FlexComponent.Alignment.CENTER);
-        modalHeader.getStyle().set("padding", "24px 24px 16px 24px");
-        modalHeader.getStyle().set("border-bottom", "1px solid rgba(255,255,255,0.1)");
-
-        // Item type badge
-        Span typeBadge = new Span(getTypeIcon(item.getItemType()) + " " + item.getItemType());
-        typeBadge.getStyle().set("background", getTypeColor(item.getItemType()));
-        typeBadge.getStyle().set("color", "white");
-        typeBadge.getStyle().set("padding", "6px 12px");
-        typeBadge.getStyle().set("border-radius", "20px");
-        typeBadge.getStyle().set("font-size", "12px");
-        typeBadge.getStyle().set("font-weight", "600");
-
-        // Close button
-        Button closeBtn = new Button(VaadinIcon.CLOSE.create());
-        closeBtn.addClassName("modal-close-btn");
-        closeBtn.getStyle().set("background", "rgba(255,255,255,0.1)");
-        closeBtn.getStyle().set("border", "none");
-        closeBtn.getStyle().set("color", "#ffffff");
-        closeBtn.getStyle().set("border-radius", "50%");
-        closeBtn.getStyle().set("width", "40px");
-        closeBtn.getStyle().set("height", "40px");
-        closeBtn.getStyle().set("cursor", "pointer");
-        closeBtn.addClickListener(e -> modal.close());
-
-        modalHeader.add(typeBadge, closeBtn);
-
-        // Modal Body
-        VerticalLayout modalBody = new VerticalLayout();
-        modalBody.setPadding(false);
-        modalBody.setSpacing(false);
-        modalBody.getStyle().set("padding", "0 24px");
-        modalBody.getStyle().set("overflow-y", "auto");
-        modalBody.getStyle().set("flex", "1");
-
-        // Title
-        H2 modalTitle = new H2(item.getTitle() != null ? item.getTitle() : "Untitled");
-        modalTitle.getStyle().set("color", "#ffffff");
-        modalTitle.getStyle().set("margin", "16px 0");
-        modalTitle.getStyle().set("font-weight", "700");
-
-        // Metadata
-        HorizontalLayout metadata = new HorizontalLayout();
-        metadata.setSpacing(true);
-        metadata.setAlignItems(FlexComponent.Alignment.CENTER);
-        metadata.getStyle().set("margin-bottom", "20px");
-
-        if (item.getCreatedAt() != null) {
-            Span dateSpan = new Span("📅 " + item.getCreatedAt().format(java.time.format.DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm")));
-            dateSpan.getStyle().set("color", "#CBD5E1");
-            dateSpan.getStyle().set("font-size", "14px");
-            metadata.add(dateSpan);
-        }
-
-        if (item.getTags() != null && !item.getTags().trim().isEmpty()) {
-            Span tagsSpan = new Span("🏷️ " + item.getTags());
-            tagsSpan.getStyle().set("color", "#A78BFA");
-            tagsSpan.getStyle().set("font-size", "14px");
-            metadata.add(tagsSpan);
-        }
-
-        // Source URL (if available)
-        if (item.getSourceUrl() != null && !item.getSourceUrl().trim().isEmpty()) {
-            Anchor urlLink = new Anchor(item.getSourceUrl(), "🔗 Open Original Source");
-            urlLink.setTarget("_blank");
-            urlLink.getStyle().set("color", "#60A5FA");
-            urlLink.getStyle().set("text-decoration", "none");
-            urlLink.getStyle().set("font-size", "14px");
-            urlLink.getStyle().set("margin-top", "8px");
-            metadata.add(urlLink);
-        }
-
-        // AI Context Section
-        if (item.getAiContext() != null && !item.getAiContext().trim().isEmpty()) {
-            Div aiSection = new Div();
-            aiSection.getStyle().set("background", "rgba(167, 139, 250, 0.1)");
-            aiSection.getStyle().set("border", "1px solid rgba(167, 139, 250, 0.2)");
-            aiSection.getStyle().set("border-radius", "12px");
-            aiSection.getStyle().set("padding", "16px");
-            aiSection.getStyle().set("margin", "20px 0");
-
-            H4 aiTitle = new H4("🤖 AI Summary");
-            aiTitle.getStyle().set("color", "#A78BFA");
-            aiTitle.getStyle().set("margin", "0 0 12px 0");
-
-            Paragraph aiContent = new Paragraph(item.getAiContext());
-            aiContent.getStyle().set("color", "#E2E8F0");
-            aiContent.getStyle().set("margin", "0");
-            aiContent.getStyle().set("line-height", "1.6");
-
-            // Speak button for AI summary
-            Button speakAiBtn = new Button("Listen to AI Summary");
-            speakAiBtn.setIcon(VaadinIcon.VOLUME_UP.create());
-            speakAiBtn.getStyle().set("background", "rgba(167, 139, 250, 0.2)");
-            speakAiBtn.getStyle().set("border", "1px solid rgba(167, 139, 250, 0.3)");
-            speakAiBtn.getStyle().set("color", "#A78BFA");
-            speakAiBtn.getStyle().set("border-radius", "20px");
-            speakAiBtn.getStyle().set("margin-top", "12px");
-            speakAiBtn.getStyle().set("font-size", "12px");
-            speakAiBtn.addClickListener(e -> speakText(item.getAiContext()));
-
-            aiSection.add(aiTitle, aiContent, speakAiBtn);
-            modalBody.add(aiSection);
-        }
-
-        // Content Section
-        if (item.getContent() != null && !item.getContent().trim().isEmpty()) {
-            Div contentSection = new Div();
-            contentSection.getStyle().set("background", "rgba(255, 255, 255, 0.05)");
-            contentSection.getStyle().set("border", "1px solid rgba(255, 255, 255, 0.1)");
-            contentSection.getStyle().set("border-radius", "12px");
-            contentSection.getStyle().set("padding", "16px");
-            contentSection.getStyle().set("margin", "20px 0");
-
-            H4 contentTitle = new H4("📄 Full Content");
-            contentTitle.getStyle().set("color", "#ffffff");
-            contentTitle.getStyle().set("margin", "0 0 12px 0");
-
-            // Content area with scroll
-            Div contentArea = new Div();
-            contentArea.getStyle().set("max-height", "200px");
-            contentArea.getStyle().set("overflow-y", "auto");
-            contentArea.getStyle().set("background", "rgba(0, 0, 0, 0.2)");
-            contentArea.getStyle().set("border-radius", "8px");
-            contentArea.getStyle().set("padding", "12px");
-
-            Paragraph fullContent = new Paragraph(item.getContent());
-            fullContent.getStyle().set("color", "#E2E8F0");
-            fullContent.getStyle().set("margin", "0");
-            fullContent.getStyle().set("line-height", "1.6");
-            fullContent.getStyle().set("white-space", "pre-wrap");
-            fullContent.getStyle().set("font-family", "'SF Mono', 'Monaco', 'Cascadia Code', monospace");
-            fullContent.getStyle().set("font-size", "13px");
-
-            contentArea.add(fullContent);
-            contentSection.add(contentTitle, contentArea);
-            modalBody.add(contentSection);
-        }
-
-        modalBody.add(modalTitle, metadata);
-
-        // Modal Footer with actions
-        HorizontalLayout modalFooter = new HorizontalLayout();
-        modalFooter.setWidthFull();
-        modalFooter.setJustifyContentMode(FlexComponent.JustifyContentMode.END);
-        modalFooter.getStyle().set("padding", "16px 24px 24px 24px");
-        modalFooter.getStyle().set("border-top", "1px solid rgba(255,255,255,0.1)");
-
-        Button deleteBtn = new Button("Delete", VaadinIcon.TRASH.create());
-        deleteBtn.getStyle().set("background", "rgba(239, 68, 68, 0.2)");
-        deleteBtn.getStyle().set("border", "1px solid rgba(239, 68, 68, 0.3)");
-        deleteBtn.getStyle().set("color", "#EF4444");
-        deleteBtn.getStyle().set("border-radius", "8px");
-        deleteBtn.addClickListener(e -> {
-            try {
-                vaultItemService.delete(item.getId());
-                modal.close();
-                showNeonNotification("Memory deleted", true);
-                if ("vault".equals(currentViewState)) {
-                    loadAllItems();
-                } else {
-                    loadRecentItems();
+        // Inject modal into page using JavaScript
+        getElement().executeJs("""
+            // Remove any existing modal
+            const existingModal = document.querySelector('.custom-vault-modal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+            
+            // Create modal HTML
+            const modalHtml = $0;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            
+            // Get modal elements
+            const modal = document.querySelector('.custom-vault-modal');
+            const overlay = document.querySelector('.custom-modal-overlay');
+            const closeBtn = document.querySelector('.custom-modal-close');
+            const deleteBtn = document.querySelector('.custom-modal-delete');
+            const speakBtn = document.querySelector('.custom-modal-speak');
+            
+            // Show modal with animation
+            setTimeout(() => {
+                overlay.classList.add('show');
+                modal.classList.add('show');
+            }, 10);
+            
+            // Close modal function
+            const closeModal = () => {
+                overlay.classList.remove('show');
+                modal.classList.remove('show');
+                setTimeout(() => {
+                    overlay.remove();
+                    modal.remove();
+                }, 300);
+            };
+            
+            // Close button click
+            closeBtn.addEventListener('click', closeModal);
+            
+            // Overlay click
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    closeModal();
                 }
-            } catch (Exception ex) {
-                showNeonNotification("Error: " + ex.getMessage(), false);
+            });
+            
+            // ESC key
+            const handleEsc = (e) => {
+                if (e.key === 'Escape') {
+                    closeModal();
+                    document.removeEventListener('keydown', handleEsc);
+                }
+            };
+            document.addEventListener('keydown', handleEsc);
+            
+            // Delete button
+            if (deleteBtn) {
+                deleteBtn.addEventListener('click', () => {
+                    if (confirm('Are you sure you want to delete this memory?')) {
+                        fetch('/api/vault/delete/' + $1, { method: 'DELETE' })
+                            .then(() => {
+                                closeModal();
+                                window.location.reload();
+                            });
+                    }
+                });
             }
-        });
-
-        modalFooter.add(deleteBtn);
-
-        modalContent.add(modalHeader, modalBody, modalFooter);
-        modal.add(modalContent);
-
-        // Add keyboard support (ESC to close) and FORCE dark theme
-        modal.addOpenedChangeListener(e -> {
-            if (e.isOpened()) {
-                modal.getElement().executeJs("""
-                    const modal = this;
-                    
-                    // AGGRESSIVE dark theme enforcement
-                    setTimeout(() => {
-                        const overlay = document.querySelector('vaadin-dialog-overlay');
-                        if (overlay) {
-                            // Force overlay background
-                            overlay.style.setProperty('background', 'rgba(5, 5, 10, 0.8)', 'important');
-                            overlay.style.setProperty('background-color', 'rgba(5, 5, 10, 0.8)', 'important');
-                            overlay.style.setProperty('backdrop-filter', 'blur(8px)', 'important');
-                            
-                            // Access shadow DOM
-                            const shadowRoot = overlay.shadowRoot;
-                            if (shadowRoot) {
-                                // Force content part to be dark
-                                const content = shadowRoot.querySelector('[part="content"]');
-                                if (content) {
-                                    content.style.setProperty('background', 'rgba(20, 20, 30, 0.8)', 'important');
-                                    content.style.setProperty('background-color', 'rgba(20, 20, 30, 0.8)', 'important');
-                                    content.style.setProperty('backdrop-filter', 'blur(20px)', 'important');
-                                    content.style.setProperty('border', '1px solid rgba(255, 255, 255, 0.08)', 'important');
-                                    content.style.setProperty('border-radius', '24px', 'important');
-                                    content.style.setProperty('box-shadow', '0 20px 40px -10px rgba(0,0,0,0.5), 0 0 20px rgba(99, 102, 241, 0.15)', 'important');
-                                    content.style.setProperty('color', '#ffffff', 'important');
-                                    content.style.setProperty('padding', '0', 'important');
-                                }
-                                
-                                // Force overlay part to be dark
-                                const overlayPart = shadowRoot.querySelector('[part="overlay"]');
-                                if (overlayPart) {
-                                    overlayPart.style.setProperty('background', 'rgba(5, 5, 10, 0.8)', 'important');
-                                    overlayPart.style.setProperty('background-color', 'rgba(5, 5, 10, 0.8)', 'important');
-                                    overlayPart.style.setProperty('backdrop-filter', 'blur(8px)', 'important');
-                                }
-                                
-                                // Force ALL elements inside to be transparent/white text
-                                const allElements = content.querySelectorAll('*');
-                                allElements.forEach(el => {
-                                    if (!el.classList.contains('modern-button') && 
-                                        !el.classList.contains('modal-speak-btn') && 
-                                        !el.classList.contains('modal-delete-btn') &&
-                                        !el.classList.contains('modal-close-btn')) {
-                                        if (el.tagName === 'VAADIN-VERTICAL-LAYOUT' || 
-                                            el.tagName === 'VAADIN-HORIZONTAL-LAYOUT' ||
-                                            el.tagName === 'DIV') {
-                                            el.style.setProperty('background', 'transparent', 'important');
-                                            el.style.setProperty('background-color', 'transparent', 'important');
-                                        }
-                                        el.style.setProperty('color', '#ffffff', 'important');
-                                    }
-                                });
-                            }
+            
+            // Speak button
+            if (speakBtn) {
+                speakBtn.addEventListener('click', async () => {
+                    const text = speakBtn.getAttribute('data-text');
+                    try {
+                        const response = await fetch('/api/speech/synthesize', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ text: text })
+                        });
+                        const result = await response.json();
+                        if (result.success) {
+                            const audio = new Audio(result.audio);
+                            audio.play();
                         }
-                    }, 50);
-                    
-                    // Keyboard support
-                    const handleKeydown = (event) => {
-                        if (event.key === 'Escape') {
-                            modal.close();
-                            document.removeEventListener('keydown', handleKeydown);
-                        }
-                    };
-                    document.addEventListener('keydown', handleKeydown);
-                    """);
+                    } catch (error) {
+                        console.error('Speech error:', error);
+                    }
+                });
             }
-        });
+            """, modalHtml, item.getId());
+    }
 
-        modal.open();
+    /**
+     * Create modal HTML content
+     */
+    private String createModalHtml(VaultItem item) {
+        String title = item.getTitle() != null ? escapeHtml(item.getTitle()) : "Untitled Memory";
+        String aiContext = item.getAiContext() != null ? escapeHtml(item.getAiContext()) : "";
+        String content = item.getContent() != null ? escapeHtml(item.getContent()) : "";
+        String sourceUrl = item.getSourceUrl() != null ? escapeHtml(item.getSourceUrl()) : "";
+        String tags = item.getTags() != null ? escapeHtml(item.getTags()) : "";
+        String date = item.getCreatedAt() != null ?
+            item.getCreatedAt().format(java.time.format.DateTimeFormatter.ofPattern("MMM dd, yyyy • HH:mm")) : "";
+        String typeIcon = getTypeIcon(item.getItemType());
+        String typeColor = getTypeColor(item.getItemType());
+
+        StringBuilder html = new StringBuilder();
+
+        // Modal overlay
+        html.append("<div class='custom-modal-overlay'></div>");
+
+        // Modal container
+        html.append("<div class='custom-vault-modal'>");
+
+        // Header
+        html.append("<div class='custom-modal-header'>");
+        html.append("<span class='custom-modal-badge' style='background: ").append(typeColor).append("'>");
+        html.append(typeIcon).append(" ").append(item.getItemType()).append("</span>");
+        html.append("<button class='custom-modal-close'>✕</button>");
+        html.append("</div>");
+
+        // Title section
+        html.append("<div class='custom-modal-title-section'>");
+        html.append("<h2 class='custom-modal-title'>").append(title).append("</h2>");
+        html.append("<div class='custom-modal-meta'>");
+        if (!date.isEmpty()) {
+            html.append("<span class='custom-meta-chip'>📅 ").append(date).append("</span>");
+        }
+        if (!tags.isEmpty()) {
+            html.append("<span class='custom-meta-chip'>🏷️ ").append(tags).append("</span>");
+        }
+        html.append("</div>");
+        html.append("</div>");
+
+        // Body
+        html.append("<div class='custom-modal-body'>");
+
+        // Source URL
+        if (!sourceUrl.isEmpty()) {
+            html.append("<a href='").append(sourceUrl).append("' target='_blank' class='custom-source-link'>");
+            html.append("🔗 Open Original Source</a>");
+        }
+
+        // AI Summary
+        if (!aiContext.isEmpty()) {
+            html.append("<div class='custom-ai-card'>");
+            html.append("<div class='custom-ai-accent'></div>");
+            html.append("<h3 class='custom-ai-title'>🤖 AI Summary</h3>");
+            html.append("<p class='custom-ai-text'>").append(aiContext).append("</p>");
+            html.append("<button class='custom-modal-speak' data-text='").append(aiContext).append("'>");
+            html.append("🔊 Listen to Summary</button>");
+            html.append("</div>");
+        }
+
+        // Full Content
+        if (!content.isEmpty()) {
+            html.append("<div class='custom-content-card'>");
+            html.append("<h3 class='custom-content-title'>📄 Full Content</h3>");
+            html.append("<div class='custom-content-box'>");
+            html.append("<p class='custom-content-text'>").append(content).append("</p>");
+            html.append("</div>");
+            html.append("</div>");
+        }
+
+        html.append("</div>");
+
+        // Footer
+        html.append("<div class='custom-modal-footer'>");
+        html.append("<button class='custom-modal-delete'>🗑️ Delete Memory</button>");
+        html.append("</div>");
+
+        html.append("</div>");
+
+        return html.toString();
+    }
+
+    /**
+     * Escape HTML to prevent XSS
+     */
+    private String escapeHtml(String text) {
+        if (text == null) return "";
+        return text.replace("&", "&amp;")
+                   .replace("<", "&lt;")
+                   .replace(">", "&gt;")
+                   .replace("\"", "&quot;")
+                   .replace("'", "&#39;")
+                   .replace("\n", "<br>");
     }
 
     /**
