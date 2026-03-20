@@ -225,6 +225,10 @@ public class ArchiveController implements AppContextAware {
 
     private void configureColumns() {
         itemsTableView.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        if (!titleColumn.getStyleClass().contains("title-column")) {
+            titleColumn.getStyleClass().add("title-column");
+        }
+        titleColumn.setStyle("-fx-alignment: CENTER-LEFT;");
         titleColumn.setCellValueFactory(cellData -> new ReadOnlyStringWrapper(
                 appModel.getItemTitle(cellData.getValue())));
         typeColumn.setCellValueFactory(cellData -> new ReadOnlyStringWrapper(

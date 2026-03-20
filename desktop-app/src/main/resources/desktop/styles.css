@@ -253,6 +253,17 @@
     -fx-padding: 6px 0 0 0;
 }
 
+.form-secondary-action {
+    -fx-background-color: rgba(255, 255, 255, 0.04);
+    -fx-border-color: rgba(255, 255, 255, 0.08);
+    -fx-border-width: 1px;
+    -fx-padding: 12px 18px;
+}
+
+.form-secondary-action:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.08);
+}
+
 .auth-shell {
     -fx-background-color: linear-gradient(to bottom right, rgba(24, 33, 43, 0.96), rgba(17, 24, 33, 0.98));
     -fx-background-radius: 24px;
@@ -539,6 +550,12 @@
     -fx-text-fill: -color-muted;
     -fx-font-size: 12px;
     -fx-font-weight: 700;
+}
+
+.table-view .column-header.title-column .label,
+.table-view .table-cell.title-column {
+    -fx-alignment: center-left;
+    -fx-text-alignment: left;
 }
 
 .table-view .table-row-cell {
