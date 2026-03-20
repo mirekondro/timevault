@@ -46,9 +46,6 @@ public class HeaderController implements AppContextAware {
     private Button clearSearchButton;
 
     @FXML
-    private Button reloadButton;
-
-    @FXML
     private Button avatarButton;
 
     @FXML
@@ -80,14 +77,12 @@ public class HeaderController implements AppContextAware {
         this.ownerStage = stage;
 
         configureSearchControls();
-        reloadButton.disableProperty().bind(appModel.busyProperty().or(appModel.authenticatedProperty().not()));
         avatarLetterLabel.textProperty().bind(Bindings.createStringBinding(this::resolveCurrentUserInitial,
                 appModel.currentUserProperty(), appModel.localeProperty()));
         avatarButton.disableProperty().bind(appModel.busyProperty().or(appModel.currentUserProperty().isNull()));
 
         appModel.bindText(brandLabel, "header.brand");
         appModel.bindPrompt(searchField, "header.search.prompt");
-        appModel.bindText(reloadButton, "header.reload");
 
         buildUserMenu();
         appModel.currentUserProperty().addListener((obs, oldUser, newUser) -> updateMenuIdentity());

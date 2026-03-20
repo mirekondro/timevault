@@ -24,10 +24,10 @@
     </padding>
     <Label fx:id="detailTitleLabel" styleClass="detail-title"/>
     <Label fx:id="detailMetaLabel" styleClass="muted-copy" wrapText="true"/>
-    <ScrollPane fitToHeight="true" fitToWidth="true" hbarPolicy="NEVER" styleClass="page-scroll" vbarPolicy="AS_NEEDED"
+    <ScrollPane fitToHeight="true" fitToWidth="true" hbarPolicy="AS_NEEDED" styleClass="page-scroll" vbarPolicy="AS_NEEDED"
                 VBox.vgrow="ALWAYS">
         <content>
-            <VBox spacing="14.0">
+            <VBox minWidth="560.0" spacing="14.0">
                 <VBox fx:id="trashBox" spacing="10.0" styleClass="locked-detail-box" visible="false" managed="false">
                     <Label fx:id="trashTitleLabel" styleClass="section-title"/>
                     <Label fx:id="trashCopyLabel" styleClass="muted-copy" wrapText="true"/>

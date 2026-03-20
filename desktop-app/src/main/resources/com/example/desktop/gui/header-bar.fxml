@@ -37,8 +37,6 @@
                     </graphic>
                 </Button>
             </HBox>
-            <Button fx:id="reloadButton" mnemonicParsing="false" onAction="#handleReload"
-                    styleClass="ghost-button compact-button"/>
         </HBox>
     </center>
 
