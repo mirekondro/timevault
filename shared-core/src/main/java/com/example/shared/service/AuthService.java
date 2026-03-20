@@ -52,6 +52,60 @@ public class AuthService {
         return toSession(user);
     }
 
+    public UserSession requireUser(long userId) {
+        VaultUser user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Account not found."));
+        return toSession(user);
+    }
+
+    public UserSession updateEmail(long userId, String newEmail, String currentPassword) {
+        String normalizedEmail = AccountValidator.normalizeEmail(newEmail);
+        validateEmail(normalizedEmail);
+        validatePassword(currentPassword);
+
+        VaultUser user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Account not found."));
+
+        if (!PasswordHasher.matches(currentPassword, user.getPasswordHash())) {
+            throw new IllegalArgumentException("Current password is incorrect.");
+        }
+        if (normalizedEmail.equalsIgnoreCase(user.getEmail())) {
+            throw new IllegalArgumentException("New email matches the current email.");
+        }
+
+        userRepository.findByEmailIgnoreCase(normalizedEmail)
+                .filter(existingUser -> !existingUser.getId().equals(userId))
+                .ifPresent(existingUser -> {
+                    throw new IllegalArgumentException("An account with that email already exists.");
+                });
+
+        user.setEmail(normalizedEmail);
+        VaultUser savedUser = userRepository.save(user);
+        return toSession(savedUser);
+    }
+
+    public void updatePassword(long userId,
+                               String currentPassword,
+                               String newPassword,
+                               String confirmPassword) {
+        validatePassword(currentPassword);
+        validatePassword(newPassword);
+
+        if (!newPassword.equals(confirmPassword)) {
+            throw new IllegalArgumentException("New password and confirmation do not match.");
+        }
+
+        VaultUser user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Account not found."));
+
+        if (!PasswordHasher.matches(currentPassword, user.getPasswordHash())) {
+            throw new IllegalArgumentException("Current password is incorrect.");
+        }
+
+        user.setPasswordHash(PasswordHasher.hash(newPassword));
+        userRepository.save(user);
+    }
+
     private void validateEmail(String email) {
         if (!AccountValidator.isValidEmail(email)) {
             throw new IllegalArgumentException("Enter a valid email address.");

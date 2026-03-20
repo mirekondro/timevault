@@ -1,5 +1,7 @@
 package com.example.shared.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -10,6 +12,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
@@ -35,6 +38,7 @@ public class VaultItem {
 
     @ManyToOne(fetch = FetchType.EAGER, optional = false)
     @JoinColumn(name = "user_id", nullable = false, foreignKey = @ForeignKey(name = "fk_vault_items_user"))
+    @JsonIgnore
     private VaultUser owner;
 
     @Column(name = "title", nullable = false, length = 500)
@@ -63,6 +67,25 @@ public class VaultItem {
 
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
+
+    @Column(name = "is_locked", nullable = false)
+    private boolean locked;
+
+    @Column(name = "lock_password_hash", length = 512)
+    @JsonIgnore
+    private String lockPasswordHash;
+
+    @Column(name = "lock_salt", length = 128)
+    @JsonIgnore
+    private String lockSalt;
+
+    @Column(name = "lock_payload", columnDefinition = "NVARCHAR(MAX)")
+    @JsonIgnore
+    private String lockPayload;
+
+    @OneToOne(mappedBy = "item", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
+    private VaultItemImage image;
 
     @Column(name = "user_id", nullable = false, insertable = false, updatable = false)
     private Long userId = 1L; // Default user ID for single-user application
@@ -123,6 +146,21 @@ public class VaultItem {
 
     public LocalDateTime getDeletedAt() { return deletedAt; }
     public void setDeletedAt(LocalDateTime deletedAt) { this.deletedAt = deletedAt; }
+
+    public boolean isLocked() { return locked; }
+    public void setLocked(boolean locked) { this.locked = locked; }
+
+    public String getLockPasswordHash() { return lockPasswordHash; }
+    public void setLockPasswordHash(String lockPasswordHash) { this.lockPasswordHash = lockPasswordHash; }
+
+    public String getLockSalt() { return lockSalt; }
+    public void setLockSalt(String lockSalt) { this.lockSalt = lockSalt; }
+
+    public String getLockPayload() { return lockPayload; }
+    public void setLockPayload(String lockPayload) { this.lockPayload = lockPayload; }
+
+    public VaultItemImage getImage() { return image; }
+    public void setImage(VaultItemImage image) { this.image = image; }
 
     public Long getUserId() { return userId; }
     public void setUserId(Long userId) { this.userId = userId; }

@@ -30,6 +30,8 @@ public interface VaultItemRepository extends JpaRepository<VaultItem, Long> {
     // Find all ordered by creation date
     List<VaultItem> findAllByOwnerIdAndDeletedAtIsNullOrderByCreatedAtDesc(Long userId);
 
+    List<VaultItem> findAllByOwnerIdOrderByCreatedAtDesc(Long userId);
+
     List<VaultItem> findAllByOwnerIdAndDeletedAtIsNotNullOrderByDeletedAtDescCreatedAtDesc(Long userId);
 
     // Search by title (case-insensitive)
@@ -61,6 +63,8 @@ public interface VaultItemRepository extends JpaRepository<VaultItem, Long> {
     long countByOwnerIdAndDeletedAtIsNull(Long userId);
 
     Optional<VaultItem> findByIdAndOwnerIdAndDeletedAtIsNull(Long id, Long userId);
+
+    Optional<VaultItem> findByIdAndOwnerId(Long id, Long userId);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""

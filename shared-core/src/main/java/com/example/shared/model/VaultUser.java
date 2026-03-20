@@ -1,5 +1,6 @@
 package com.example.shared.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -33,6 +34,7 @@ public class VaultUser {
     private String email;
 
     @Column(name = "password_hash", nullable = false, length = 512)
+    @JsonIgnore
     private String passwordHash;
 
     @Column(name = "created_at", nullable = false)
@@ -42,6 +44,7 @@ public class VaultUser {
     private LocalDateTime updatedAt;
 
     @OneToMany(mappedBy = "owner")
+    @JsonIgnore
     private List<VaultItem> items = new ArrayList<>();
 
     @PrePersist
