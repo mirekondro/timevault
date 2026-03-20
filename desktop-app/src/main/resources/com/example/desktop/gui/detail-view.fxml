@@ -27,7 +27,7 @@
     <ScrollPane fitToHeight="true" fitToWidth="true" hbarPolicy="AS_NEEDED" styleClass="page-scroll" vbarPolicy="AS_NEEDED"
                 VBox.vgrow="ALWAYS">
         <content>
-            <VBox minWidth="560.0" spacing="14.0">
+            <VBox minWidth="480.0" prefWidth="480.0" spacing="14.0">
                 <VBox fx:id="trashBox" spacing="10.0" styleClass="locked-detail-box" visible="false" managed="false">
                     <Label fx:id="trashTitleLabel" styleClass="section-title"/>
                     <Label fx:id="trashCopyLabel" styleClass="muted-copy" wrapText="true"/>
@@ -43,7 +43,7 @@
                     <VBox fx:id="imageBox" spacing="10.0" visible="false" managed="false">
                         <Label fx:id="imageSectionLabel" styleClass="section-title"/>
                         <StackPane styleClass="image-preview-shell gallery-preview-shell">
-                            <ImageView fx:id="detailImageView" fitWidth="500.0" fitHeight="340.0" preserveRatio="true"/>
+                            <ImageView fx:id="detailImageView" fitWidth="420.0" fitHeight="340.0" preserveRatio="true"/>
                             <Button fx:id="detailPreviewPreviousButton" mnemonicParsing="false" onAction="#handlePreviewPrevious"
                                     styleClass="preview-nav-button" text="&lt;" StackPane.alignment="CENTER_LEFT">
                                 <StackPane.margin>
@@ -60,16 +60,16 @@
                         <Label fx:id="imageMetaLabel" styleClass="muted-copy" wrapText="true"/>
                         <ListView fx:id="detailGalleryListView" prefHeight="160.0" styleClass="gallery-list-view"/>
                         <Label fx:id="selectedImageSectionLabel" styleClass="section-title"/>
-                        <TextArea fx:id="selectedImageContextArea" editable="false" prefRowCount="4"
+                        <TextArea fx:id="selectedImageContextArea" editable="false" prefRowCount="6"
                                   styleClass="readonly-area" wrapText="true"/>
                     </VBox>
                     <Separator/>
                     <Label fx:id="contextSectionLabel" styleClass="section-title"/>
-                    <TextArea fx:id="contextArea" editable="false" prefRowCount="5" styleClass="context-box" wrapText="true"/>
+                    <TextArea fx:id="contextArea" editable="false" prefRowCount="7" styleClass="context-box" wrapText="true"/>
                     <Label fx:id="tagsSectionLabel" styleClass="section-title"/>
                     <FlowPane fx:id="tagsPane" hgap="8.0" vgap="8.0"/>
                     <Label fx:id="contentSectionLabel" styleClass="section-title"/>
-                    <TextArea fx:id="contentArea" editable="false" prefRowCount="8" styleClass="readonly-area" wrapText="true"/>
+                    <TextArea fx:id="contentArea" editable="false" prefRowCount="9" styleClass="readonly-area" wrapText="true"/>
                 </VBox>
             </VBox>
         </content>
