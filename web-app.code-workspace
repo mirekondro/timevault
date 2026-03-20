@@ -1,7 +1,12 @@
 {
     "folders": [
         {
-            "path": "."
+            "name": "web-app",
+            "path": "web-app"
+        },
+        {
+            "name": "shared-core",
+            "path": "shared-core"
         }
     ],
     "settings": {
@@ -14,7 +19,8 @@
                 "name": "Run Web App",
                 "request": "launch",
                 "mainClass": "com.example.Application",
-                "projectName": "timevault-web"
+                "projectName": "timevault-web",
+                "cwd": "${workspaceFolder:web-app}"
             }
         ]
     }

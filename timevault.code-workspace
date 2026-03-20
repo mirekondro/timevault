@@ -14,14 +14,16 @@
                 "name": "Run Web App",
                 "request": "launch",
                 "mainClass": "com.example.Application",
-                "projectName": "timevault-web"
+                "projectName": "timevault-web",
+                "cwd": "${workspaceFolder}/web-app"
             },
             {
                 "type": "java",
                 "name": "Run Desktop App",
                 "request": "launch",
                 "mainClass": "com.example.desktop.DesktopLauncher",
-                "projectName": "timevault-desktop"
+                "projectName": "timevault-desktop",
+                "cwd": "${workspaceFolder}/desktop-app"
             }
         ]
     }

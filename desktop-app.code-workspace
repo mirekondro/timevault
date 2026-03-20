@@ -1,7 +1,12 @@
 {
     "folders": [
         {
-            "path": "."
+            "name": "desktop-app",
+            "path": "desktop-app"
+        },
+        {
+            "name": "shared-core",
+            "path": "shared-core"
         }
     ],
     "settings": {
@@ -14,7 +19,8 @@
                 "name": "Run Desktop App",
                 "request": "launch",
                 "mainClass": "com.example.desktop.DesktopLauncher",
-                "projectName": "timevault-desktop"
+                "projectName": "timevault-desktop",
+                "cwd": "${workspaceFolder:desktop-app}"
             }
         ]
     }
