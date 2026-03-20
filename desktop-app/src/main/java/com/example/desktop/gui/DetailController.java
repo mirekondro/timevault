@@ -78,6 +78,12 @@ public class DetailController implements AppContextAware {
     private ImageView detailImageView;
 
     @FXML
+    private Button detailPreviewPreviousButton;
+
+    @FXML
+    private Button detailPreviewNextButton;
+
+    @FXML
     private Label imageMetaLabel;
 
     @FXML
@@ -138,6 +144,17 @@ public class DetailController implements AppContextAware {
         detailGalleryListView.setCellFactory(listView -> new GalleryImageListCell(appModel));
         detailGalleryListView.getSelectionModel().selectedItemProperty()
                 .addListener((obs, oldImage, newImage) -> updateSelectedImage(newImage));
+        detailPreviewPreviousButton.disableProperty().bind(Bindings.createBooleanBinding(
+                () -> detailGalleryListView.getSelectionModel().getSelectedIndex() <= 0,
+                detailGalleryListView.getSelectionModel().selectedIndexProperty(),
+                Bindings.size(detailGalleryImages)));
+        detailPreviewNextButton.disableProperty().bind(Bindings.createBooleanBinding(
+                () -> {
+                    int index = detailGalleryListView.getSelectionModel().getSelectedIndex();
+                    return index < 0 || index >= detailGalleryImages.size() - 1;
+                },
+                detailGalleryListView.getSelectionModel().selectedIndexProperty(),
+                Bindings.size(detailGalleryImages)));
 
         sourceLink.disableProperty().bind(Bindings.createBooleanBinding(() -> {
             VaultItemFx item = appModel.getSelectedItem();
@@ -175,6 +192,24 @@ public class DetailController implements AppContextAware {
         VaultItemFx item = appModel.getSelectedItem();
         if (vaultManager.unlockItem(appModel, item, unlockPasswordField.getText())) {
             unlockPasswordField.clear();
+        }
+    }
+
+    @FXML
+    private void handlePreviewPrevious() {
+        int selectedIndex = detailGalleryListView.getSelectionModel().getSelectedIndex();
+        if (selectedIndex > 0) {
+            detailGalleryListView.getSelectionModel().select(selectedIndex - 1);
+            detailGalleryListView.scrollTo(selectedIndex - 1);
+        }
+    }
+
+    @FXML
+    private void handlePreviewNext() {
+        int selectedIndex = detailGalleryListView.getSelectionModel().getSelectedIndex();
+        if (selectedIndex >= 0 && selectedIndex < detailGalleryImages.size() - 1) {
+            detailGalleryListView.getSelectionModel().select(selectedIndex + 1);
+            detailGalleryListView.scrollTo(selectedIndex + 1);
         }
     }
 
