@@ -14,19 +14,29 @@ import com.example.desktop.model.ToastNotificationType;
 import com.example.desktop.model.UnlockedItemSession;
 import com.example.desktop.model.VaultItemFx;
 import com.example.desktop.security.ProtectedItemCrypto;
+import com.example.shared.model.VaultItem;
 import com.example.shared.model.UserSession;
 import com.example.shared.security.AccountValidator;
 import com.example.shared.service.GeminiService;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Business logic layer for the desktop application.
@@ -34,6 +44,12 @@ import java.util.Optional;
 public class VaultManager {
 
     private static final long MAX_IMAGE_BYTES = 10L * 1024L * 1024L;
+    private static final int MAX_FETCHED_URL_CONTENT = 8000;
+    private static final String INVALID_URL_MARKER = "invalid-url";
+    private static final Pattern TITLE_PATTERN = Pattern.compile("(?is)<title[^>]*>(.*?)</title>");
+    private static final Pattern META_DESCRIPTION_PATTERN = Pattern.compile(
+            "(?is)<meta[^>]+name\\s*=\\s*['\"]description['\"][^>]+content\\s*=\\s*['\"](.*?)['\"][^>]*>|" +
+                    "<meta[^>]+content\\s*=\\s*['\"](.*?)['\"][^>]+name\\s*=\\s*['\"]description['\"][^>]*>");
 
     private final VaultItemDAO vaultItemDAO;
     private final UserDAO userDAO;
@@ -242,25 +258,33 @@ public class VaultManager {
         return appModel.text("detail.meta.empty.auth");
     }
 
-    public DialogActionResult createUrl(AppModel appModel, String urlInput, String titleInput, String notesInput, ItemLockOptions lockOptions) {
+    public DialogActionResult createUrl(AppModel appModel,
+                                        String urlInput,
+                                        String titleInput,
+                                        String summaryInput,
+                                        String contentInput,
+                                        String tagsInput,
+                                        ItemLockOptions lockOptions) {
         UserSession currentUser = currentDialogUser(appModel);
         if (currentUser == null) {
             return authRequiredDialogResult(appModel);
         }
 
-        String url = sanitize(urlInput);
-        if (url.isBlank()) {
-            return dialogFieldError(appModel, DialogFieldIds.URL, "dialog.validation.url.required");
+        String url = normalizeUrlInput(urlInput);
+        if (url == null) {
+            return dialogFieldError(appModel, DialogFieldIds.URL, invalidUrlKey(urlInput));
         }
 
         String title = firstNonBlank(titleInput, appModel.text("save.default.urlTitle"));
-        String notes = firstNonBlank(notesInput, url);
+        String content = sanitize(contentInput);
+        String aiContext = firstNonBlank(summaryInput, buildContext("URL", title, firstNonBlank(content, url)));
+        String tags = resolveUrlTags(tagsInput, url, content, aiContext);
         VaultItemFx item = new VaultItemFx();
         item.setTitle(title);
-        item.setContent(notes);
-        item.setAiContext(buildContext("URL", title, notes));
+        item.setContent(content);
+        item.setAiContext(aiContext);
         item.setItemType(AppModel.TYPE_URL);
-        item.setTags(buildTags(AppModel.TYPE_URL, url));
+        item.setTags(tags);
         item.setSourceUrl(url);
         item.setOwnerId(currentUser.id());
         item.setCreatedAt(LocalDateTime.now());
@@ -277,7 +301,9 @@ public class VaultManager {
                                         VaultItemFx existingItem,
                                         String urlInput,
                                         String titleInput,
-                                        String notesInput,
+                                        String summaryInput,
+                                        String contentInput,
+                                        String tagsInput,
                                         ItemLockOptions lockOptions) {
         UserSession currentUser = currentDialogUser(appModel);
         if (currentUser == null) {
@@ -287,19 +313,21 @@ public class VaultManager {
             return dialogFormError(appModel, "status.edit.select");
         }
 
-        String url = sanitize(urlInput);
-        if (url.isBlank()) {
-            return dialogFieldError(appModel, DialogFieldIds.URL, "dialog.validation.url.required");
+        String url = normalizeUrlInput(urlInput);
+        if (url == null) {
+            return dialogFieldError(appModel, DialogFieldIds.URL, invalidUrlKey(urlInput));
         }
 
         String title = firstNonBlank(titleInput, appModel.text("save.default.urlTitle"));
-        String notes = firstNonBlank(notesInput, url);
+        String content = sanitize(contentInput);
+        String aiContext = firstNonBlank(summaryInput, buildContext("URL", title, firstNonBlank(content, url)));
+        String tags = resolveUrlTags(tagsInput, url, content, aiContext);
         VaultItemFx updatedItem = copyItem(existingItem);
         updatedItem.setTitle(title);
-        updatedItem.setContent(notes);
-        updatedItem.setAiContext(buildContext("URL", title, notes));
+        updatedItem.setContent(content);
+        updatedItem.setAiContext(aiContext);
         updatedItem.setItemType(AppModel.TYPE_URL);
-        updatedItem.setTags(buildTags(AppModel.TYPE_URL, url));
+        updatedItem.setTags(tags);
         updatedItem.setSourceUrl(url);
         updatedItem.setUpdatedAt(LocalDateTime.now());
         LockConfigurationResult lockResult = applyLockConfiguration(appModel, updatedItem, existingItem, lockOptions, null);
@@ -308,6 +336,23 @@ public class VaultManager {
         }
 
         return updateExistingItem(appModel, currentUser, updatedItem, lockResult.imageRecord(), "status.edit.url.updated");
+    }
+
+    public UrlAnalysisResult analyzeUrl(String urlInput, boolean archiveContent) throws IOException {
+        String normalizedUrl = normalizeUrlInput(urlInput);
+        if (normalizedUrl == null) {
+            throw new IllegalArgumentException(INVALID_URL_MARKER);
+        }
+
+        String pageContent = fetchWebpageContent(normalizedUrl);
+        VaultItem analyzedItem = geminiService.generateUrlSummary(normalizedUrl, pageContent);
+        String title = sanitize(analyzedItem.getTitle());
+        String aiContext = firstNonBlank(
+                analyzedItem.getAiContext(),
+                buildContext("URL", firstNonBlank(title, normalizedUrl), firstNonBlank(pageContent, normalizedUrl)));
+        String archivedContent = archiveContent ? pageContent : "";
+        String tags = buildUrlTags(normalizedUrl, firstNonBlank(pageContent, archivedContent), aiContext);
+        return new UrlAnalysisResult(normalizedUrl, title, aiContext, archivedContent, tags);
     }
 
     public DialogActionResult createText(AppModel appModel, String titleInput, String contentInput, ItemLockOptions lockOptions) {
@@ -574,6 +619,7 @@ public class VaultManager {
             LocalDateTime now = LocalDateTime.now();
             deletedItem.setDeletedAt(now);
             deletedItem.setUpdatedAt(now);
+            normalizeStoredItemState(deletedItem);
             appModel.updateItem(deletedItem);
             appModel.showSuccessKey("status.delete.deleted", selectedItem.getId());
             return true;
@@ -607,6 +653,7 @@ public class VaultManager {
             LocalDateTime now = LocalDateTime.now();
             deletedItem.setDeletedAt(now);
             deletedItem.setUpdatedAt(now);
+            normalizeStoredItemState(deletedItem);
             appModel.updateItem(deletedItem);
             return DialogActionResult.successMainToast(appModel.text("status.delete.deleted", item.getId()));
         } catch (SQLException exception) {
@@ -640,6 +687,7 @@ public class VaultManager {
             VaultItemFx restoredItem = copyItem(item);
             restoredItem.setUpdatedAt(LocalDateTime.now());
             restoredItem.setDeletedAt(null);
+            normalizeStoredItemState(restoredItem);
             appModel.updateItem(restoredItem);
             return DialogActionResult.successMainToast(appModel.text("status.restore.restored", item.getId()));
         } catch (SQLException exception) {
@@ -657,6 +705,7 @@ public class VaultManager {
         appModel.setBusy(true);
         try {
             VaultItemFx savedItem = vaultItemDAO.insert(currentUser.id(), item, imageRecord);
+            normalizeStoredItemState(savedItem);
             appModel.addItem(savedItem);
             return DialogActionResult.successMainToast(appModel.text(successKey, savedItem.getId(), currentUser.id()));
         } catch (SQLException exception) {
@@ -673,6 +722,7 @@ public class VaultManager {
                                                   String successKey) {
         appModel.setBusy(true);
         try {
+            normalizeStoredItemState(item);
             boolean updated = vaultItemDAO.update(currentUser.id(), item, imageRecord);
             if (!updated) {
                 return dialogFormError(appModel, "status.edit.missing");
@@ -839,6 +889,99 @@ public class VaultManager {
         return geminiService.analyzeImage(imageAsset.bytes(), imageAsset.mimeType(), imageAsset.fileName());
     }
 
+    private String resolveUrlTags(String tagsInput, String url, String content, String aiContext) {
+        String manualTags = normalizeManualTags(tagsInput);
+        if (!manualTags.isBlank()) {
+            return manualTags;
+        }
+        return buildUrlTags(url, content, aiContext);
+    }
+
+    private String buildUrlTags(String url, String content, String aiContext) {
+        Set<String> tags = new LinkedHashSet<>();
+        addTag(tags, AppModel.TYPE_URL);
+        addTag(tags, LocalDate.now().toString());
+
+        String normalizedUrl = sanitize(url).toLowerCase(Locale.ROOT);
+        String searchableText = (sanitize(content) + " " + sanitize(aiContext)).toLowerCase(Locale.ROOT);
+
+        String host = extractHostLabel(normalizedUrl);
+        if (!host.isBlank()) {
+            addTag(tags, host);
+        }
+
+        if (normalizedUrl.contains("github.com")) {
+            addTag(tags, "GitHub");
+            addTag(tags, "Code");
+        } else if (normalizedUrl.contains("medium.com")) {
+            addTag(tags, "Medium");
+            addTag(tags, "Article");
+        } else if (normalizedUrl.contains("twitter.com") || normalizedUrl.contains("x.com")) {
+            addTag(tags, "Twitter");
+            addTag(tags, "Social");
+        } else if (normalizedUrl.contains("youtube.com") || normalizedUrl.contains("youtu.be")) {
+            addTag(tags, "YouTube");
+            addTag(tags, "Video");
+        } else if (normalizedUrl.contains("reddit.com")) {
+            addTag(tags, "Reddit");
+            addTag(tags, "Discussion");
+        } else if (normalizedUrl.contains("stackoverflow.com")) {
+            addTag(tags, "StackOverflow");
+            addTag(tags, "Q&A");
+        } else if (normalizedUrl.contains("linkedin.com")) {
+            addTag(tags, "LinkedIn");
+            addTag(tags, "Professional");
+        } else if (normalizedUrl.contains("docs.google.com")) {
+            addTag(tags, "Google Docs");
+            addTag(tags, "Document");
+        } else if (normalizedUrl.contains("figma.com")) {
+            addTag(tags, "Figma");
+            addTag(tags, "Design");
+        }
+
+        if (containsAny(searchableText, "tutorial", "guide", "how to", "step-by-step")) {
+            addTag(tags, "Tutorial");
+        }
+        if (containsAny(searchableText, "documentation", "docs", "reference", "api")) {
+            addTag(tags, "Documentation");
+        }
+        if (containsAny(searchableText, "article", "blog", "post")) {
+            addTag(tags, "Article");
+        }
+        if (containsAny(searchableText, "research", "study", "analysis", "findings")) {
+            addTag(tags, "Research");
+        }
+        if (containsAny(searchableText, "product", "pricing", "buy", "cart")) {
+            addTag(tags, "Product");
+        }
+        if (containsAny(searchableText, "video", "course", "watch")) {
+            addTag(tags, "Video");
+        }
+        if (containsAny(searchableText, "table", "chart", "graph", "diagram")) {
+            addTag(tags, "Data");
+        }
+        if (containsAny(searchableText, "javascript", "js")) {
+            addTag(tags, "JavaScript");
+        }
+        if (searchableText.contains("python")) {
+            addTag(tags, "Python");
+        }
+        if (searchableText.contains("java") && !searchableText.contains("javascript")) {
+            addTag(tags, "Java");
+        }
+        if (searchableText.contains("react")) {
+            addTag(tags, "React");
+        }
+        if (searchableText.contains("docker")) {
+            addTag(tags, "Docker");
+        }
+        if (searchableText.contains("sql")) {
+            addTag(tags, "SQL");
+        }
+
+        return String.join(", ", tags);
+    }
+
     private String buildTags(String type, String content) {
         StringBuilder tags = new StringBuilder(type).append(", ").append(LocalDate.now());
 
@@ -945,7 +1088,8 @@ public class VaultManager {
         item.setLockPasswordHash(envelope.passwordHash());
         item.setLockSalt(envelope.lockSalt());
         item.setLockPayload(envelope.encryptedPayload());
-        item.setUnlockedSession(envelope.unlockedSession());
+        // Once the locked item is saved, the UI should immediately return to the protected view.
+        item.clearUnlockedSession();
         item.clearCachedImageBytes();
     }
 
@@ -955,6 +1099,14 @@ public class VaultManager {
         item.setLockSalt("");
         item.setLockPayload("");
         item.clearUnlockedSession();
+    }
+
+    private void normalizeStoredItemState(VaultItemFx item) {
+        if (item == null || !item.isLocked()) {
+            return;
+        }
+        item.clearUnlockedSession();
+        item.clearCachedImageBytes();
     }
 
     private VaultItemFx unlockItemInSession(AppModel appModel, VaultItemFx item, String password) throws SQLException {
@@ -972,12 +1124,230 @@ public class VaultManager {
         return vaultItemDAO.findStoredImageByItemId(userId, itemId);
     }
 
-    private String firstNonBlank(String value, String fallback) {
-        return value == null || value.isBlank() ? fallback : value.trim();
+    private String firstNonBlank(String... values) {
+        if (values == null) {
+            return "";
+        }
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                return value.trim();
+            }
+        }
+        return "";
     }
 
     private String sanitize(String value) {
         return value == null ? "" : value.trim();
+    }
+
+    private String normalizeUrlInput(String urlInput) {
+        String url = sanitize(urlInput);
+        if (url.isBlank()) {
+            return null;
+        }
+
+        if (!url.matches("^[a-zA-Z][a-zA-Z0-9+.-]*://.*$")) {
+            url = "https://" + url;
+        }
+
+        try {
+            URI uri = URI.create(url);
+            String scheme = sanitize(uri.getScheme()).toLowerCase(Locale.ROOT);
+            if (!"http".equals(scheme) && !"https".equals(scheme)) {
+                return null;
+            }
+            if (uri.getHost() == null || uri.getHost().isBlank()) {
+                return null;
+            }
+            return uri.toString();
+        } catch (IllegalArgumentException exception) {
+            return null;
+        }
+    }
+
+    private String invalidUrlKey(String urlInput) {
+        return sanitize(urlInput).isBlank() ? "dialog.validation.url.required" : "dialog.validation.url.invalid";
+    }
+
+    private String fetchWebpageContent(String url) throws IOException {
+        HttpClient client = HttpClient.newBuilder()
+                .followRedirects(HttpClient.Redirect.NORMAL)
+                .connectTimeout(Duration.ofSeconds(12))
+                .build();
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .timeout(Duration.ofSeconds(20))
+                .header("User-Agent", "Mozilla/5.0 (TimeVault Desktop)")
+                .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+                .build();
+
+        try {
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                throw new IOException("HTTP " + response.statusCode());
+            }
+
+            String readableText = extractReadableText(response.body());
+            if (readableText.isBlank()) {
+                throw new IOException("No readable content found.");
+            }
+            return truncate(readableText, MAX_FETCHED_URL_CONTENT);
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw new IOException("The page analysis was interrupted.", exception);
+        } catch (IllegalArgumentException exception) {
+            throw new IOException("The page URL could not be fetched.", exception);
+        }
+    }
+
+    private String extractReadableText(String html) {
+        String pageTitle = decodeHtmlEntities(extractPatternGroup(html, TITLE_PATTERN));
+        String description = decodeHtmlEntities(extractMetaDescription(html));
+        String strippedText = html == null ? "" : html
+                .replaceAll("(?is)<script[^>]*>.*?</script>", " ")
+                .replaceAll("(?is)<style[^>]*>.*?</style>", " ")
+                .replaceAll("(?is)<noscript[^>]*>.*?</noscript>", " ")
+                .replaceAll("(?is)<svg[^>]*>.*?</svg>", " ")
+                .replaceAll("(?is)<[^>]+>", " ")
+                .replaceAll("\\s+", " ")
+                .trim();
+
+        StringBuilder combined = new StringBuilder();
+        appendDistinctText(combined, pageTitle);
+        appendDistinctText(combined, description);
+        appendDistinctText(combined, decodeHtmlEntities(strippedText));
+        return combined.toString().trim();
+    }
+
+    private String extractMetaDescription(String html) {
+        Matcher matcher = META_DESCRIPTION_PATTERN.matcher(html == null ? "" : html);
+        if (!matcher.find()) {
+            return "";
+        }
+        return firstNonBlank(matcher.group(1), matcher.group(2));
+    }
+
+    private String extractPatternGroup(String source, Pattern pattern) {
+        if (source == null || pattern == null) {
+            return "";
+        }
+        Matcher matcher = pattern.matcher(source);
+        if (!matcher.find()) {
+            return "";
+        }
+        return matcher.group(1);
+    }
+
+    private void appendDistinctText(StringBuilder builder, String value) {
+        String cleaned = sanitize(value);
+        if (cleaned.isBlank()) {
+            return;
+        }
+        String existing = builder.toString().toLowerCase(Locale.ROOT);
+        String normalized = cleaned.toLowerCase(Locale.ROOT);
+        if (existing.contains(normalized)) {
+            return;
+        }
+        if (builder.length() > 0) {
+            builder.append(' ');
+        }
+        builder.append(cleaned);
+    }
+
+    private String decodeHtmlEntities(String value) {
+        return sanitize(value)
+                .replace("&nbsp;", " ")
+                .replace("&amp;", "&")
+                .replace("&quot;", "\"")
+                .replace("&#39;", "'")
+                .replace("&lt;", "<")
+                .replace("&gt;", ">");
+    }
+
+    private String truncate(String value, int maxLength) {
+        String sanitized = sanitize(value);
+        if (sanitized.length() <= maxLength) {
+            return sanitized;
+        }
+        return sanitized.substring(0, maxLength) + "...";
+    }
+
+    private String normalizeManualTags(String value) {
+        String sanitized = sanitize(value);
+        if (sanitized.isBlank()) {
+            return "";
+        }
+
+        Set<String> tokens = new LinkedHashSet<>();
+        for (String token : sanitized.split("[,\\n]")) {
+            String cleaned = sanitize(token);
+            if (!cleaned.isBlank()) {
+                tokens.add(cleaned);
+            }
+        }
+        return String.join(", ", tokens);
+    }
+
+    private void addTag(Set<String> tags, String candidate) {
+        String cleaned = sanitize(candidate);
+        if (cleaned.isBlank() || tags == null) {
+            return;
+        }
+        for (String existing : tags) {
+            if (existing.equalsIgnoreCase(cleaned)) {
+                return;
+            }
+        }
+        tags.add(cleaned);
+    }
+
+    private boolean containsAny(String value, String... needles) {
+        String normalized = sanitize(value).toLowerCase(Locale.ROOT);
+        if (normalized.isBlank() || needles == null) {
+            return false;
+        }
+        for (String needle : needles) {
+            if (needle != null && !needle.isBlank() && normalized.contains(needle.toLowerCase(Locale.ROOT))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private String extractHostLabel(String url) {
+        String normalizedUrl = sanitize(url);
+        if (normalizedUrl.isBlank()) {
+            return "";
+        }
+        try {
+            String host = URI.create(normalizedUrl).getHost();
+            if (host == null || host.isBlank()) {
+                return "";
+            }
+            String cleaned = host.replaceFirst("^(www\\.)", "");
+            int lastDot = cleaned.lastIndexOf('.');
+            if (lastDot > 0) {
+                cleaned = cleaned.substring(0, lastDot);
+            }
+            String[] segments = cleaned.replace('-', ' ').split("\\s+");
+            StringBuilder label = new StringBuilder();
+            for (String segment : segments) {
+                if (segment.isBlank()) {
+                    continue;
+                }
+                if (label.length() > 0) {
+                    label.append(' ');
+                }
+                label.append(Character.toUpperCase(segment.charAt(0)));
+                if (segment.length() > 1) {
+                    label.append(segment.substring(1).toLowerCase(Locale.ROOT));
+                }
+            }
+            return label.toString();
+        } catch (IllegalArgumentException exception) {
+            return "";
+        }
     }
 
     private UserSession currentDialogUser(AppModel appModel) {
@@ -1113,5 +1483,12 @@ public class VaultManager {
         private static LockConfigurationResult failed(DialogActionResult failureResult) {
             return new LockConfigurationResult(false, null, failureResult);
         }
+    }
+
+    public record UrlAnalysisResult(String normalizedUrl,
+                                    String title,
+                                    String aiContext,
+                                    String archivedContent,
+                                    String tags) {
     }
 }

@@ -166,6 +166,12 @@ public class ApiVaultItemDAO implements VaultItemDAO {
             return;
         }
 
+        if (target.isLocked()) {
+            target.clearUnlockedSession();
+            target.clearCachedImageBytes();
+            return;
+        }
+
         UnlockedItemSession unlockedSession = source.getUnlockedSession();
         if (unlockedSession != null) {
             target.setUnlockedSession(unlockedSession.copy());

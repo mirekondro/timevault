@@ -5,10 +5,13 @@
 <?import javafx.scene.control.CheckBox?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.PasswordField?>
+<?import javafx.scene.control.RadioButton?>
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.TextArea?>
 <?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.ToggleGroup?>
 <?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
@@ -16,6 +19,9 @@
            fx:controller="com.example.desktop.gui.UrlDialogController"
            alignment="CENTER"
            styleClass="dialog-scene-root">
+    <fx:define>
+        <ToggleGroup fx:id="captureModeToggleGroup"/>
+    </fx:define>
     <ScrollPane fitToHeight="true" fitToWidth="true" hbarPolicy="NEVER" styleClass="page-scroll" vbarPolicy="AS_NEEDED">
         <content>
             <StackPane alignment="CENTER">
@@ -23,17 +29,39 @@
                     <Insets top="28.0" right="28.0" bottom="28.0" left="28.0"/>
                 </padding>
 
-                <VBox maxHeight="-Infinity" maxWidth="560.0" prefWidth="560.0" spacing="14.0" styleClass="dialog-shell">
+                <VBox maxHeight="-Infinity" maxWidth="680.0" prefWidth="680.0" spacing="14.0" styleClass="dialog-shell">
                     <padding>
                         <Insets top="22.0" right="22.0" bottom="22.0" left="22.0"/>
                     </padding>
                     <Label fx:id="dialogTitleLabel" styleClass="section-title"/>
                     <Label fx:id="dialogCopyLabel" styleClass="muted-copy" wrapText="true"/>
                     <Label fx:id="formMessageLabel" managed="false" styleClass="form-error-label" visible="false" wrapText="true"/>
+
+                    <Label fx:id="urlLabel" styleClass="dialog-field-label"/>
                     <TextField fx:id="urlField" styleClass="text-field"/>
                     <Label fx:id="urlErrorLabel" managed="false" styleClass="field-error-label" visible="false" wrapText="true"/>
+
+                    <VBox spacing="8.0" styleClass="mode-box">
+                        <Label fx:id="captureModeLabel" styleClass="dialog-field-label"/>
+                        <RadioButton fx:id="linkOnlyRadio" mnemonicParsing="false" styleClass="mode-option"
+                                     toggleGroup="$captureModeToggleGroup"/>
+                        <RadioButton fx:id="archiveContentRadio" mnemonicParsing="false" styleClass="mode-option"
+                                     toggleGroup="$captureModeToggleGroup"/>
+                        <Label fx:id="captureModeCopyLabel" styleClass="muted-copy" wrapText="true"/>
+                    </VBox>
+
+                    <Label fx:id="titleLabel" styleClass="dialog-field-label"/>
                     <TextField fx:id="titleField" styleClass="text-field"/>
-                    <TextArea fx:id="notesArea" prefRowCount="6" styleClass="text-area" wrapText="true"/>
+
+                    <Label fx:id="tagsLabel" styleClass="dialog-field-label"/>
+                    <TextField fx:id="tagsField" styleClass="text-field"/>
+
+                    <Label fx:id="summaryLabel" styleClass="dialog-field-label"/>
+                    <TextArea fx:id="summaryArea" prefRowCount="5" styleClass="text-area" wrapText="true"/>
+
+                    <Label fx:id="contentLabel" styleClass="dialog-field-label"/>
+                    <TextArea fx:id="contentArea" prefRowCount="8" styleClass="text-area" wrapText="true"/>
+
                     <VBox spacing="10.0" styleClass="lock-box">
                         <CheckBox fx:id="lockToggle" mnemonicParsing="false" styleClass="lock-toggle"/>
                         <PasswordField fx:id="lockPasswordField" styleClass="password-field"/>
@@ -42,7 +70,11 @@
                         <Label fx:id="confirmLockPasswordErrorLabel" managed="false" styleClass="field-error-label" visible="false" wrapText="true"/>
                         <Label fx:id="lockHintLabel" styleClass="muted-copy" wrapText="true"/>
                     </VBox>
-                    <HBox alignment="CENTER_RIGHT" spacing="10.0" styleClass="dialog-actions">
+
+                    <HBox alignment="CENTER_LEFT" spacing="10.0" styleClass="dialog-actions">
+                        <Button fx:id="analyzeButton" mnemonicParsing="false"
+                                onAction="#handleAnalyze" styleClass="ghost-button"/>
+                        <Region HBox.hgrow="ALWAYS"/>
                         <Button fx:id="cancelButton" cancelButton="true" mnemonicParsing="false"
                                 onAction="#handleCancel" styleClass="ghost-button"/>
                         <Button fx:id="primaryButton" defaultButton="true" mnemonicParsing="false"
