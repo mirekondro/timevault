@@ -122,12 +122,51 @@ public class MainView extends VerticalLayout {
 
         logoArea.add(vaultIcon, title);
 
+        // Enhanced Search Bar Container
+        Div searchContainer = new Div();
+        searchContainer.getStyle().set("position", "relative");
+        searchContainer.getStyle().set("max-width", "450px");
+        searchContainer.getStyle().set("width", "100%");
+
+        // Search Field
         TextField searchField = new TextField();
-        searchField.setPlaceholder("Search your digital mind...");
-        searchField.setPrefixComponent(VaadinIcon.SEARCH.create());
+        searchField.setPlaceholder("🔍 Search your digital memories...");
         searchField.addClassName("header-search");
+        searchField.setWidthFull();
         searchField.setClearButtonVisible(true);
 
+        // Search Button Group
+        Div buttonGroup = new Div();
+        buttonGroup.addClassName("search-button-group");
+
+        // Voice Search Button
+        Button voiceBtn = new Button(VaadinIcon.MICROPHONE.create());
+        voiceBtn.addClassName("voice-search-btn");
+        voiceBtn.setTooltipText("Voice Search");
+
+        // Search Execute Button
+        Button searchBtn = new Button(VaadinIcon.SEARCH.create());
+        searchBtn.addClassName("search-execute-btn");
+        searchBtn.setTooltipText("Search");
+
+        buttonGroup.add(voiceBtn, searchBtn);
+
+        // Voice Status Indicator
+        Div voiceStatus = new Div();
+        voiceStatus.addClassName("voice-status");
+        voiceStatus.setText("🎤 Listening...");
+
+        // Search Results Dropdown
+        Div resultsDropdown = new Div();
+        resultsDropdown.addClassName("search-results-dropdown");
+
+        // Search Loading Indicator
+        Div loadingIndicator = new Div();
+        loadingIndicator.addClassName("search-loading");
+
+        searchContainer.add(searchField, buttonGroup, voiceStatus, resultsDropdown, loadingIndicator);
+
+        // Enhanced search functionality
         searchField.addValueChangeListener(e -> {
             if (e.getValue() != null && !e.getValue().trim().isEmpty()) {
                 updateItemsList(vaultItemService.searchComprehensive(e.getValue().trim()));
@@ -136,7 +175,190 @@ public class MainView extends VerticalLayout {
             }
         });
 
-        header.add(logoArea, searchField);
+        // Add enhanced JavaScript for voice search and advanced functionality
+        searchContainer.getElement().executeJs("""
+            // Enhanced Search Functionality
+            const searchField = this.querySelector('.header-search input');
+            const voiceBtn = this.querySelector('.voice-search-btn');
+            const searchBtn = this.querySelector('.search-execute-btn');
+            const voiceStatus = this.querySelector('.voice-status');
+            const resultsDropdown = this.querySelector('.search-results-dropdown');
+            const loadingIndicator = this.querySelector('.search-loading');
+            
+            let recognition = null;
+            let searchTimeout = null;
+            
+            // Initialize Speech Recognition
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                recognition = new SpeechRecognition();
+                recognition.continuous = false;
+                recognition.interimResults = false;
+                recognition.lang = 'en-US';
+                
+                recognition.onstart = () => {
+                    voiceBtn.classList.add('listening');
+                    voiceStatus.classList.add('show');
+                };
+                
+                recognition.onend = () => {
+                    voiceBtn.classList.remove('listening');
+                    voiceStatus.classList.remove('show');
+                };
+                
+                recognition.onresult = (event) => {
+                    const transcript = event.results[0][0].transcript;
+                    searchField.value = transcript;
+                    searchField.dispatchEvent(new Event('input', { bubbles: true }));
+                    performSearch(transcript);
+                };
+                
+                recognition.onerror = (event) => {
+                    voiceBtn.classList.remove('listening');
+                    voiceStatus.classList.remove('show');
+                    console.error('Speech recognition error:', event.error);
+                };
+            } else {
+                voiceBtn.style.display = 'none';
+            }
+            
+            // Voice Search Button Click
+            voiceBtn.addEventListener('click', () => {
+                if (recognition) {
+                    try {
+                        recognition.start();
+                    } catch (error) {
+                        console.error('Voice recognition failed:', error);
+                        showNotification('🎤 Voice search not available', 'error');
+                    }
+                }
+            });
+            
+            // Search Button Click
+            searchBtn.addEventListener('click', () => {
+                performSearch(searchField.value);
+            });
+            
+            // Search Field Input (with debounce for suggestions)
+            searchField.addEventListener('input', (e) => {
+                const query = e.target.value.trim();
+                
+                clearTimeout(searchTimeout);
+                
+                if (query.length >= 2) {
+                    searchTimeout = setTimeout(() => {
+                        fetchSuggestions(query);
+                    }, 300);
+                } else {
+                    resultsDropdown.classList.remove('show');
+                }
+            });
+            
+            // Search on Enter
+            searchField.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    performSearch(searchField.value);
+                }
+            });
+            
+            // Fetch Search Suggestions
+            async function fetchSuggestions(query) {
+                try {
+                    loadingIndicator.classList.add('show');
+                    
+                    const response = await fetch(`/api/search/suggestions?q=${encodeURIComponent(query)}`);
+                    const data = await response.json();
+                    
+                    loadingIndicator.classList.remove('show');
+                    
+                    if (data.success && data.suggestions.length > 0) {
+                        displaySuggestions(data.suggestions);
+                    } else {
+                        resultsDropdown.classList.remove('show');
+                    }
+                } catch (error) {
+                    loadingIndicator.classList.remove('show');
+                    console.error('Suggestions error:', error);
+                }
+            }
+            
+            // Display Search Suggestions
+            function displaySuggestions(suggestions) {
+                resultsDropdown.innerHTML = '';
+                
+                suggestions.forEach(suggestion => {
+                    const item = document.createElement('div');
+                    item.className = 'search-result-item';
+                    item.innerHTML = `
+                        <div class="search-result-title">${escapeHtml(suggestion.title)}</div>
+                        <div class="search-result-snippet">${escapeHtml(suggestion.snippet)}</div>
+                    `;
+                    
+                    item.addEventListener('click', () => {
+                        searchField.value = suggestion.title;
+                        resultsDropdown.classList.remove('show');
+                        performSearch(suggestion.title);
+                    });
+                    
+                    resultsDropdown.appendChild(item);
+                });
+                
+                resultsDropdown.classList.add('show');
+            }
+            
+            // Perform Search
+            function performSearch(query) {
+                if (!query.trim()) return;
+                
+                resultsDropdown.classList.remove('show');
+                showNotification(`🔍 Searching: "${query}"`, 'info');
+                
+                // Trigger Vaadin search
+                searchField.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            
+            // Show Notification
+            function showNotification(message, type = 'info') {
+                const notification = document.createElement('div');
+                const bgColor = type === 'error' ? 
+                    'linear-gradient(135deg, #EF4444 0%, #DC2626 50%, #B91C1C 100%)' :
+                    'linear-gradient(135deg, #60A5FA 0%, #A78BFA 50%, #F472B6 100%)';
+                    
+                notification.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: ${bgColor};
+                    color: white;
+                    padding: 15px 20px;
+                    border-radius: 12px;
+                    z-index: 10000;
+                    font-family: 'Plus Jakarta Sans', sans-serif;
+                    font-weight: 600;
+                    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+                `;
+                notification.textContent = message;
+                document.body.appendChild(notification);
+                
+                setTimeout(() => document.body.removeChild(notification), 3000);
+            }
+            
+            // Utility function to escape HTML
+            function escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text || '';
+                return div.innerHTML;
+            }
+            
+            // Hide dropdown when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!this.contains(e.target)) {
+                    resultsDropdown.classList.remove('show');
+                }
+            });
+            """);
+
+        header.add(logoArea, searchContainer);
         return header;
     }
 
@@ -188,21 +410,50 @@ public class MainView extends VerticalLayout {
         VerticalLayout vaultContent = new VerticalLayout();
         vaultContent.setSpacing(true);
         vaultContent.setPadding(false);
+        vaultContent.setAlignItems(Alignment.CENTER);
 
         // Add vault header
         H2 vaultTitle = new H2("Your Digital Vault");
         vaultTitle.addClassName("section-title");
+        vaultTitle.getStyle().set("color", "#ffffff");
+        vaultTitle.getStyle().set("font-weight", "800");
+        vaultTitle.getStyle().set("margin-bottom", "2rem");
         vaultContent.add(vaultTitle);
 
-        // Add search functionality specific to vault
+        // Simple Search Container with Voice Search
+        Div searchContainer = new Div();
+        searchContainer.getStyle().set("position", "relative");
+        searchContainer.getStyle().set("max-width", "600px");
+        searchContainer.getStyle().set("width", "100%");
+        searchContainer.getStyle().set("margin-bottom", "2rem");
+
+        // Search Field - same as before but with voice
         TextField vaultSearch = new TextField();
-        vaultSearch.setPlaceholder("Search your vault...");
+        vaultSearch.setPlaceholder("🔍 Search your vault...");
         vaultSearch.setPrefixComponent(VaadinIcon.SEARCH.create());
         vaultSearch.addClassName("vault-search");
         vaultSearch.setWidthFull();
-        vaultSearch.setMaxWidth("600px");
         vaultSearch.setClearButtonVisible(true);
 
+        // Simple Search Button Group (just voice + search)
+        Div buttonGroup = new Div();
+        buttonGroup.addClassName("search-button-group");
+
+        // Voice Search Button
+        Button voiceBtn = new Button(VaadinIcon.MICROPHONE.create());
+        voiceBtn.addClassName("voice-search-btn");
+        voiceBtn.setTooltipText("Voice Search");
+
+        buttonGroup.add(voiceBtn);
+
+        // Voice Status Indicator
+        Div voiceStatus = new Div();
+        voiceStatus.addClassName("voice-status");
+        voiceStatus.setText("🎤 Listening...");
+
+        searchContainer.add(vaultSearch, buttonGroup, voiceStatus);
+
+        // Keep original search functionality
         vaultSearch.addValueChangeListener(e -> {
             if (e.getValue() != null && !e.getValue().trim().isEmpty()) {
                 updateItemsList(vaultItemService.searchComprehensive(e.getValue().trim()));
@@ -211,10 +462,63 @@ public class MainView extends VerticalLayout {
             }
         });
 
-        vaultContent.add(vaultSearch);
-        vaultContent.setHorizontalComponentAlignment(Alignment.CENTER, vaultSearch);
+        // Add simple voice search JavaScript (same as landing page)
+        searchContainer.getElement().executeJs("""
+            const searchField = this.querySelector('.vault-search input');
+            const voiceBtn = this.querySelector('.voice-search-btn');
+            const voiceStatus = this.querySelector('.voice-status');
+            
+            let recognition = null;
+            
+            // Initialize Speech Recognition (same as landing page)
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                recognition = new SpeechRecognition();
+                recognition.continuous = false;
+                recognition.interimResults = false;
+                recognition.lang = 'en-US';
+                
+                recognition.onstart = () => {
+                    voiceBtn.classList.add('listening');
+                    voiceStatus.classList.add('show');
+                };
+                
+                recognition.onend = () => {
+                    voiceBtn.classList.remove('listening');
+                    voiceStatus.classList.remove('show');
+                };
+                
+                recognition.onresult = (event) => {
+                    const transcript = event.results[0][0].transcript;
+                    searchField.value = transcript;
+                    searchField.dispatchEvent(new Event('input', { bubbles: true }));
+                    searchField.dispatchEvent(new Event('change', { bubbles: true }));
+                };
+                
+                recognition.onerror = (event) => {
+                    voiceBtn.classList.remove('listening');
+                    voiceStatus.classList.remove('show');
+                    console.error('Voice recognition error:', event.error);
+                };
+            } else {
+                voiceBtn.style.display = 'none';
+            }
+            
+            // Voice Search Button Click
+            voiceBtn.addEventListener('click', () => {
+                if (recognition) {
+                    try {
+                        recognition.start();
+                    } catch (error) {
+                        console.error('Voice recognition failed:', error);
+                    }
+                }
+            });
+            """);
 
-        // Add all items grid
+        vaultContent.add(searchContainer);
+
+        // Add all items grid (same as before)
         itemsGrid.removeAll();
         loadAllItems();
         vaultContent.add(itemsGrid);
