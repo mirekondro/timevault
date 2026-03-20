@@ -1,7 +1,3 @@
-/* =========================================
-   TIMEVAULT - ULTRA PREMIUM AI THEME
-   ========================================= */
-
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 html {
@@ -420,20 +416,24 @@ vaadin-vertical-layout.main-view > vaadin-vertical-layout {
   box-shadow: 0 12px 30px rgba(167, 139, 250, 0.5);
 }
 
-/* Vault Search Styling (Simple + Voice) */
+.vault-search {
+  position: relative;
+  max-width: 600px;
+  width: 100%;
+  height: 80px;
+}
+
 .vault-search::part(input-field) {
   background: rgba(255,255,255,0.05) !important;
-  border: 1px solid rgba(255,255,255,0.1) !important;
   border-radius: 50px !important;
   color: white !important;
   backdrop-filter: blur(10px) !important;
   transition: all 0.3s ease !important;
-  padding-right: 60px !important; /* Space for voice button only */
+  padding-right: 60px !important; /* Space for voice button */
 }
 
 .vault-search:hover::part(input-field),
 .vault-search[focused]::part(input-field) {
-  background: rgba(255,255,255,0.1) !important;
   border-color: rgba(167, 139, 250, 0.5) !important;
   box-shadow: 0 0 25px rgba(167, 139, 250, 0.3) !important;
   transform: scale(1.02) !important;
@@ -460,7 +460,6 @@ vaadin-vertical-layout.main-view > vaadin-vertical-layout {
   transform: translateY(-50%);
   width: 16px;
   height: 16px;
-  border: 2px solid rgba(167, 139, 250, 0.3);
   border-top: 2px solid #A78BFA;
   border-radius: 50%;
   animation: spin 1s linear infinite;
