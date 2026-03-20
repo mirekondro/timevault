@@ -2,6 +2,7 @@ package com.example.web.config;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
@@ -20,9 +21,15 @@ public class VaultImageSchemaMigration implements ApplicationRunner {
     private static final Logger LOGGER = LoggerFactory.getLogger(VaultImageSchemaMigration.class);
 
     private final DataSource dataSource;
+    private final boolean resetOnStart;
+    private final WebDemoDataSeeder webDemoDataSeeder;
 
-    public VaultImageSchemaMigration(DataSource dataSource) {
+    public VaultImageSchemaMigration(DataSource dataSource,
+                                     @Value("${db.resetOnStart:false}") boolean resetOnStart,
+                                     WebDemoDataSeeder webDemoDataSeeder) {
         this.dataSource = dataSource;
+        this.resetOnStart = resetOnStart;
+        this.webDemoDataSeeder = webDemoDataSeeder;
     }
 
     @Override
@@ -33,6 +40,11 @@ public class VaultImageSchemaMigration implements ApplicationRunner {
             connection.setAutoCommit(false);
             try {
                 ensureVaultItemImagesTable(statement);
+                if (resetOnStart) {
+                    LOGGER.warn("db.resetOnStart=true detected. Clearing existing vault data and reseeding demo users/items.");
+                    clearVaultData(statement);
+                    webDemoDataSeeder.seed(connection);
+                }
                 connection.commit();
                 LOGGER.info("Verified multi-image schema for vault_item_images.");
             } catch (SQLException exception) {
@@ -299,6 +311,32 @@ public class VaultImageSchemaMigration implements ApplicationRunner {
                 BEGIN
                     CREATE INDEX idx_vault_item_images_item_order
                     ON dbo.vault_item_images (item_id, display_order, id)
+                END
+                """);
+    }
+
+    private void clearVaultData(Statement statement) throws SQLException {
+        statement.executeUpdate("""
+                IF OBJECT_ID('dbo.vault_item_images', 'U') IS NOT NULL
+                BEGIN
+                    DELETE FROM dbo.vault_item_images
+                    DBCC CHECKIDENT ('dbo.vault_item_images', RESEED, 0) WITH NO_INFOMSGS
+                END
+                """);
+
+        statement.executeUpdate("""
+                IF OBJECT_ID('dbo.vault_items', 'U') IS NOT NULL
+                BEGIN
+                    DELETE FROM dbo.vault_items
+                    DBCC CHECKIDENT ('dbo.vault_items', RESEED, 0) WITH NO_INFOMSGS
+                END
+                """);
+
+        statement.executeUpdate("""
+                IF OBJECT_ID('dbo.vault_users', 'U') IS NOT NULL
+                BEGIN
+                    DELETE FROM dbo.vault_users
+                    DBCC CHECKIDENT ('dbo.vault_users', RESEED, 0) WITH NO_INFOMSGS
                 END
                 """);
     }
