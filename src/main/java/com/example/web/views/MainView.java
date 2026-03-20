@@ -5,6 +5,7 @@ import com.example.shared.service.VaultItemService;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
+import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.html.*;
 import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
@@ -975,7 +976,206 @@ public class MainView extends VerticalLayout {
         cardFooter.add(dateStr, buttonGroup);
 
         card.add(cardHeader, title, contextWrapper, cardFooter);
+
+        // Make card clickable
+        card.getStyle().set("cursor", "pointer");
+        card.addClickListener(e -> openCardModal(vaultItem));
+
         return card;
+    }
+
+    /**
+     * Open a modal dialog to view full vault item details - CUSTOM HTML MODAL (NO VAADIN)
+     */
+    private void openCardModal(VaultItem item) {
+        // Create modal HTML content
+        String modalHtml = createModalHtml(item);
+
+        // Inject modal into page using JavaScript
+        getElement().executeJs("""
+            // Remove any existing modal
+            const existingModal = document.querySelector('.custom-vault-modal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+            
+            // Create modal HTML
+            const modalHtml = $0;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            
+            // Get modal elements
+            const modal = document.querySelector('.custom-vault-modal');
+            const overlay = document.querySelector('.custom-modal-overlay');
+            const closeBtn = document.querySelector('.custom-modal-close');
+            const deleteBtn = document.querySelector('.custom-modal-delete');
+            const speakBtn = document.querySelector('.custom-modal-speak');
+            
+            // Show modal with animation
+            setTimeout(() => {
+                overlay.classList.add('show');
+                modal.classList.add('show');
+            }, 10);
+            
+            // Close modal function
+            const closeModal = () => {
+                overlay.classList.remove('show');
+                modal.classList.remove('show');
+                setTimeout(() => {
+                    overlay.remove();
+                    modal.remove();
+                }, 300);
+            };
+            
+            // Close button click
+            closeBtn.addEventListener('click', closeModal);
+            
+            // Overlay click
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    closeModal();
+                }
+            });
+            
+            // ESC key
+            const handleEsc = (e) => {
+                if (e.key === 'Escape') {
+                    closeModal();
+                    document.removeEventListener('keydown', handleEsc);
+                }
+            };
+            document.addEventListener('keydown', handleEsc);
+            
+            // Delete button
+            if (deleteBtn) {
+                deleteBtn.addEventListener('click', () => {
+                    if (confirm('Are you sure you want to delete this memory?')) {
+                        fetch('/api/vault/delete/' + $1, { method: 'DELETE' })
+                            .then(() => {
+                                closeModal();
+                                window.location.reload();
+                            });
+                    }
+                });
+            }
+            
+            // Speak button
+            if (speakBtn) {
+                speakBtn.addEventListener('click', async () => {
+                    const text = speakBtn.getAttribute('data-text');
+                    try {
+                        const response = await fetch('/api/speech/synthesize', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ text: text })
+                        });
+                        const result = await response.json();
+                        if (result.success) {
+                            const audio = new Audio(result.audio);
+                            audio.play();
+                        }
+                    } catch (error) {
+                        console.error('Speech error:', error);
+                    }
+                });
+            }
+            """, modalHtml, item.getId());
+    }
+
+    /**
+     * Create modal HTML content
+     */
+    private String createModalHtml(VaultItem item) {
+        String title = item.getTitle() != null ? escapeHtml(item.getTitle()) : "Untitled Memory";
+        String aiContext = item.getAiContext() != null ? escapeHtml(item.getAiContext()) : "";
+        String content = item.getContent() != null ? escapeHtml(item.getContent()) : "";
+        String sourceUrl = item.getSourceUrl() != null ? escapeHtml(item.getSourceUrl()) : "";
+        String tags = item.getTags() != null ? escapeHtml(item.getTags()) : "";
+        String date = item.getCreatedAt() != null ?
+            item.getCreatedAt().format(java.time.format.DateTimeFormatter.ofPattern("MMM dd, yyyy • HH:mm")) : "";
+        String typeIcon = getTypeIcon(item.getItemType());
+        String typeColor = getTypeColor(item.getItemType());
+
+        StringBuilder html = new StringBuilder();
+
+        // Modal overlay
+        html.append("<div class='custom-modal-overlay'></div>");
+
+        // Modal container
+        html.append("<div class='custom-vault-modal'>");
+
+        // Header
+        html.append("<div class='custom-modal-header'>");
+        html.append("<span class='custom-modal-badge' style='background: ").append(typeColor).append("'>");
+        html.append(typeIcon).append(" ").append(item.getItemType()).append("</span>");
+        html.append("<button class='custom-modal-close'>✕</button>");
+        html.append("</div>");
+
+        // Title section
+        html.append("<div class='custom-modal-title-section'>");
+        html.append("<h2 class='custom-modal-title'>").append(title).append("</h2>");
+        html.append("<div class='custom-modal-meta'>");
+        if (!date.isEmpty()) {
+            html.append("<span class='custom-meta-chip'>📅 ").append(date).append("</span>");
+        }
+        if (!tags.isEmpty()) {
+            html.append("<span class='custom-meta-chip'>🏷️ ").append(tags).append("</span>");
+        }
+        html.append("</div>");
+        html.append("</div>");
+
+        // Body
+        html.append("<div class='custom-modal-body'>");
+
+        // Source URL
+        if (!sourceUrl.isEmpty()) {
+            html.append("<a href='").append(sourceUrl).append("' target='_blank' class='custom-source-link'>");
+            html.append("🔗 Open Original Source</a>");
+        }
+
+        // AI Summary
+        if (!aiContext.isEmpty()) {
+            html.append("<div class='custom-ai-card'>");
+            html.append("<div class='custom-ai-accent'></div>");
+            html.append("<h3 class='custom-ai-title'>🤖 AI Summary</h3>");
+            html.append("<p class='custom-ai-text'>").append(aiContext).append("</p>");
+            html.append("<button class='custom-modal-speak' data-text='").append(aiContext).append("'>");
+            html.append("🔊 Listen to Summary</button>");
+            html.append("</div>");
+        }
+
+        // Full Content
+        if (!content.isEmpty()) {
+            html.append("<div class='custom-content-card'>");
+            html.append("<h3 class='custom-content-title'>📄 Full Content</h3>");
+            html.append("<div class='custom-content-box'>");
+            html.append("<p class='custom-content-text'>").append(content).append("</p>");
+            html.append("</div>");
+            html.append("</div>");
+        }
+
+        html.append("</div>");
+
+        // Footer
+        html.append("<div class='custom-modal-footer'>");
+        html.append("<button class='custom-modal-delete'>🗑️ Delete Memory</button>");
+        html.append("</div>");
+
+        html.append("</div>");
+
+        return html.toString();
+    }
+
+    /**
+     * Escape HTML to prevent XSS
+     */
+    private String escapeHtml(String text) {
+        if (text == null) return "";
+        return text.replace("&", "&amp;")
+                   .replace("<", "&lt;")
+                   .replace(">", "&gt;")
+                   .replace("\"", "&quot;")
+                   .replace("'", "&#39;")
+                   .replace("\n", "<br>");
     }
 
     /**
@@ -1075,6 +1275,32 @@ public class MainView extends VerticalLayout {
             
             speakText($0);
             """, text);
+    }
+
+    /**
+     * Get type icon for different item types
+     */
+    private String getTypeIcon(String itemType) {
+        if (itemType == null) return "📄";
+        return switch (itemType.toUpperCase()) {
+            case "URL" -> "📄";
+            case "IMAGE" -> "🖼️";
+            case "TEXT" -> "📝";
+            default -> "📄";
+        };
+    }
+
+    /**
+     * Get type color for different item types
+     */
+    private String getTypeColor(String itemType) {
+        if (itemType == null) return "rgba(96, 165, 250, 0.8)";
+        return switch (itemType.toUpperCase()) {
+            case "URL" -> "rgba(96, 165, 250, 0.8)"; // Blue
+            case "IMAGE" -> "rgba(34, 197, 94, 0.8)"; // Green
+            case "TEXT" -> "rgba(251, 146, 60, 0.8)"; // Orange
+            default -> "rgba(96, 165, 250, 0.8)";
+        };
     }
 
     private void showNeonNotification(String text, boolean success) {
