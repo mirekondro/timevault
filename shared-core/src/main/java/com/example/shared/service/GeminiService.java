@@ -12,7 +12,10 @@ import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.List;
+import java.util.Locale;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -29,6 +32,29 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
  */
 @Service
 public class GeminiService {
+
+    private static final List<String> LOW_VALUE_PAGE_PHRASES = List.of(
+            "skip to content",
+            "privacy policy",
+            "terms of service",
+            "cookie policy",
+            "accept cookies",
+            "all rights reserved",
+            "sign up",
+            "log in",
+            "share this",
+            "subscribe",
+            "javascript",
+            "newsletter");
+    private static final List<String> GENERIC_URL_SUMMARY_PHRASES = List.of(
+            "contains saved content",
+            "archived locally",
+            "offline access",
+            "future reference",
+            "searchable by keywords",
+            "text, images, and interactive elements",
+            "can be searched by url or content",
+            "preserved for future reference");
 
     @Value("${gemini.api.key:}")
     private String apiKey;
@@ -82,34 +108,32 @@ public class GeminiService {
      * Generate a proper title and context for URL content
      */
     public VaultItem generateUrlSummary(String url, String pageContent) {
+        return generateUrlSummaryResult(url, pageContent).item();
+    }
+
+    public UrlSummaryResult generateUrlSummaryResult(String url, String pageContent) {
         if (!isConfigured()) {
-            return createFallbackUrlSummary(url, pageContent);
+            return new UrlSummaryResult(createFallbackUrlSummary(url, pageContent), false);
         }
 
         try {
             String prompt = """
-                Analyze this webpage content thoroughly and create a rich, detailed summary. Provide your response in this EXACT format:
+                Analyze this webpage content and create a concrete, memorable summary that helps someone instantly remember what they saved. Provide your response in this EXACT format:
                 
                 TITLE: [Generate a clear, descriptive title - NO URLs, just describe what it is]
-                DESCRIPTION: [Provide exactly 3 sentences that describe the ACTUAL CONTENT, what you see, what it contains, and what information it provides]
+                DESCRIPTION: [Provide exactly 3 sentences about the ACTUAL CONTENT and WHY IT MATTERS]
                 
-                Focus on describing WHAT IS ACTUALLY ON THE PAGE:
-                - What does the text say? (main points, key information, specific facts)
-                - What kind of images are there? (photos, diagrams, screenshots, charts, logos)
-                - What type of content structure? (has videos, code examples, forms, interactive elements)
-                - What specific information does it contain? (data, instructions, news events, research findings)
+                Requirements:
+                - Be specific and concrete. Mention exact subjects, names, places, species, products, features, counts, dates, or sections when they appear.
+                - Sentence 1: identify what the page is about, including the site/source and author/date if they are visible.
+                - Sentence 2: summarize the most important facts, examples, lists, or sections with real details from the page.
+                - Sentence 3: explain why this page would be worth saving or what makes it useful later.
+                - Never use vague filler like "contains text, images, and interactive elements" unless that is genuinely the important point.
+                - If the page is a list article, mention the size of the list and name representative items from it.
                 
-                Examples of what I want:
-                - Instead of: "This is a news article about Apple"
-                - Write: "Apple announced iPhone 15 with titanium design, USB-C port, and 48MP camera, with pricing starting at $799 and availability from September 22nd in multiple color options"
-                
-                - Instead of: "This page contains tutorial information"  
-                - Write: "Step-by-step React tutorial showing how to build a todo app with useState hooks, featuring 5 code examples, 3 screenshot diagrams of component structure, and interactive demos for testing functionality"
-                
-                - Instead of: "This documentation explains API usage"
-                - Write: "REST API documentation for payments processing, containing 12 endpoint examples with JSON request/response samples, authentication guide with API key setup, and rate limiting information of 1000 calls per hour"
-                
-                Be specific about numbers, features, visual elements, and actual information content.
+                Example of the level of detail:
+                - "Article on reptilehere.com by Ali Ekram Fahim about 7 turtle species in the Philippines, covering five marine turtles and two freshwater turtles. It names species such as the green sea turtle, hawksbill, olive ridley, loggerhead, leatherback, Philippine forest turtle, and Southeast Asian box turtle, while also outlining their habitats, conservation status, and major threats. The page is useful as a wildlife reference because it combines species identification with conservation context and habitat information in one place."
+                - "Documentation page on docs.spring.io for Spring Boot property binding, showing the supported configuration styles, example annotations, and validation options. It explains how `@ConfigurationProperties` maps external settings into typed Java objects, including constructor binding and nested properties. This page is worth saving as a practical reference when wiring application config or debugging binding behavior."
                 
                 URL: %s
                 Content:
@@ -117,9 +141,13 @@ public class GeminiService {
                 """.formatted(url, truncate(pageContent, 3000));
 
             String response = callGemini(prompt, null);
-            return parseUrlSummaryResponse(response, url, pageContent);
+            VaultItem parsedItem = parseUrlSummaryResponse(response, url, pageContent);
+            if (!looksUsefulUrlSummary(parsedItem)) {
+                return new UrlSummaryResult(createFallbackUrlSummary(url, pageContent), false);
+            }
+            return new UrlSummaryResult(parsedItem, true);
         } catch (Exception e) {
-            return createFallbackUrlSummary(url, pageContent);
+            return new UrlSummaryResult(createFallbackUrlSummary(url, pageContent), false);
         }
     }
 
@@ -156,7 +184,8 @@ public class GeminiService {
                 """.formatted(url, truncate(pageContent, 2500), analysisInfo);
 
             String response = callGemini(prompt, null);
-            return parseUrlSummaryResponse(response, url, pageContent);
+            VaultItem parsedItem = parseUrlSummaryResponse(response, url, pageContent);
+            return parsedItem == null ? createFallbackUrlSummary(url, pageContent) : parsedItem;
         } catch (Exception e) {
             return createFallbackUrlSummary(url, pageContent);
         }
@@ -164,9 +193,10 @@ public class GeminiService {
 
     private VaultItem parseUrlSummaryResponse(String response, String url, String pageContent) {
         try {
-            String[] lines = response.split("\n");
-            String title = "Saved Webpage";
-            String description = response;
+            String normalizedResponse = sanitize(response).replace("```", "");
+            String[] lines = normalizedResponse.split("\n");
+            String title = "";
+            String description = normalizedResponse;
 
             for (String line : lines) {
                 if (line.startsWith("TITLE:")) {
@@ -174,10 +204,19 @@ public class GeminiService {
                 } else if (line.startsWith("DESCRIPTION:")) {
                     description = line.substring(12).trim();
                     // Get the rest of the description if it spans multiple lines
-                    int index = response.indexOf("DESCRIPTION:") + 12;
-                    description = response.substring(index).trim();
+                    int index = normalizedResponse.indexOf("DESCRIPTION:") + 12;
+                    description = normalizedResponse.substring(index).trim();
                     break;
                 }
+            }
+
+            title = sanitize(title);
+            description = sanitize(description);
+            if (title.isBlank()) {
+                title = resolveFallbackTitle(url, pageContent);
+            }
+            if (description.isBlank()) {
+                return null;
             }
 
             VaultItem item = new VaultItem();
@@ -187,29 +226,64 @@ public class GeminiService {
             item.setContent(truncate(pageContent, 5000)); // Store more content for search
             return item;
         } catch (Exception e) {
-            return createFallbackUrlSummary(url, pageContent);
+            return null;
         }
     }
 
     private VaultItem createFallbackUrlSummary(String url, String pageContent) {
         VaultItem item = new VaultItem();
 
-        // Generate a simple title from URL
-        String title = generateTitleFromUrl(url);
-
-        // Generate a descriptive fallback
-        String description = String.format(
-            "This webpage from %s contains saved content including text, images, and interactive elements. " +
-            "The page has been archived locally for offline access and future reference. " +
-            "Content is searchable by keywords and can be found using the site name or topic mentioned within the page.",
-            extractDomain(url)
-        );
+        String title = resolveFallbackTitle(url, pageContent);
+        String description = buildFallbackUrlDescription(title, url, pageContent);
 
         item.setTitle(title);
         item.setAiContext(description);
         item.setSourceUrl(url);
         item.setContent(truncate(pageContent, 5000));
         return item;
+    }
+
+    private String resolveFallbackTitle(String url, String pageContent) {
+        List<String> sentences = extractCandidateSentences(pageContent, 2);
+        if (!sentences.isEmpty()) {
+            String firstSentence = trimSentenceEnding(sentences.getFirst());
+            if (looksLikeTitle(firstSentence)) {
+                return firstSentence;
+            }
+        }
+        return generateTitleFromUrl(url);
+    }
+
+    private String buildFallbackUrlDescription(String title, String url, String pageContent) {
+        List<String> sentences = extractCandidateSentences(pageContent, 5);
+        List<String> selected = new ArrayList<>();
+        for (String sentence : sentences) {
+            String trimmed = trimSentenceEnding(sentence);
+            if (!trimmed.equalsIgnoreCase(title)) {
+                selected.add(sentence);
+            }
+            if (selected.size() == 3) {
+                break;
+            }
+        }
+
+        if (selected.isEmpty()) {
+            String domain = extractDomain(url);
+            return String.format(
+                    "%s from %s was saved for later reference. The page content could be read, but an AI summary was unavailable. You can still search this saved page by its title, URL, and extracted text.",
+                    title,
+                    domain);
+        }
+
+        while (selected.size() < 3) {
+            if (selected.size() == 1) {
+                selected.add(String.format("The page appears to be a useful reference saved from %s for later review.", extractDomain(url)));
+            } else {
+                selected.add("The extracted page text is stored so it can still be searched and reviewed later.");
+            }
+        }
+
+        return String.join(" ", selected);
     }
 
     private String generateTitleFromUrl(String url) {
@@ -254,6 +328,107 @@ public class GeminiService {
         }
 
         return result.toString();
+    }
+
+    private List<String> extractCandidateSentences(String text, int limit) {
+        List<String> sentences = new ArrayList<>();
+        if (text == null || text.isBlank()) {
+            return sentences;
+        }
+
+        String normalized = text.replaceAll("\\s+", " ").trim();
+        String[] parts = normalized.split("(?<=[.!?])\\s+");
+        for (String part : parts) {
+            String cleaned = part == null ? "" : part.trim();
+            if (cleaned.isBlank()) {
+                continue;
+            }
+            if (isLowValueSentence(cleaned)) {
+                continue;
+            }
+            if (cleaned.length() < 35 && !looksLikeTitle(cleaned)) {
+                continue;
+            }
+            if (cleaned.length() > 320) {
+                cleaned = cleaned.substring(0, 320).trim() + "...";
+            }
+            if (!sentences.isEmpty() && sentences.getLast().equalsIgnoreCase(cleaned)) {
+                continue;
+            }
+            sentences.add(ensureSentenceEnding(cleaned));
+            if (sentences.size() >= limit) {
+                break;
+            }
+        }
+        return sentences;
+    }
+
+    private boolean isLowValueSentence(String value) {
+        String normalized = sanitize(value).toLowerCase(Locale.ROOT);
+        if (normalized.isBlank()) {
+            return true;
+        }
+        for (String phrase : LOW_VALUE_PAGE_PHRASES) {
+            if (normalized.contains(phrase)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean looksUsefulUrlSummary(VaultItem item) {
+        if (item == null) {
+            return false;
+        }
+
+        String title = sanitize(item.getTitle());
+        String description = sanitize(item.getAiContext());
+        if (title.isBlank() || description.isBlank()) {
+            return false;
+        }
+        if ("saved webpage".equalsIgnoreCase(title) || "saved link".equalsIgnoreCase(title)) {
+            return false;
+        }
+
+        String normalizedDescription = description.toLowerCase(Locale.ROOT);
+        for (String phrase : GENERIC_URL_SUMMARY_PHRASES) {
+            if (normalizedDescription.contains(phrase)) {
+                return false;
+            }
+        }
+
+        String[] sentences = normalizedDescription.split("(?<=[.!?])\\s+");
+        return sentences.length >= 2 && description.split("\\s+").length >= 18;
+    }
+
+    private boolean looksLikeTitle(String value) {
+        if (value == null || value.isBlank()) {
+            return false;
+        }
+        String cleaned = trimSentenceEnding(value);
+        if (cleaned.length() < 8 || cleaned.length() > 120) {
+            return false;
+        }
+        long wordCount = cleaned.split("\\s+").length;
+        return wordCount >= 2 && wordCount <= 16;
+    }
+
+    private String ensureSentenceEnding(String value) {
+        if (value == null || value.isBlank()) {
+            return "";
+        }
+        char lastChar = value.charAt(value.length() - 1);
+        if (lastChar == '.' || lastChar == '!' || lastChar == '?') {
+            return value;
+        }
+        return value + ".";
+    }
+
+    private String trimSentenceEnding(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replaceAll("[.!?]+$", "").trim();
     }
 
     /**
@@ -534,6 +709,13 @@ public class GeminiService {
     private String truncate(String text, int maxLength) {
         if (text == null) return "";
         return text.length() > maxLength ? text.substring(0, maxLength) + "..." : text;
+    }
+
+    private String sanitize(String value) {
+        return value == null ? "" : value.trim();
+    }
+
+    public record UrlSummaryResult(VaultItem item, boolean aiGenerated) {
     }
 }
 

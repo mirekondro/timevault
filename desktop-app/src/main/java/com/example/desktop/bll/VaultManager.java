@@ -345,14 +345,15 @@ public class VaultManager {
         }
 
         String pageContent = fetchWebpageContent(normalizedUrl);
-        VaultItem analyzedItem = geminiService.generateUrlSummary(normalizedUrl, pageContent);
+        GeminiService.UrlSummaryResult summaryResult = geminiService.generateUrlSummaryResult(normalizedUrl, pageContent);
+        VaultItem analyzedItem = summaryResult.item();
         String title = sanitize(analyzedItem.getTitle());
         String aiContext = firstNonBlank(
                 analyzedItem.getAiContext(),
                 buildContext("URL", firstNonBlank(title, normalizedUrl), firstNonBlank(pageContent, normalizedUrl)));
         String archivedContent = archiveContent ? pageContent : "";
         String tags = buildUrlTags(normalizedUrl, firstNonBlank(pageContent, archivedContent), aiContext);
-        return new UrlAnalysisResult(normalizedUrl, title, aiContext, archivedContent, tags);
+        return new UrlAnalysisResult(normalizedUrl, title, aiContext, archivedContent, tags, summaryResult.aiGenerated());
     }
 
     public DialogActionResult createText(AppModel appModel, String titleInput, String contentInput, ItemLockOptions lockOptions) {
@@ -1209,8 +1210,11 @@ public class VaultManager {
                 .replaceAll("(?is)<style[^>]*>.*?</style>", " ")
                 .replaceAll("(?is)<noscript[^>]*>.*?</noscript>", " ")
                 .replaceAll("(?is)<svg[^>]*>.*?</svg>", " ")
+                .replaceAll("(?is)<br\\s*/?>", ". ")
+                .replaceAll("(?is)</(p|div|section|article|aside|main|header|footer|h[1-6]|li|ul|ol|table|tr|td|th|blockquote)>", ". ")
                 .replaceAll("(?is)<[^>]+>", " ")
                 .replaceAll("\\s+", " ")
+                .replaceAll("(?:\\.\\s*){2,}", ". ")
                 .trim();
 
         StringBuilder combined = new StringBuilder();
@@ -1250,7 +1254,12 @@ public class VaultManager {
             return;
         }
         if (builder.length() > 0) {
-            builder.append(' ');
+            char lastCharacter = builder.charAt(builder.length() - 1);
+            if (lastCharacter == '.' || lastCharacter == '!' || lastCharacter == '?') {
+                builder.append(' ');
+            } else {
+                builder.append(". ");
+            }
         }
         builder.append(cleaned);
     }
@@ -1489,6 +1498,7 @@ public class VaultManager {
                                     String title,
                                     String aiContext,
                                     String archivedContent,
-                                    String tags) {
+                                    String tags,
+                                    boolean aiGenerated) {
     }
 }

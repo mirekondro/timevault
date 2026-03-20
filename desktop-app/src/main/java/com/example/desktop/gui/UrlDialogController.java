@@ -207,8 +207,13 @@ public class UrlDialogController extends BaseItemDialogController {
 
         analysisTask.setOnSucceeded(event -> {
             appModel.setBusy(false);
-            applyAnalysisResult(analysisTask.getValue());
-            showDialogToast(ToastNotificationType.SUCCESS, appModel.text("status.url.analyze.success"));
+            VaultManager.UrlAnalysisResult result = analysisTask.getValue();
+            applyAnalysisResult(result);
+            if (result != null && result.aiGenerated()) {
+                showDialogToast(ToastNotificationType.SUCCESS, appModel.text("status.url.analyze.success"));
+            } else {
+                showDialogToast(ToastNotificationType.INFO, appModel.text("status.url.analyze.fallback"));
+            }
         });
 
         analysisTask.setOnFailed(event -> {

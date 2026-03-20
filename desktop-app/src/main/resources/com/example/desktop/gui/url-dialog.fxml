@@ -57,7 +57,7 @@
                     <TextField fx:id="tagsField" styleClass="text-field"/>
 
                     <Label fx:id="summaryLabel" styleClass="dialog-field-label"/>
-                    <TextArea fx:id="summaryArea" prefRowCount="5" styleClass="text-area" wrapText="true"/>
+                    <TextArea fx:id="summaryArea" prefRowCount="7" styleClass="text-area" wrapText="true"/>
 
                     <Label fx:id="contentLabel" styleClass="dialog-field-label"/>
                     <TextArea fx:id="contentArea" prefRowCount="8" styleClass="text-area" wrapText="true"/>
