@@ -6,6 +6,7 @@ import com.example.desktop.dao.VaultItemDAO;
 import com.example.desktop.model.AppModel;
 import com.example.desktop.model.DialogActionResult;
 import com.example.desktop.model.DialogFieldIds;
+import com.example.desktop.model.GalleryImageFx;
 import com.example.desktop.model.ImageAssetData;
 import com.example.desktop.model.ItemLockOptions;
 import com.example.desktop.model.ProtectedItemData;
@@ -30,6 +31,7 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -445,6 +447,7 @@ public class VaultManager {
         item.setOwnerId(currentUser.id());
         item.setCreatedAt(LocalDateTime.now());
         item.setUpdatedAt(item.getCreatedAt());
+        item.setGalleryImages(List.of(createGalleryImage(imageAsset, aiContext, 0)));
         item.setImageMimeType(imageAsset.mimeType());
         item.setImageByteCount(imageAsset.size());
         item.setCachedImageBytes(imageAsset.bytes());
@@ -489,6 +492,7 @@ public class VaultManager {
         updatedItem.setTags(buildTags(AppModel.TYPE_IMAGE, title + " " + imageAsset.fileName()));
         updatedItem.setSourceUrl(null);
         updatedItem.setUpdatedAt(LocalDateTime.now());
+        updatedItem.setGalleryImages(List.of(createGalleryImage(imageAsset, aiContext, 0)));
         updatedItem.setImageMimeType(imageAsset.mimeType());
         updatedItem.setImageByteCount(imageAsset.size());
         updatedItem.setCachedImageBytes(imageAsset.bytes());
@@ -499,6 +503,147 @@ public class VaultManager {
         }
 
         return updateExistingItem(appModel, currentUser, updatedItem, lockResult.imageRecord(), "status.edit.image.updated");
+    }
+
+    public ImageGalleryAnalysisResult analyzeImageGallery(String titleInput,
+                                                          String notesInput,
+                                                          List<GalleryImageFx> galleryImages,
+                                                          boolean refreshExistingAnalyses) {
+        List<GalleryImageFx> normalizedImages = normalizeGalleryImages(galleryImages);
+        if (normalizedImages.isEmpty()) {
+            throw new IllegalArgumentException("No images selected.");
+        }
+
+        String title = firstNonBlank(sanitize(titleInput), defaultGalleryTitle(normalizedImages));
+        String notes = sanitize(notesInput);
+
+        List<GalleryImageFx> analyzedImages = analyzeGalleryImages(normalizedImages, refreshExistingAnalyses);
+        String combinedSummary = buildImageGallerySummary(title, notes, analyzedImages);
+        String tags = buildImageGalleryTags(title, notes, combinedSummary, analyzedImages);
+        return new ImageGalleryAnalysisResult(title, combinedSummary, tags, analyzedImages);
+    }
+
+    public DialogActionResult createImage(AppModel appModel,
+                                          String titleInput,
+                                          String notesInput,
+                                          String summaryInput,
+                                          String tagsInput,
+                                          List<GalleryImageFx> galleryImages,
+                                          ItemLockOptions lockOptions) {
+        UserSession currentUser = currentDialogUser(appModel);
+        if (currentUser == null) {
+            return authRequiredDialogResult(appModel);
+        }
+
+        List<GalleryImageFx> normalizedImages = normalizeGalleryImages(galleryImages);
+        DialogActionResult validationResult = validateImageInputs(appModel, normalizedImages);
+        if (validationResult != null) {
+            return validationResult;
+        }
+
+        String title = firstNonBlank(sanitize(titleInput), defaultGalleryTitle(normalizedImages));
+        String notes = sanitize(notesInput);
+        List<GalleryImageFx> analyzedImages = ensureGalleryAnalysis(title, notes, normalizedImages);
+        String aiContext = firstNonBlank(summaryInput, buildImageGallerySummary(title, notes, analyzedImages));
+        String tags = firstNonBlank(normalizeManualTags(tagsInput), buildImageGalleryTags(title, notes, aiContext, analyzedImages));
+
+        VaultItemFx item = new VaultItemFx();
+        item.setTitle(title);
+        item.setContent(notes);
+        item.setAiContext(aiContext);
+        item.setItemType(AppModel.TYPE_IMAGE);
+        item.setTags(tags);
+        item.setSourceUrl(null);
+        item.setOwnerId(currentUser.id());
+        item.setCreatedAt(LocalDateTime.now());
+        item.setUpdatedAt(item.getCreatedAt());
+        item.setGalleryImages(analyzedImages);
+
+        GalleryLockConfigurationResult lockResult = applyGalleryLockConfiguration(appModel, item, null, lockOptions, analyzedImages);
+        if (!lockResult.success()) {
+            return lockResult.failureResult();
+        }
+
+        return saveNewItem(appModel, currentUser, item, lockResult.imageRecords(), "status.save.image.saved");
+    }
+
+    public DialogActionResult updateImage(AppModel appModel,
+                                          VaultItemFx existingItem,
+                                          String titleInput,
+                                          String notesInput,
+                                          String summaryInput,
+                                          String tagsInput,
+                                          List<GalleryImageFx> galleryImages,
+                                          ItemLockOptions lockOptions) {
+        UserSession currentUser = currentDialogUser(appModel);
+        if (currentUser == null) {
+            return authRequiredDialogResult(appModel);
+        }
+        if (existingItem == null) {
+            return dialogFormError(appModel, "status.edit.select");
+        }
+
+        List<GalleryImageFx> normalizedImages = normalizeGalleryImages(galleryImages);
+        DialogActionResult validationResult = validateImageInputs(appModel, normalizedImages);
+        if (validationResult != null) {
+            return validationResult;
+        }
+
+        String title = firstNonBlank(sanitize(titleInput), appModel.getResolvedTitle(existingItem), defaultGalleryTitle(normalizedImages));
+        String notes = sanitize(notesInput);
+        List<GalleryImageFx> analyzedImages = ensureGalleryAnalysis(title, notes, normalizedImages);
+        String aiContext = firstNonBlank(summaryInput, buildImageGallerySummary(title, notes, analyzedImages));
+        String tags = firstNonBlank(normalizeManualTags(tagsInput), buildImageGalleryTags(title, notes, aiContext, analyzedImages));
+
+        VaultItemFx updatedItem = copyItem(existingItem);
+        updatedItem.setTitle(title);
+        updatedItem.setContent(notes);
+        updatedItem.setAiContext(aiContext);
+        updatedItem.setItemType(AppModel.TYPE_IMAGE);
+        updatedItem.setTags(tags);
+        updatedItem.setSourceUrl(null);
+        updatedItem.setUpdatedAt(LocalDateTime.now());
+        updatedItem.setGalleryImages(analyzedImages);
+
+        GalleryLockConfigurationResult lockResult = applyGalleryLockConfiguration(appModel, updatedItem, existingItem, lockOptions, analyzedImages);
+        if (!lockResult.success()) {
+            return lockResult.failureResult();
+        }
+
+        return updateExistingItem(appModel, currentUser, updatedItem, lockResult.imageRecords(), "status.edit.image.updated");
+    }
+
+    public List<GalleryImageFx> loadImageGallery(AppModel appModel, VaultItemFx item) {
+        if (item == null
+                || !AppModel.TYPE_IMAGE.equalsIgnoreCase(item.getItemType())
+                || appModel.isLockedItemHidden(item)
+                || !item.hasStoredImage()) {
+            return List.of();
+        }
+
+        if (item.isUnlockedInSession() && item.getUnlockedSession() != null && !item.getUnlockedSession().galleryImages().isEmpty()) {
+            item.setGalleryImages(item.getUnlockedSession().galleryImages());
+            return item.getGalleryImages();
+        }
+
+        List<GalleryImageFx> existingImages = item.getGalleryImages();
+        boolean hasAllBytes = !existingImages.isEmpty() && existingImages.stream().allMatch(GalleryImageFx::hasCachedBytes);
+        if (hasAllBytes) {
+            return existingImages;
+        }
+
+        try {
+            List<StoredImageRecord> storedImages = loadStoredImageRecords(item.getOwnerId(), item.getId());
+            if (storedImages.isEmpty()) {
+                return existingImages;
+            }
+            List<GalleryImageFx> loadedImages = mapGalleryImages(storedImages, true);
+            item.setGalleryImages(loadedImages);
+            return item.getGalleryImages();
+        } catch (SQLException exception) {
+            appModel.showErrorKey("status.image.load.error", safeMessage(exception));
+            return existingImages;
+        }
     }
 
     public boolean unlockItem(AppModel appModel, VaultItemFx item, String rawPassword) {
@@ -703,9 +848,17 @@ public class VaultManager {
                                            VaultItemFx item,
                                            StoredImageRecord imageRecord,
                                            String successKey) {
+        return saveNewItem(appModel, currentUser, item, imageRecord == null ? List.of() : List.of(imageRecord), successKey);
+    }
+
+    private DialogActionResult saveNewItem(AppModel appModel,
+                                           UserSession currentUser,
+                                           VaultItemFx item,
+                                           List<StoredImageRecord> imageRecords,
+                                           String successKey) {
         appModel.setBusy(true);
         try {
-            VaultItemFx savedItem = vaultItemDAO.insert(currentUser.id(), item, imageRecord);
+            VaultItemFx savedItem = vaultItemDAO.insert(currentUser.id(), item, imageRecords);
             normalizeStoredItemState(savedItem);
             appModel.addItem(savedItem);
             return DialogActionResult.successMainToast(appModel.text(successKey, savedItem.getId(), currentUser.id()));
@@ -721,10 +874,18 @@ public class VaultManager {
                                                   VaultItemFx item,
                                                   StoredImageRecord imageRecord,
                                                   String successKey) {
+        return updateExistingItem(appModel, currentUser, item, imageRecord == null ? List.of() : List.of(imageRecord), successKey);
+    }
+
+    private DialogActionResult updateExistingItem(AppModel appModel,
+                                                  UserSession currentUser,
+                                                  VaultItemFx item,
+                                                  List<StoredImageRecord> imageRecords,
+                                                  String successKey) {
         appModel.setBusy(true);
         try {
             normalizeStoredItemState(item);
-            boolean updated = vaultItemDAO.update(currentUser.id(), item, imageRecord);
+            boolean updated = vaultItemDAO.update(currentUser.id(), item, imageRecords);
             if (!updated) {
                 return dialogFormError(appModel, "status.edit.missing");
             }
@@ -890,6 +1051,198 @@ public class VaultManager {
         return geminiService.analyzeImage(imageAsset.bytes(), imageAsset.mimeType(), imageAsset.fileName());
     }
 
+    private DialogActionResult validateImageInputs(AppModel appModel, List<GalleryImageFx> galleryImages) {
+        if (galleryImages == null || galleryImages.isEmpty()) {
+            return dialogFieldError(appModel, DialogFieldIds.PATH, "dialog.validation.image.path.required");
+        }
+        return null;
+    }
+
+    private List<GalleryImageFx> normalizeGalleryImages(List<GalleryImageFx> galleryImages) {
+        if (galleryImages == null || galleryImages.isEmpty()) {
+            return List.of();
+        }
+
+        List<GalleryImageFx> normalizedImages = new ArrayList<>();
+        int displayOrder = 0;
+        for (GalleryImageFx sourceImage : galleryImages) {
+            if (sourceImage == null) {
+                continue;
+            }
+            GalleryImageFx normalizedImage = sourceImage.copy();
+            normalizedImage.setDisplayOrder(displayOrder++);
+            if (normalizedImage.getByteCount() <= 0L && normalizedImage.hasCachedBytes()) {
+                normalizedImage.setByteCount(normalizedImage.getCachedImageBytes().length);
+            }
+            if (normalizedImage.getByteCount() > 0L) {
+                normalizedImages.add(normalizedImage);
+            }
+        }
+        return normalizedImages;
+    }
+
+    private List<GalleryImageFx> analyzeGalleryImages(List<GalleryImageFx> galleryImages, boolean refreshExistingAnalyses) {
+        List<GalleryImageFx> analyzedImages = new ArrayList<>();
+        for (GalleryImageFx sourceImage : normalizeGalleryImages(galleryImages)) {
+            GalleryImageFx analyzedImage = sourceImage.copy();
+            if (refreshExistingAnalyses || analyzedImage.getAiContext().isBlank()) {
+                analyzedImage.setAiContext(geminiService.analyzeImage(
+                        analyzedImage.getCachedImageBytes(),
+                        analyzedImage.getMimeType(),
+                        analyzedImage.getFileName()));
+            }
+            analyzedImages.add(analyzedImage);
+        }
+        return analyzedImages;
+    }
+
+    private List<GalleryImageFx> ensureGalleryAnalysis(String title, String notes, List<GalleryImageFx> galleryImages) {
+        List<GalleryImageFx> analyzedImages = analyzeGalleryImages(galleryImages, false);
+        String summary = buildImageGallerySummary(title, notes, analyzedImages);
+        if (summary.isBlank()) {
+            return analyzeGalleryImages(galleryImages, true);
+        }
+        return analyzedImages;
+    }
+
+    private String buildImageGallerySummary(String title, String notes, List<GalleryImageFx> galleryImages) {
+        List<String> imageAnalyses = galleryImages == null ? List.of() : galleryImages.stream()
+                .map(GalleryImageFx::getAiContext)
+                .filter(value -> value != null && !value.isBlank())
+                .toList();
+        return geminiService.generateImageGallerySummary(title, notes, imageAnalyses);
+    }
+
+    private String buildImageGalleryTags(String title,
+                                         String notes,
+                                         String combinedSummary,
+                                         List<GalleryImageFx> galleryImages) {
+        Set<String> tags = new LinkedHashSet<>();
+        addTag(tags, AppModel.TYPE_IMAGE);
+        addTag(tags, LocalDate.now().toString());
+        addTag(tags, galleryImages == null || galleryImages.size() <= 1 ? "Single image" : galleryImages.size() + " images");
+
+        String searchableText = (sanitize(title) + " " + sanitize(notes) + " " + sanitize(combinedSummary) + " "
+                + concatenateImageSearchText(galleryImages)).toLowerCase(Locale.ROOT);
+
+        if (containsAny(searchableText, "diagram", "chart", "graph", "table")) {
+            addTag(tags, "Reference");
+        }
+        if (containsAny(searchableText, "document", "receipt", "invoice", "report", "form")) {
+            addTag(tags, "Document");
+        }
+        if (containsAny(searchableText, "screenshot", "ui", "dashboard", "interface", "app")) {
+            addTag(tags, "Screenshot");
+        }
+        if (containsAny(searchableText, "photo", "scene", "landscape", "portrait")) {
+            addTag(tags, "Photo");
+        }
+        if (containsAny(searchableText, "whiteboard", "notes", "handwritten")) {
+            addTag(tags, "Notes");
+        }
+        if (containsAny(searchableText, "presentation", "slide")) {
+            addTag(tags, "Presentation");
+        }
+
+        return String.join(", ", tags);
+    }
+
+    private String concatenateImageSearchText(List<GalleryImageFx> galleryImages) {
+        if (galleryImages == null || galleryImages.isEmpty()) {
+            return "";
+        }
+        StringBuilder builder = new StringBuilder();
+        for (GalleryImageFx image : galleryImages) {
+            if (image == null) {
+                continue;
+            }
+            if (builder.length() > 0) {
+                builder.append(' ');
+            }
+            builder.append(sanitize(image.getFileName())).append(' ')
+                    .append(sanitize(image.getAiContext())).append(' ')
+                    .append(sanitize(image.getMimeType()));
+        }
+        return builder.toString().trim();
+    }
+
+    private String defaultGalleryTitle(List<GalleryImageFx> galleryImages) {
+        if (galleryImages == null || galleryImages.isEmpty()) {
+            return "Image gallery";
+        }
+        if (galleryImages.size() == 1) {
+            return extractFileStem(galleryImages.getFirst().getFileName());
+        }
+        return "Image gallery (" + galleryImages.size() + " images)";
+    }
+
+    private String extractFileStem(String fileName) {
+        String sanitized = sanitize(fileName);
+        if (sanitized.isBlank()) {
+            return "Image";
+        }
+        int lastDot = sanitized.lastIndexOf('.');
+        if (lastDot <= 0) {
+            return sanitized;
+        }
+        return sanitized.substring(0, lastDot);
+    }
+
+    private GalleryImageFx createGalleryImage(ImageAssetData imageAsset, String aiContext, int displayOrder) {
+        GalleryImageFx galleryImage = new GalleryImageFx();
+        galleryImage.setFileName(imageAsset == null ? "" : imageAsset.fileName());
+        galleryImage.setAiContext(aiContext);
+        galleryImage.setMimeType(imageAsset == null ? "application/octet-stream" : imageAsset.mimeType());
+        galleryImage.setByteCount(imageAsset == null ? 0L : imageAsset.size());
+        galleryImage.setDisplayOrder(displayOrder);
+        galleryImage.setCachedImageBytes(imageAsset == null ? new byte[0] : imageAsset.bytes());
+        return galleryImage;
+    }
+
+    private List<GalleryImageFx> mapGalleryImages(List<StoredImageRecord> imageRecords, boolean includeBytes) {
+        if (imageRecords == null || imageRecords.isEmpty()) {
+            return List.of();
+        }
+        List<GalleryImageFx> galleryImages = new ArrayList<>();
+        for (StoredImageRecord imageRecord : imageRecords) {
+            if (imageRecord == null || imageRecord.byteCount() <= 0L) {
+                continue;
+            }
+            GalleryImageFx galleryImage = new GalleryImageFx();
+            galleryImage.setId(imageRecord.id() == null ? 0L : imageRecord.id());
+            galleryImage.setFileName(imageRecord.fileName());
+            galleryImage.setAiContext(imageRecord.aiContext());
+            galleryImage.setMimeType(imageRecord.mimeType());
+            galleryImage.setByteCount(imageRecord.byteCount());
+            galleryImage.setDisplayOrder(imageRecord.displayOrder());
+            if (includeBytes && imageRecord.imageData().length > 0) {
+                galleryImage.setCachedImageBytes(imageRecord.imageData());
+            }
+            galleryImages.add(galleryImage);
+        }
+        return galleryImages;
+    }
+
+    private List<StoredImageRecord> buildPlainGalleryImageRecords(List<GalleryImageFx> galleryImages) {
+        if (galleryImages == null || galleryImages.isEmpty()) {
+            return List.of();
+        }
+        List<StoredImageRecord> imageRecords = new ArrayList<>();
+        for (GalleryImageFx galleryImage : normalizeGalleryImages(galleryImages)) {
+            imageRecords.add(new StoredImageRecord(
+                    galleryImage.getId() > 0L ? galleryImage.getId() : null,
+                    galleryImage.getFileName(),
+                    galleryImage.getAiContext(),
+                    galleryImage.getMimeType(),
+                    galleryImage.getByteCount(),
+                    galleryImage.getDisplayOrder(),
+                    "",
+                    galleryImage.getCachedImageBytes(),
+                    new byte[0]));
+        }
+        return imageRecords;
+    }
+
     private String resolveUrlTags(String tagsInput, String url, String content, String aiContext) {
         String manualTags = normalizeManualTags(tagsInput);
         if (!manualTags.isBlank()) {
@@ -1016,16 +1369,36 @@ public class VaultManager {
                                                            VaultItemFx existingItem,
                                                            ItemLockOptions lockOptions,
                                                            ImageAssetData imageAsset) {
+        List<GalleryImageFx> galleryImages = imageAsset == null ? List.of() : item.getGalleryImages();
+        GalleryLockConfigurationResult galleryLockResult = applyGalleryLockConfiguration(
+                appModel,
+                item,
+                existingItem,
+                lockOptions,
+                galleryImages);
+        if (!galleryLockResult.success()) {
+            return LockConfigurationResult.failed(galleryLockResult.failureResult());
+        }
+        return LockConfigurationResult.success(primaryImageRecord(galleryLockResult.imageRecords()));
+    }
+
+    private GalleryLockConfigurationResult applyGalleryLockConfiguration(AppModel appModel,
+                                                                        VaultItemFx item,
+                                                                        VaultItemFx existingItem,
+                                                                        ItemLockOptions lockOptions,
+                                                                        List<GalleryImageFx> galleryImages) {
         ItemLockOptions safeLockOptions = lockOptions == null
                 ? new ItemLockOptions(false, "", "")
                 : lockOptions;
+        List<GalleryImageFx> normalizedImages = normalizeGalleryImages(galleryImages);
 
         if (!safeLockOptions.enabled()) {
             if (existingItem != null && existingItem.isLocked() && !existingItem.isUnlockedInSession()) {
-                return LockConfigurationResult.failed(dialogFormError(appModel, "status.lock.unlock.required"));
+                return GalleryLockConfigurationResult.failed(dialogFormError(appModel, "status.lock.unlock.required"));
             }
             clearLockState(item);
-            return LockConfigurationResult.success(buildPlainImageRecord(item, imageAsset));
+            item.setGalleryImages(normalizedImages);
+            return GalleryLockConfigurationResult.success(buildPlainGalleryImageRecords(normalizedImages));
         }
 
         ProtectedItemData protectedItemData = new ProtectedItemData(
@@ -1034,31 +1407,33 @@ public class VaultManager {
                 item.getAiContext(),
                 item.getTags(),
                 item.getSourceUrl());
-
         String password = safePasswordValue(safeLockOptions.password());
         String confirmPassword = safePasswordValue(safeLockOptions.confirmPassword());
+        List<StoredImageRecord> plainImageRecords = buildPlainGalleryImageRecords(normalizedImages);
 
         if (existingItem != null && existingItem.isLocked() && password.isBlank() && confirmPassword.isBlank()) {
             if (!existingItem.isUnlockedInSession()) {
-                return LockConfigurationResult.failed(dialogFormError(appModel, "status.lock.unlock.required"));
+                return GalleryLockConfigurationResult.failed(dialogFormError(appModel, "status.lock.unlock.required"));
             }
             ProtectedItemCrypto.LockedItemEnvelope envelope = protectedItemCrypto.relockWithExistingSession(
                     protectedItemData,
-                    imageAsset == null ? null : imageAsset.bytes(),
+                    plainImageRecords,
                     existingItem);
             applyProtectedEnvelope(item, envelope);
-            return LockConfigurationResult.success(buildProtectedImageRecord(item, envelope.encryptedImageData()));
+            return GalleryLockConfigurationResult.success(envelope.encryptedImages());
         }
 
         DialogActionResult validationResult = validateLockInputs(appModel, password, confirmPassword);
         if (validationResult != null) {
-            return LockConfigurationResult.failed(validationResult);
+            return GalleryLockConfigurationResult.failed(validationResult);
         }
 
-        byte[] rawImageBytes = imageAsset == null ? new byte[0] : imageAsset.bytes();
-        ProtectedItemCrypto.LockedItemEnvelope envelope = protectedItemCrypto.createNewLock(protectedItemData, rawImageBytes, password);
+        ProtectedItemCrypto.LockedItemEnvelope envelope = protectedItemCrypto.createNewLock(
+                protectedItemData,
+                plainImageRecords,
+                password);
         applyProtectedEnvelope(item, envelope);
-        return LockConfigurationResult.success(buildProtectedImageRecord(item, envelope.encryptedImageData()));
+        return GalleryLockConfigurationResult.success(envelope.encryptedImages());
     }
 
     private StoredImageRecord buildPlainImageRecord(VaultItemFx item, ImageAssetData imageAsset) {
@@ -1068,15 +1443,15 @@ public class VaultManager {
         item.setImageMimeType(imageAsset.mimeType());
         item.setImageByteCount(imageAsset.size());
         item.setCachedImageBytes(imageAsset.bytes());
-        return new StoredImageRecord(imageAsset.mimeType(), imageAsset.size(), imageAsset.bytes(), null);
+        return primaryImageRecord(buildPlainGalleryImageRecords(item.getGalleryImages()));
     }
 
-    private StoredImageRecord buildProtectedImageRecord(VaultItemFx item, byte[] encryptedImageData) {
-        if (item == null || encryptedImageData == null || encryptedImageData.length == 0) {
+    private StoredImageRecord buildProtectedImageRecord(VaultItemFx item, List<StoredImageRecord> encryptedImageRecords) {
+        if (item == null || encryptedImageRecords == null || encryptedImageRecords.isEmpty()) {
             return null;
         }
         item.clearCachedImageBytes();
-        return new StoredImageRecord(item.getImageMimeType(), item.getImageByteCount(), null, encryptedImageData);
+        return primaryImageRecord(encryptedImageRecords);
     }
 
     private void applyProtectedEnvelope(VaultItemFx item, ProtectedItemCrypto.LockedItemEnvelope envelope) {
@@ -1089,6 +1464,7 @@ public class VaultManager {
         item.setLockPasswordHash(envelope.passwordHash());
         item.setLockSalt(envelope.lockSalt());
         item.setLockPayload(envelope.encryptedPayload());
+        item.setGalleryImages(mapGalleryImages(envelope.encryptedImages(), false));
         // Once the locked item is saved, the UI should immediately return to the protected view.
         item.clearUnlockedSession();
         item.clearCachedImageBytes();
@@ -1111,18 +1487,28 @@ public class VaultManager {
     }
 
     private VaultItemFx unlockItemInSession(AppModel appModel, VaultItemFx item, String password) throws SQLException {
-        byte[] protectedImageData = loadStoredImageRecord(item.getOwnerId(), item.getId())
-                .map(StoredImageRecord::protectedImageData)
-                .orElseGet(() -> new byte[0]);
-        UnlockedItemSession unlockedSession = protectedItemCrypto.unlock(item, protectedImageData, password);
+        List<StoredImageRecord> protectedImages = loadStoredImageRecords(item.getOwnerId(), item.getId());
+        UnlockedItemSession unlockedSession = protectedItemCrypto.unlock(item, protectedImages, password);
         VaultItemFx unlockedItem = copyItem(item);
         unlockedItem.setUnlockedSession(unlockedSession);
+        unlockedItem.setGalleryImages(unlockedSession.galleryImages());
         appModel.updateItem(unlockedItem);
         return unlockedItem;
     }
 
     private Optional<StoredImageRecord> loadStoredImageRecord(long userId, long itemId) throws SQLException {
-        return vaultItemDAO.findStoredImageByItemId(userId, itemId);
+        return loadStoredImageRecords(userId, itemId).stream().findFirst();
+    }
+
+    private List<StoredImageRecord> loadStoredImageRecords(long userId, long itemId) throws SQLException {
+        return vaultItemDAO.findStoredImagesByItemId(userId, itemId);
+    }
+
+    private StoredImageRecord primaryImageRecord(List<StoredImageRecord> imageRecords) {
+        if (imageRecords == null || imageRecords.isEmpty()) {
+            return null;
+        }
+        return imageRecords.getFirst();
     }
 
     private String firstNonBlank(String... values) {
@@ -1405,6 +1791,7 @@ public class VaultManager {
         copy.setLockSalt(source.getLockSalt());
         copy.setLockPayload(source.getLockPayload());
         copy.setUnlockedSession(source.getUnlockedSession() == null ? null : source.getUnlockedSession().copy());
+        copy.setGalleryImages(source.getGalleryImages());
         copy.setImageMimeType(source.getImageMimeType());
         copy.setImageByteCount(source.getImageByteCount());
         copy.setCachedImageBytes(source.getCachedImageBytes());
@@ -1492,6 +1879,25 @@ public class VaultManager {
         private static LockConfigurationResult failed(DialogActionResult failureResult) {
             return new LockConfigurationResult(false, null, failureResult);
         }
+    }
+
+    private record GalleryLockConfigurationResult(boolean success,
+                                                  List<StoredImageRecord> imageRecords,
+                                                  DialogActionResult failureResult) {
+
+        private static GalleryLockConfigurationResult success(List<StoredImageRecord> imageRecords) {
+            return new GalleryLockConfigurationResult(true, imageRecords == null ? List.of() : List.copyOf(imageRecords), null);
+        }
+
+        private static GalleryLockConfigurationResult failed(DialogActionResult failureResult) {
+            return new GalleryLockConfigurationResult(false, List.of(), failureResult);
+        }
+    }
+
+    public record ImageGalleryAnalysisResult(String title,
+                                             String aiContext,
+                                             String tags,
+                                             List<GalleryImageFx> galleryImages) {
     }
 
     public record UrlAnalysisResult(String normalizedUrl,

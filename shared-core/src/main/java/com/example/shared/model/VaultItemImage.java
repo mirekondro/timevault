@@ -4,10 +4,11 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.MapsId;
-import jakarta.persistence.OneToOne;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
@@ -21,14 +22,27 @@ import java.time.LocalDateTime;
 public class VaultItemImage {
 
     @Id
-    @Column(name = "item_id")
-    private Long itemId;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
+    private Long id;
 
-    @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @MapsId
-    @JoinColumn(name = "item_id")
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "item_id", nullable = false)
     @JsonIgnore
     private VaultItem item;
+
+    @Column(name = "file_name", length = 500)
+    private String fileName;
+
+    @Column(name = "ai_context", columnDefinition = "NVARCHAR(MAX)")
+    private String aiContext;
+
+    @Column(name = "protected_metadata", columnDefinition = "NVARCHAR(MAX)")
+    @JsonIgnore
+    private String protectedMetadata;
+
+    @Column(name = "display_order", nullable = false)
+    private int displayOrder;
 
     @Column(name = "mime_type", length = 100)
     private String mimeType;
@@ -63,12 +77,12 @@ public class VaultItemImage {
         updatedAt = LocalDateTime.now();
     }
 
-    public Long getItemId() {
-        return itemId;
+    public Long getId() {
+        return id;
     }
 
-    public void setItemId(Long itemId) {
-        this.itemId = itemId;
+    public void setId(Long id) {
+        this.id = id;
     }
 
     public VaultItem getItem() {
@@ -77,6 +91,38 @@ public class VaultItemImage {
 
     public void setItem(VaultItem item) {
         this.item = item;
+    }
+
+    public String getFileName() {
+        return fileName;
+    }
+
+    public void setFileName(String fileName) {
+        this.fileName = fileName;
+    }
+
+    public String getAiContext() {
+        return aiContext;
+    }
+
+    public void setAiContext(String aiContext) {
+        this.aiContext = aiContext;
+    }
+
+    public String getProtectedMetadata() {
+        return protectedMetadata;
+    }
+
+    public void setProtectedMetadata(String protectedMetadata) {
+        this.protectedMetadata = protectedMetadata;
+    }
+
+    public int getDisplayOrder() {
+        return displayOrder;
+    }
+
+    public void setDisplayOrder(int displayOrder) {
+        this.displayOrder = Math.max(displayOrder, 0);
     }
 
     public String getMimeType() {

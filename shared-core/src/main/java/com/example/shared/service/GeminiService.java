@@ -508,6 +508,52 @@ public class GeminiService {
     }
 
     /**
+     * Create a combined AI summary for a gallery item using per-image analyses.
+     */
+    public String generateImageGallerySummary(String title, String notes, List<String> imageAnalyses) {
+        List<String> normalizedAnalyses = imageAnalyses == null ? List.of() : imageAnalyses.stream()
+                .map(this::sanitize)
+                .filter(value -> !value.isBlank())
+                .toList();
+        if (normalizedAnalyses.isEmpty()) {
+            return buildFallbackImageGallerySummary(title, notes, List.of());
+        }
+
+        if (!isConfigured()) {
+            return buildFallbackImageGallerySummary(title, notes, normalizedAnalyses);
+        }
+
+        try {
+            String prompt = """
+                You are summarizing a saved gallery of images. Write exactly 3 sentences that help the user remember the gallery as one saved item.
+
+                Requirements:
+                - Sentence 1: explain the overall subject of the gallery and mention how many images it contains.
+                - Sentence 2: combine the most important recurring details, text, scenes, objects, or topics from the image analyses.
+                - Sentence 3: explain why this gallery is useful to keep or what kind of reference it provides later.
+                - Be concrete and specific. Mention names, numbers, locations, products, documents, diagrams, or visible text when available.
+                - Do not write generic filler like "these images were saved for future reference" unless that is the actual point.
+
+                Gallery title: %s
+                Shared notes: %s
+                Number of images: %d
+                Image analyses:
+                %s
+
+                Respond with only the 3 detailed sentences, no bullets or numbering.
+                """.formatted(
+                    sanitize(title),
+                    truncate(sanitize(notes), 800),
+                    normalizedAnalyses.size(),
+                    formatGalleryAnalyses(normalizedAnalyses));
+
+            return sanitize(callGemini(prompt, null));
+        } catch (Exception exception) {
+            return buildFallbackImageGallerySummary(title, notes, normalizedAnalyses);
+        }
+    }
+
+    /**
      * Analyze an image and generate context using Gemini Vision
      */
     public String analyzeImage(byte[] imageData, String mimeType, String filename) {
@@ -695,6 +741,58 @@ public class GeminiService {
             case "TEXT" -> String.format("Text content saved: \"%s\". This written content includes notes, ideas, or important information preserved for future reference. Content is fully searchable and can be found by keywords, phrases, or topics mentioned within the text.", preview);
             default -> String.format("Digital content archived to TimeVault. Resource type: %s. Content preserved with metadata for easy retrieval through search. Automatically organized by type, date, and content for efficient discovery and reference.", type.toLowerCase());
         };
+    }
+
+    private String buildFallbackImageGallerySummary(String title, String notes, List<String> imageAnalyses) {
+        String resolvedTitle = sanitize(title);
+        String resolvedNotes = sanitize(notes);
+        int imageCount = imageAnalyses == null ? 0 : imageAnalyses.size();
+
+        if (imageAnalyses == null || imageAnalyses.isEmpty()) {
+            return String.format(
+                    "%s contains %d saved image%s. Shared notes: %s. The gallery can still be reviewed later even when AI synthesis is unavailable.",
+                    resolvedTitle.isBlank() ? "This gallery" : resolvedTitle,
+                    Math.max(imageCount, 1),
+                    Math.max(imageCount, 1) == 1 ? "" : "s",
+                    resolvedNotes.isBlank() ? "none provided" : truncate(resolvedNotes, 120));
+        }
+
+        List<String> selectedAnalyses = imageAnalyses.stream()
+                .limit(3)
+                .map(this::trimSentenceEnding)
+                .filter(value -> !value.isBlank())
+                .toList();
+
+        String subjectSentence = String.format(
+                "%s contains %d image%s focused on %s.",
+                resolvedTitle.isBlank() ? "This gallery" : resolvedTitle,
+                imageCount,
+                imageCount == 1 ? "" : "s",
+                selectedAnalyses.isEmpty() ? "the saved visual material" : selectedAnalyses.getFirst().toLowerCase(Locale.ROOT));
+
+        String detailSentence = selectedAnalyses.size() > 1
+                ? ensureSentenceEnding(String.join(" ", selectedAnalyses.subList(0, Math.min(selectedAnalyses.size(), 2))))
+                : "The saved images include concrete visual details that can still be searched and reviewed later.";
+
+        String usefulnessSentence = resolvedNotes.isBlank()
+                ? "The gallery remains useful as a visual reference because it preserves the images together in one item."
+                : "Shared notes add extra context: " + truncate(resolvedNotes, 140) + ".";
+
+        return String.join(" ", subjectSentence, detailSentence, usefulnessSentence);
+    }
+
+    private String formatGalleryAnalyses(List<String> imageAnalyses) {
+        if (imageAnalyses == null || imageAnalyses.isEmpty()) {
+            return "";
+        }
+        StringBuilder builder = new StringBuilder();
+        for (int index = 0; index < imageAnalyses.size(); index++) {
+            if (builder.length() > 0) {
+                builder.append('\n');
+            }
+            builder.append("Image ").append(index + 1).append(": ").append(truncate(imageAnalyses.get(index), 500));
+        }
+        return builder.toString();
     }
 
     private String extractDomain(String url) {

@@ -2,18 +2,20 @@ package com.example.desktop.dao.api;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.example.desktop.dao.VaultItemDAO;
+import com.example.desktop.model.GalleryImageFx;
 import com.example.desktop.model.StoredImageRecord;
 import com.example.desktop.model.UnlockedItemSession;
 import com.example.desktop.model.VaultItemFx;
 import com.example.shared.api.ApiMessageResponse;
 import com.example.shared.api.ApiStoredImageDto;
 import com.example.shared.api.ApiVaultItemDto;
+import com.example.shared.api.ApiVaultItemImageDto;
 import com.example.shared.api.ApiVaultItemMutationRequest;
 
 import java.sql.SQLException;
 import java.util.Base64;
+import java.util.Comparator;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * API-backed desktop vault item DAO.
@@ -38,27 +40,27 @@ public class ApiVaultItemDAO implements VaultItemDAO {
     }
 
     @Override
-    public VaultItemFx insert(long userId, VaultItemFx item, StoredImageRecord imageRecord) throws SQLException {
+    public VaultItemFx insert(long userId, VaultItemFx item, List<StoredImageRecord> imageRecords) throws SQLException {
         ApiVaultItemDto savedItem = apiClient.post(
                 "/api/client/vault/items",
-                toMutationRequest(item, imageRecord),
+                toMutationRequest(item, imageRecords),
                 ApiVaultItemDto.class,
                 true);
         VaultItemFx mappedItem = toFxItem(savedItem);
-        preserveTransientState(item, mappedItem, imageRecord);
+        preserveTransientState(item, mappedItem, imageRecords);
         return mappedItem;
     }
 
     @Override
-    public boolean update(long userId, VaultItemFx item, StoredImageRecord imageRecord) throws SQLException {
+    public boolean update(long userId, VaultItemFx item, List<StoredImageRecord> imageRecords) throws SQLException {
         try {
             ApiVaultItemDto updatedItem = apiClient.put(
                     "/api/client/vault/items/" + item.getId(),
-                    toMutationRequest(item, imageRecord),
+                    toMutationRequest(item, imageRecords),
                     ApiVaultItemDto.class,
                     true);
             syncItem(item, updatedItem);
-            preserveTransientState(item, item, imageRecord);
+            preserveTransientState(item, item, imageRecords);
             return true;
         } catch (ApiNotFoundException exception) {
             return false;
@@ -86,19 +88,23 @@ public class ApiVaultItemDAO implements VaultItemDAO {
     }
 
     @Override
-    public Optional<StoredImageRecord> findStoredImageByItemId(long userId, long itemId) throws SQLException {
+    public List<StoredImageRecord> findStoredImagesByItemId(long userId, long itemId) throws SQLException {
         try {
-            ApiStoredImageDto storedImage = apiClient.get(
-                    "/api/client/vault/items/" + itemId + "/image",
-                    ApiStoredImageDto.class,
+            List<ApiStoredImageDto> storedImages = apiClient.get(
+                    "/api/client/vault/items/" + itemId + "/images",
+                    new TypeReference<List<ApiStoredImageDto>>() {},
                     true);
-            return Optional.of(toStoredImageRecord(storedImage));
+            return storedImages.stream()
+                    .map(this::toStoredImageRecord)
+                    .sorted(Comparator.comparingInt(StoredImageRecord::displayOrder)
+                            .thenComparing(record -> record.id() == null ? Long.MAX_VALUE : record.id()))
+                    .toList();
         } catch (ApiNotFoundException exception) {
-            return Optional.empty();
+            return List.of();
         }
     }
 
-    private ApiVaultItemMutationRequest toMutationRequest(VaultItemFx item, StoredImageRecord imageRecord) {
+    private ApiVaultItemMutationRequest toMutationRequest(VaultItemFx item, List<StoredImageRecord> imageRecords) {
         return new ApiVaultItemMutationRequest(
                 item.getTitle(),
                 item.getContent(),
@@ -113,7 +119,9 @@ public class ApiVaultItemDAO implements VaultItemDAO {
                 item.getLockPasswordHash(),
                 item.getLockSalt(),
                 item.getLockPayload(),
-                toStoredImageDto(imageRecord));
+                imageRecords == null ? List.of() : imageRecords.stream()
+                        .map(this::toStoredImageDto)
+                        .toList());
     }
 
     private ApiStoredImageDto toStoredImageDto(StoredImageRecord imageRecord) {
@@ -121,16 +129,26 @@ public class ApiVaultItemDAO implements VaultItemDAO {
             return null;
         }
         return new ApiStoredImageDto(
+                imageRecord.id(),
+                imageRecord.fileName(),
+                imageRecord.aiContext(),
                 imageRecord.mimeType(),
                 imageRecord.byteCount(),
+                imageRecord.displayOrder(),
+                imageRecord.protectedMetadata(),
                 encodeBase64(imageRecord.imageData()),
                 encodeBase64(imageRecord.protectedImageData()));
     }
 
     private StoredImageRecord toStoredImageRecord(ApiStoredImageDto storedImage) {
         return new StoredImageRecord(
+                storedImage.id(),
+                storedImage.fileName(),
+                storedImage.aiContext(),
                 storedImage.mimeType(),
                 storedImage.byteCount(),
+                storedImage.displayOrder(),
+                storedImage.protectedMetadata(),
                 decodeBase64(storedImage.imageDataBase64()),
                 decodeBase64(storedImage.protectedImageDataBase64()));
     }
@@ -157,11 +175,10 @@ public class ApiVaultItemDAO implements VaultItemDAO {
         target.setLockPasswordHash(source.lockPasswordHash());
         target.setLockSalt(source.lockSalt());
         target.setLockPayload(source.lockPayload());
-        target.setImageMimeType(source.imageMimeType());
-        target.setImageByteCount(source.imageByteCount());
+        target.setGalleryImages(mapGalleryImages(source.images()));
     }
 
-    private void preserveTransientState(VaultItemFx source, VaultItemFx target, StoredImageRecord imageRecord) {
+    private void preserveTransientState(VaultItemFx source, VaultItemFx target, List<StoredImageRecord> imageRecords) {
         if (source == null || target == null) {
             return;
         }
@@ -179,18 +196,76 @@ public class ApiVaultItemDAO implements VaultItemDAO {
             target.clearUnlockedSession();
         }
 
-        byte[] cachedBytes = source.getCachedImageBytes();
-        if (cachedBytes.length > 0) {
-            target.setCachedImageBytes(cachedBytes);
-            return;
+        target.setGalleryImages(mergeGalleryImages(target.getGalleryImages(), source.getGalleryImages(), imageRecords));
+    }
+
+    private List<GalleryImageFx> mapGalleryImages(List<ApiVaultItemImageDto> images) {
+        if (images == null || images.isEmpty()) {
+            return List.of();
+        }
+        return images.stream()
+                .filter(java.util.Objects::nonNull)
+                .map(source -> {
+                    GalleryImageFx image = new GalleryImageFx();
+                    image.setId(source.id() == null ? 0L : source.id());
+                    image.setFileName(source.fileName());
+                    image.setAiContext(source.aiContext());
+                    image.setMimeType(source.mimeType());
+                    image.setByteCount(source.byteCount());
+                    image.setDisplayOrder(source.displayOrder());
+                    return image;
+                })
+                .sorted(Comparator.comparingInt(GalleryImageFx::getDisplayOrder)
+                        .thenComparingLong(GalleryImageFx::getId))
+                .toList();
+    }
+
+    private List<GalleryImageFx> mergeGalleryImages(List<GalleryImageFx> targetImages,
+                                                    List<GalleryImageFx> sourceImages,
+                                                    List<StoredImageRecord> imageRecords) {
+        if (targetImages == null || targetImages.isEmpty()) {
+            return List.of();
         }
 
-        if (imageRecord != null && imageRecord.imageData().length > 0) {
-            target.setCachedImageBytes(imageRecord.imageData());
-            return;
-        }
+        List<StoredImageRecord> safeImageRecords = imageRecords == null ? List.of() : imageRecords;
+        return targetImages.stream()
+                .map(targetImage -> {
+                    GalleryImageFx mergedImage = targetImage.copy();
+                    findMatchingSourceImage(targetImage, sourceImages).ifPresent(sourceImage ->
+                            mergedImage.setCachedImageBytes(sourceImage.getCachedImageBytes()));
+                    if (!mergedImage.hasCachedBytes()) {
+                        findMatchingRecord(targetImage, safeImageRecords).ifPresent(record ->
+                                mergedImage.setCachedImageBytes(record.imageData()));
+                    }
+                    return mergedImage;
+                })
+                .toList();
+    }
 
-        target.clearCachedImageBytes();
+    private java.util.Optional<GalleryImageFx> findMatchingSourceImage(GalleryImageFx targetImage, List<GalleryImageFx> sourceImages) {
+        if (targetImage == null || sourceImages == null || sourceImages.isEmpty()) {
+            return java.util.Optional.empty();
+        }
+        return sourceImages.stream()
+                .filter(sourceImage -> matchesImage(targetImage, sourceImage.getId(), sourceImage.getDisplayOrder(), sourceImage.getFileName()))
+                .findFirst();
+    }
+
+    private java.util.Optional<StoredImageRecord> findMatchingRecord(GalleryImageFx targetImage, List<StoredImageRecord> imageRecords) {
+        if (targetImage == null || imageRecords == null || imageRecords.isEmpty()) {
+            return java.util.Optional.empty();
+        }
+        return imageRecords.stream()
+                .filter(record -> matchesImage(targetImage, record.id() == null ? 0L : record.id(), record.displayOrder(), record.fileName()))
+                .findFirst();
+    }
+
+    private boolean matchesImage(GalleryImageFx targetImage, long candidateId, int candidateDisplayOrder, String candidateFileName) {
+        if (targetImage.getId() > 0L && candidateId > 0L) {
+            return targetImage.getId() == candidateId;
+        }
+        return targetImage.getDisplayOrder() == candidateDisplayOrder
+                && java.util.Objects.equals(targetImage.getFileName(), candidateFileName);
     }
 
     private String encodeBase64(byte[] value) {

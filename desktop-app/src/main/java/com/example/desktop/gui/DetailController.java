@@ -3,14 +3,17 @@ package com.example.desktop.gui;
 import com.example.desktop.DesktopNavigator;
 import com.example.desktop.bll.VaultManager;
 import com.example.desktop.model.AppModel;
-import com.example.desktop.model.ImageAssetData;
+import com.example.desktop.model.GalleryImageFx;
 import com.example.desktop.model.VaultItemFx;
 import javafx.application.HostServices;
 import javafx.beans.binding.Bindings;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListView;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextArea;
 import javafx.scene.image.Image;
@@ -21,6 +24,7 @@ import javafx.stage.Stage;
 
 import java.io.ByteArrayInputStream;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Locale;
 
 /**
@@ -77,6 +81,15 @@ public class DetailController implements AppContextAware {
     private Label imageMetaLabel;
 
     @FXML
+    private ListView<GalleryImageFx> detailGalleryListView;
+
+    @FXML
+    private Label selectedImageSectionLabel;
+
+    @FXML
+    private TextArea selectedImageContextArea;
+
+    @FXML
     private FlowPane tagsPane;
 
     @FXML
@@ -94,6 +107,7 @@ public class DetailController implements AppContextAware {
     @FXML
     private Label contentSectionLabel;
 
+    private final ObservableList<GalleryImageFx> detailGalleryImages = FXCollections.observableArrayList();
     private AppModel appModel;
     private VaultManager vaultManager;
     private HostServices hostServices;
@@ -112,12 +126,18 @@ public class DetailController implements AppContextAware {
         appModel.bindText(tagsSectionLabel, "detail.section.tags");
         appModel.bindText(contentSectionLabel, "detail.section.content");
         appModel.bindText(imageSectionLabel, "detail.section.image");
+        appModel.bindText(selectedImageSectionLabel, "detail.section.image.analysis");
         appModel.bindText(trashTitleLabel, "detail.trash.title");
         appModel.bindText(trashCopyLabel, "detail.trash.copy");
         appModel.bindText(unlockTitleLabel, "detail.locked.title");
         appModel.bindText(unlockCopyLabel, "detail.locked.copy");
         appModel.bindPrompt(unlockPasswordField, "detail.unlock.prompt");
         appModel.bindText(unlockButton, "detail.unlock.button");
+
+        detailGalleryListView.setItems(detailGalleryImages);
+        detailGalleryListView.setCellFactory(listView -> new GalleryImageListCell(appModel));
+        detailGalleryListView.getSelectionModel().selectedItemProperty()
+                .addListener((obs, oldImage, newImage) -> updateSelectedImage(newImage));
 
         sourceLink.disableProperty().bind(Bindings.createBooleanBinding(() -> {
             VaultItemFx item = appModel.getSelectedItem();
@@ -254,28 +274,87 @@ public class DetailController implements AppContextAware {
         imageBox.setVisible(true);
         imageBox.setManaged(true);
 
-        vaultManager.loadImageAsset(appModel, item).ifPresentOrElse(imageAsset -> {
-            detailImageView.setImage(new Image(new ByteArrayInputStream(imageAsset.bytes())));
-            imageMetaLabel.setText(formatImageMeta(item, imageAsset));
-        }, () -> {
+        List<GalleryImageFx> galleryImages = vaultManager.loadImageGallery(appModel, item);
+        detailGalleryImages.setAll(galleryImages);
+        if (detailGalleryImages.isEmpty()) {
             detailImageView.setImage(null);
             imageMetaLabel.setText(appModel.text("detail.image.unavailable"));
-        });
+            selectedImageContextArea.setText(appModel.text("detail.image.analysis.none"));
+            return;
+        }
+
+        GalleryImageFx preferredImage = detailGalleryListView.getSelectionModel().getSelectedItem();
+        int preferredIndex = resolvePreferredIndex(preferredImage, detailGalleryImages);
+        detailGalleryListView.getSelectionModel().select(preferredIndex);
+    }
+
+    private int resolvePreferredIndex(GalleryImageFx preferredImage, List<GalleryImageFx> galleryImages) {
+        if (preferredImage == null || galleryImages == null || galleryImages.isEmpty()) {
+            return 0;
+        }
+        for (int index = 0; index < galleryImages.size(); index++) {
+            GalleryImageFx candidate = galleryImages.get(index);
+            if (matchesImage(preferredImage, candidate)) {
+                return index;
+            }
+        }
+        return 0;
+    }
+
+    private boolean matchesImage(GalleryImageFx left, GalleryImageFx right) {
+        if (left == null || right == null) {
+            return false;
+        }
+        if (left.getId() > 0L && right.getId() > 0L) {
+            return left.getId() == right.getId();
+        }
+        return left.getDisplayOrder() == right.getDisplayOrder()
+                && java.util.Objects.equals(left.getFileName(), right.getFileName());
+    }
+
+    private void updateSelectedImage(GalleryImageFx selectedImage) {
+        if (selectedImage == null) {
+            detailImageView.setImage(null);
+            imageMetaLabel.setText("");
+            selectedImageContextArea.setText("");
+            return;
+        }
+
+        if (selectedImage.hasCachedBytes()) {
+            detailImageView.setImage(new Image(new ByteArrayInputStream(selectedImage.getCachedImageBytes())));
+        } else {
+            detailImageView.setImage(null);
+        }
+
+        imageMetaLabel.setText(formatImageMeta(selectedImage));
+        selectedImageContextArea.setText(selectedImage.getAiContext() == null || selectedImage.getAiContext().isBlank()
+                ? appModel.text("detail.image.analysis.none")
+                : selectedImage.getAiContext());
     }
 
     private void clearImagePreview() {
+        detailGalleryImages.clear();
+        detailGalleryListView.getSelectionModel().clearSelection();
         detailImageView.setImage(null);
         imageMetaLabel.setText("");
+        selectedImageContextArea.setText("");
         imageBox.setVisible(false);
         imageBox.setManaged(false);
     }
 
-    private String formatImageMeta(VaultItemFx item, ImageAssetData imageAsset) {
-        String mimeType = imageAsset.mimeType() == null || imageAsset.mimeType().isBlank()
-                ? item.getImageMimeType()
-                : imageAsset.mimeType();
-        String sizeLabel = formatByteCount(Math.max(item.getImageByteCount(), imageAsset.size()));
-        return appModel.text("detail.image.meta", sizeLabel, mimeType.toLowerCase(Locale.ROOT));
+    private String formatImageMeta(GalleryImageFx image) {
+        String mimeType = image.getMimeType() == null || image.getMimeType().isBlank()
+                ? "image"
+                : image.getMimeType().toLowerCase(Locale.ROOT);
+        String sizeLabel = formatByteCount(image.getByteCount());
+        String fileName = image.getFileName() == null || image.getFileName().isBlank()
+                ? appModel.text("item.untitled")
+                : image.getFileName();
+        int selectedIndex = Math.max(detailGalleryListView.getSelectionModel().getSelectedIndex(), 0) + 1;
+        if (detailGalleryImages.size() > 1) {
+            return appModel.text("detail.image.meta.gallery", selectedIndex, detailGalleryImages.size(), fileName, sizeLabel, mimeType);
+        }
+        return appModel.text("detail.image.meta.single", fileName, sizeLabel, mimeType);
     }
 
     private String formatByteCount(long byteCount) {

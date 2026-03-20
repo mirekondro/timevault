@@ -103,11 +103,23 @@ public class ClientVaultController extends ClientApiSupport {
         return ResponseEntity.ok(new ApiMessageResponse("Item restored successfully."));
     }
 
+    @GetMapping("/items/{itemId}/images")
+    public List<ApiStoredImageDto> getStoredImages(@RequestHeader(name = "Authorization", required = false) String authorizationHeader,
+                                                   @PathVariable long itemId) {
+        UserSession session = requireAuthorizedSession(authorizationHeader);
+        List<ApiStoredImageDto> storedImages = desktopVaultApiService.findStoredImages(session.id(), itemId);
+        if (storedImages.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Stored images not found.");
+        }
+        return storedImages;
+    }
+
     @GetMapping("/items/{itemId}/image")
     public ApiStoredImageDto getStoredImage(@RequestHeader(name = "Authorization", required = false) String authorizationHeader,
                                             @PathVariable long itemId) {
         UserSession session = requireAuthorizedSession(authorizationHeader);
-        return desktopVaultApiService.findStoredImage(session.id(), itemId)
+        return desktopVaultApiService.findStoredImages(session.id(), itemId).stream()
+                .findFirst()
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Stored image not found."));
     }
 

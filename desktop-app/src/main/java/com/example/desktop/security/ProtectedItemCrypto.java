@@ -1,6 +1,8 @@
 package com.example.desktop.security;
 
+import com.example.desktop.model.GalleryImageFx;
 import com.example.desktop.model.ProtectedItemData;
+import com.example.desktop.model.StoredImageRecord;
 import com.example.desktop.model.UnlockedItemSession;
 import com.example.desktop.model.VaultItemFx;
 import com.example.shared.security.PasswordHasher;
@@ -15,6 +17,8 @@ import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
 import java.util.Base64;
+import java.util.Comparator;
+import java.util.List;
 
 /**
  * Encrypts and decrypts item-level protected payloads for the desktop vault.
@@ -32,40 +36,38 @@ public final class ProtectedItemCrypto {
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-    public LockedItemEnvelope createNewLock(ProtectedItemData data, byte[] imageBytes, String rawPassword) {
+    public LockedItemEnvelope createNewLock(ProtectedItemData data, List<StoredImageRecord> images, String rawPassword) {
         byte[] salt = new byte[SALT_BYTES];
         RANDOM.nextBytes(salt);
 
         byte[] encryptionKey = deriveKey(rawPassword, salt);
         String encryptedPayload = encryptPayload(data, encryptionKey);
-        byte[] encryptedImageData = encryptBytes(imageBytes, encryptionKey);
+        List<StoredImageRecord> encryptedImages = encryptImages(images, encryptionKey, List.of());
         return new LockedItemEnvelope(
                 PasswordHasher.hash(rawPassword),
                 Base64.getEncoder().encodeToString(salt),
                 encryptedPayload,
-                encryptedImageData,
-                new UnlockedItemSession(data, encryptionKey, imageBytes));
+                encryptedImages,
+                new UnlockedItemSession(data, encryptionKey, toUnlockedGalleryImages(images, List.of())));
     }
 
-    public LockedItemEnvelope relockWithExistingSession(ProtectedItemData data, byte[] imageBytes, VaultItemFx item) {
+    public LockedItemEnvelope relockWithExistingSession(ProtectedItemData data, List<StoredImageRecord> images, VaultItemFx item) {
         if (item == null || item.getUnlockedSession() == null) {
             throw new IllegalStateException("Cannot re-lock an item that is not unlocked in this session.");
         }
 
         String encryptedPayload = encryptPayload(data, item.getUnlockedSession().encryptionKey());
-        byte[] rawImageBytes = imageBytes == null || imageBytes.length == 0
-                ? item.getUnlockedSession().imageBytes()
-                : imageBytes.clone();
-        byte[] encryptedImageData = encryptBytes(rawImageBytes, item.getUnlockedSession().encryptionKey());
+        List<GalleryImageFx> sessionImages = item.getUnlockedSession().galleryImages();
+        List<StoredImageRecord> encryptedImages = encryptImages(images, item.getUnlockedSession().encryptionKey(), sessionImages);
         return new LockedItemEnvelope(
                 item.getLockPasswordHash(),
                 item.getLockSalt(),
                 encryptedPayload,
-                encryptedImageData,
-                new UnlockedItemSession(data, item.getUnlockedSession().encryptionKey(), rawImageBytes));
+                encryptedImages,
+                new UnlockedItemSession(data, item.getUnlockedSession().encryptionKey(), toUnlockedGalleryImages(images, sessionImages)));
     }
 
-    public UnlockedItemSession unlock(VaultItemFx item, byte[] protectedImageData, String rawPassword) {
+    public UnlockedItemSession unlock(VaultItemFx item, List<StoredImageRecord> protectedImages, String rawPassword) {
         if (item == null || !item.isLocked()) {
             throw new IllegalArgumentException("This item is not locked.");
         }
@@ -76,8 +78,8 @@ public final class ProtectedItemCrypto {
         byte[] salt = decode(item.getLockSalt());
         byte[] encryptionKey = deriveKey(rawPassword, salt);
         ProtectedItemData data = decryptPayload(item.getLockPayload(), encryptionKey);
-        byte[] imageBytes = decryptBytes(protectedImageData, encryptionKey);
-        return new UnlockedItemSession(data, encryptionKey, imageBytes);
+        List<GalleryImageFx> unlockedImages = decryptImages(protectedImages, encryptionKey, data);
+        return new UnlockedItemSession(data, encryptionKey, unlockedImages);
     }
 
     private byte[] deriveKey(String rawPassword, byte[] salt) {
@@ -109,6 +111,148 @@ public final class ProtectedItemCrypto {
         } catch (Exception exception) {
             throw new IllegalStateException("Could not decrypt the protected item payload.", exception);
         }
+    }
+
+    private List<StoredImageRecord> encryptImages(List<StoredImageRecord> images,
+                                                  byte[] encryptionKey,
+                                                  List<GalleryImageFx> sessionImages) {
+        if (images == null || images.isEmpty()) {
+            return List.of();
+        }
+
+        return images.stream()
+                .filter(image -> image != null && image.byteCount() > 0L)
+                .sorted(Comparator.comparingInt(StoredImageRecord::displayOrder)
+                        .thenComparing(image -> image.id() == null ? Long.MAX_VALUE : image.id()))
+                .map(image -> {
+                    byte[] plainBytes = image.imageData().length > 0
+                            ? image.imageData()
+                            : findMatchingSessionImage(image, sessionImages)
+                                    .map(GalleryImageFx::getCachedImageBytes)
+                                    .orElseGet(() -> new byte[0]);
+                    String resolvedFileName = !image.fileName().isBlank()
+                            ? image.fileName()
+                            : findMatchingSessionImage(image, sessionImages)
+                                    .map(GalleryImageFx::getFileName)
+                                    .orElse("");
+                    String resolvedAiContext = !image.aiContext().isBlank()
+                            ? image.aiContext()
+                            : findMatchingSessionImage(image, sessionImages)
+                                    .map(GalleryImageFx::getAiContext)
+                                    .orElse("");
+
+                    return new StoredImageRecord(
+                            image.id(),
+                            "",
+                            "",
+                            image.mimeType(),
+                            image.byteCount(),
+                            image.displayOrder(),
+                            encryptImageMetadata(new ProtectedImageMetadata(resolvedFileName, resolvedAiContext), encryptionKey),
+                            new byte[0],
+                            encryptBytes(plainBytes, encryptionKey));
+                })
+                .toList();
+    }
+
+    private List<GalleryImageFx> decryptImages(List<StoredImageRecord> protectedImages,
+                                               byte[] encryptionKey,
+                                               ProtectedItemData data) {
+        if (protectedImages == null || protectedImages.isEmpty()) {
+            return List.of();
+        }
+
+        boolean legacySingleImage = protectedImages.size() == 1
+                && protectedImages.getFirst().protectedMetadata().isBlank();
+
+        return protectedImages.stream()
+                .filter(image -> image != null && image.byteCount() > 0L)
+                .sorted(Comparator.comparingInt(StoredImageRecord::displayOrder)
+                        .thenComparing(image -> image.id() == null ? Long.MAX_VALUE : image.id()))
+                .map(image -> {
+                    ProtectedImageMetadata metadata = legacySingleImage
+                            ? new ProtectedImageMetadata(data.content(), data.aiContext())
+                            : decryptImageMetadata(image.protectedMetadata(), encryptionKey);
+                    GalleryImageFx unlockedImage = new GalleryImageFx();
+                    unlockedImage.setId(image.id() == null ? 0L : image.id());
+                    unlockedImage.setFileName(metadata.fileName());
+                    unlockedImage.setAiContext(metadata.aiContext());
+                    unlockedImage.setMimeType(image.mimeType());
+                    unlockedImage.setByteCount(image.byteCount());
+                    unlockedImage.setDisplayOrder(image.displayOrder());
+                    unlockedImage.setCachedImageBytes(decryptBytes(image.protectedImageData(), encryptionKey));
+                    return unlockedImage;
+                })
+                .toList();
+    }
+
+    private String encryptImageMetadata(ProtectedImageMetadata metadata, byte[] encryptionKey) {
+        try {
+            byte[] plainJson = OBJECT_MAPPER.writeValueAsBytes(metadata);
+            return Base64.getEncoder().encodeToString(encryptBytes(plainJson, encryptionKey));
+        } catch (Exception exception) {
+            throw new IllegalStateException("Could not encrypt gallery image metadata.", exception);
+        }
+    }
+
+    private ProtectedImageMetadata decryptImageMetadata(String payload, byte[] encryptionKey) {
+        try {
+            if (payload == null || payload.isBlank()) {
+                return new ProtectedImageMetadata("", "");
+            }
+            byte[] plainJson = decryptBytes(Base64.getDecoder().decode(payload), encryptionKey);
+            return OBJECT_MAPPER.readValue(new String(plainJson, StandardCharsets.UTF_8), ProtectedImageMetadata.class);
+        } catch (Exception exception) {
+            throw new IllegalStateException("Could not decrypt gallery image metadata.", exception);
+        }
+    }
+
+    private List<GalleryImageFx> toUnlockedGalleryImages(List<StoredImageRecord> images, List<GalleryImageFx> sessionImages) {
+        if (images == null || images.isEmpty()) {
+            return List.of();
+        }
+        return images.stream()
+                .filter(image -> image != null && image.byteCount() > 0L)
+                .sorted(Comparator.comparingInt(StoredImageRecord::displayOrder)
+                        .thenComparing(image -> image.id() == null ? Long.MAX_VALUE : image.id()))
+                .map(image -> {
+                    GalleryImageFx unlockedImage = new GalleryImageFx();
+                    unlockedImage.setId(image.id() == null ? 0L : image.id());
+                    unlockedImage.setFileName(!image.fileName().isBlank()
+                            ? image.fileName()
+                            : findMatchingSessionImage(image, sessionImages)
+                                    .map(GalleryImageFx::getFileName)
+                                    .orElse(""));
+                    unlockedImage.setAiContext(!image.aiContext().isBlank()
+                            ? image.aiContext()
+                            : findMatchingSessionImage(image, sessionImages)
+                                    .map(GalleryImageFx::getAiContext)
+                                    .orElse(""));
+                    unlockedImage.setMimeType(image.mimeType());
+                    unlockedImage.setByteCount(image.byteCount());
+                    unlockedImage.setDisplayOrder(image.displayOrder());
+                    unlockedImage.setCachedImageBytes(image.imageData().length > 0
+                            ? image.imageData()
+                            : findMatchingSessionImage(image, sessionImages)
+                                    .map(GalleryImageFx::getCachedImageBytes)
+                                    .orElseGet(() -> new byte[0]));
+                    return unlockedImage;
+                })
+                .toList();
+    }
+
+    private java.util.Optional<GalleryImageFx> findMatchingSessionImage(StoredImageRecord image, List<GalleryImageFx> sessionImages) {
+        if (image == null || sessionImages == null || sessionImages.isEmpty()) {
+            return java.util.Optional.empty();
+        }
+        return sessionImages.stream()
+                .filter(sessionImage -> {
+                    if (image.id() != null && image.id() > 0L && sessionImage.getId() > 0L) {
+                        return image.id() == sessionImage.getId();
+                    }
+                    return image.displayOrder() == sessionImage.getDisplayOrder();
+                })
+                .findFirst();
     }
 
     private byte[] encryptBytes(byte[] plainBytes, byte[] encryptionKey) {
@@ -166,7 +310,10 @@ public final class ProtectedItemCrypto {
             String passwordHash,
             String lockSalt,
             String encryptedPayload,
-            byte[] encryptedImageData,
+            List<StoredImageRecord> encryptedImages,
             UnlockedItemSession unlockedSession) {
+    }
+
+    private record ProtectedImageMetadata(String fileName, String aiContext) {
     }
 }

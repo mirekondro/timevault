@@ -184,12 +184,71 @@ public class SchemaInitializer implements AppInitializer {
 
     private void ensureVaultItemImagesTable(Statement statement) throws SQLException {
         statement.executeUpdate("""
+                IF OBJECT_ID('dbo.vault_item_images', 'U') IS NOT NULL
+                   AND COL_LENGTH('dbo.vault_item_images', 'id') IS NULL
+                BEGIN
+                    CREATE TABLE dbo.vault_item_images_v2 (
+                        id BIGINT IDENTITY(1,1) PRIMARY KEY,
+                        item_id BIGINT NOT NULL,
+                        file_name NVARCHAR(500) NULL,
+                        ai_context NVARCHAR(MAX) NULL,
+                        mime_type NVARCHAR(100) NULL,
+                        byte_count BIGINT NOT NULL CONSTRAINT df_vault_item_images_v2_byte_count DEFAULT 0,
+                        display_order INT NOT NULL CONSTRAINT df_vault_item_images_v2_display_order DEFAULT 0,
+                        protected_metadata NVARCHAR(MAX) NULL,
+                        image_data VARBINARY(MAX) NULL,
+                        protected_image_data VARBINARY(MAX) NULL,
+                        created_at DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
+                        updated_at DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
+                        CONSTRAINT fk_vault_item_images_v2_item
+                            FOREIGN KEY (item_id) REFERENCES dbo.vault_items(id) ON DELETE CASCADE
+                    )
+
+                    INSERT INTO dbo.vault_item_images_v2 (
+                        item_id, file_name, ai_context, mime_type, byte_count, display_order,
+                        protected_metadata, image_data, protected_image_data, created_at, updated_at
+                    )
+                    SELECT legacy.item_id,
+                           CASE
+                               WHEN i.item_type = 'IMAGE' THEN NULLIF(LTRIM(RTRIM(i.content)), '')
+                               ELSE NULL
+                           END,
+                           CASE
+                               WHEN i.item_type = 'IMAGE' THEN NULLIF(LTRIM(RTRIM(i.ai_context)), '')
+                               ELSE NULL
+                           END,
+                           legacy.mime_type,
+                           legacy.byte_count,
+                           0,
+                           NULL,
+                           legacy.image_data,
+                           legacy.protected_image_data,
+                           legacy.created_at,
+                           legacy.updated_at
+                    FROM dbo.vault_item_images legacy
+                    INNER JOIN dbo.vault_items i ON i.id = legacy.item_id
+
+                    DROP TABLE dbo.vault_item_images
+                    EXEC sp_rename 'dbo.vault_item_images_v2', 'vault_item_images'
+
+                    UPDATE dbo.vault_items
+                    SET content = NULL
+                    WHERE item_type = 'IMAGE'
+                END
+                """);
+
+        statement.executeUpdate("""
                 IF OBJECT_ID('dbo.vault_item_images', 'U') IS NULL
                 BEGIN
                     CREATE TABLE dbo.vault_item_images (
-                        item_id BIGINT NOT NULL PRIMARY KEY,
+                        id BIGINT IDENTITY(1,1) PRIMARY KEY,
+                        item_id BIGINT NOT NULL,
+                        file_name NVARCHAR(500) NULL,
+                        ai_context NVARCHAR(MAX) NULL,
                         mime_type NVARCHAR(100) NULL,
                         byte_count BIGINT NOT NULL CONSTRAINT df_vault_item_images_byte_count DEFAULT 0,
+                        display_order INT NOT NULL CONSTRAINT df_vault_item_images_display_order DEFAULT 0,
+                        protected_metadata NVARCHAR(MAX) NULL,
                         image_data VARBINARY(MAX) NULL,
                         protected_image_data VARBINARY(MAX) NULL,
                         created_at DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
@@ -197,6 +256,20 @@ public class SchemaInitializer implements AppInitializer {
                         CONSTRAINT fk_vault_item_images_item
                             FOREIGN KEY (item_id) REFERENCES dbo.vault_items(id) ON DELETE CASCADE
                     )
+                END
+                """);
+
+        statement.executeUpdate("""
+                IF COL_LENGTH('dbo.vault_item_images', 'file_name') IS NULL
+                BEGIN
+                    ALTER TABLE dbo.vault_item_images ADD file_name NVARCHAR(500) NULL
+                END
+                """);
+
+        statement.executeUpdate("""
+                IF COL_LENGTH('dbo.vault_item_images', 'ai_context') IS NULL
+                BEGIN
+                    ALTER TABLE dbo.vault_item_images ADD ai_context NVARCHAR(MAX) NULL
                 END
                 """);
 
@@ -212,6 +285,21 @@ public class SchemaInitializer implements AppInitializer {
                 BEGIN
                     ALTER TABLE dbo.vault_item_images
                     ADD byte_count BIGINT NOT NULL CONSTRAINT df_vault_item_images_byte_count DEFAULT 0
+                END
+                """);
+
+        statement.executeUpdate("""
+                IF COL_LENGTH('dbo.vault_item_images', 'display_order') IS NULL
+                BEGIN
+                    ALTER TABLE dbo.vault_item_images
+                    ADD display_order INT NOT NULL CONSTRAINT df_vault_item_images_display_order DEFAULT 0
+                END
+                """);
+
+        statement.executeUpdate("""
+                IF COL_LENGTH('dbo.vault_item_images', 'protected_metadata') IS NULL
+                BEGIN
+                    ALTER TABLE dbo.vault_item_images ADD protected_metadata NVARCHAR(MAX) NULL
                 END
                 """);
 
@@ -387,6 +475,16 @@ public class SchemaInitializer implements AppInitializer {
                       AND object_id = OBJECT_ID('dbo.vault_item_images')
                 )
                 CREATE INDEX idx_vault_item_images_item_id ON dbo.vault_item_images(item_id)
+                """);
+
+        statement.executeUpdate("""
+                IF NOT EXISTS (
+                    SELECT 1
+                    FROM sys.indexes
+                    WHERE name = 'idx_vault_item_images_item_order'
+                      AND object_id = OBJECT_ID('dbo.vault_item_images')
+                )
+                CREATE INDEX idx_vault_item_images_item_order ON dbo.vault_item_images(item_id, display_order, id)
                 """);
     }
 }

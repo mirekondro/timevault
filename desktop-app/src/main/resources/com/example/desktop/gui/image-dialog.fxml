@@ -4,9 +4,12 @@
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.CheckBox?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
 <?import javafx.scene.control.PasswordField?>
 <?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.TextArea?>
 <?import javafx.scene.control.TextField?>
+<?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Priority?>
 <?import javafx.scene.layout.StackPane?>
@@ -23,20 +26,68 @@
                     <Insets top="28.0" right="28.0" bottom="28.0" left="28.0"/>
                 </padding>
 
-                <VBox maxHeight="-Infinity" maxWidth="560.0" prefWidth="560.0" spacing="14.0" styleClass="dialog-shell">
+                <VBox maxHeight="-Infinity" maxWidth="720.0" prefWidth="720.0" spacing="16.0" styleClass="dialog-shell">
                     <padding>
                         <Insets top="22.0" right="22.0" bottom="22.0" left="22.0"/>
                     </padding>
                     <Label fx:id="dialogTitleLabel" styleClass="section-title"/>
                     <Label fx:id="dialogCopyLabel" styleClass="muted-copy" wrapText="true"/>
                     <Label fx:id="formMessageLabel" managed="false" styleClass="form-error-label" visible="false" wrapText="true"/>
-                    <TextField fx:id="titleField" styleClass="text-field"/>
-                    <HBox spacing="10.0">
-                        <TextField fx:id="pathField" editable="false" styleClass="text-field" HBox.hgrow="ALWAYS"/>
-                        <Button fx:id="browseButton" mnemonicParsing="false" onAction="#handleBrowse"
-                                styleClass="ghost-button"/>
-                    </HBox>
-                    <Label fx:id="pathErrorLabel" managed="false" styleClass="field-error-label" visible="false" wrapText="true"/>
+
+                    <VBox spacing="10.0">
+                        <HBox alignment="CENTER_LEFT" spacing="12.0">
+                            <Label fx:id="gallerySectionLabel" styleClass="section-title"/>
+                            <Label fx:id="galleryCountLabel" styleClass="muted-copy"/>
+                        </HBox>
+                        <HBox spacing="10.0">
+                            <Button fx:id="addImagesButton" mnemonicParsing="false" onAction="#handleAddImages"
+                                    styleClass="form-secondary-action"/>
+                            <Button fx:id="removeImageButton" mnemonicParsing="false" onAction="#handleRemoveImage"
+                                    styleClass="ghost-button"/>
+                            <Button fx:id="moveUpButton" mnemonicParsing="false" onAction="#handleMoveUp"
+                                    styleClass="ghost-button"/>
+                            <Button fx:id="moveDownButton" mnemonicParsing="false" onAction="#handleMoveDown"
+                                    styleClass="ghost-button"/>
+                        </HBox>
+                        <HBox spacing="14.0">
+                            <ListView fx:id="galleryListView" prefHeight="240.0" prefWidth="280.0"
+                                      styleClass="gallery-list-view"/>
+                            <VBox spacing="10.0" HBox.hgrow="ALWAYS">
+                                <StackPane styleClass="image-preview-shell">
+                                    <Label fx:id="previewPlaceholderLabel" styleClass="muted-copy" wrapText="true"/>
+                                    <ImageView fx:id="previewImageView" fitWidth="330.0" fitHeight="220.0" preserveRatio="true"/>
+                                </StackPane>
+                                <Label fx:id="previewMetaLabel" styleClass="muted-copy" wrapText="true"/>
+                                <TextArea fx:id="selectedImageContextArea" editable="false" prefRowCount="5"
+                                          styleClass="readonly-area" wrapText="true" VBox.vgrow="ALWAYS"/>
+                            </VBox>
+                        </HBox>
+                        <Label fx:id="pathErrorLabel" managed="false" styleClass="field-error-label" visible="false" wrapText="true"/>
+                    </VBox>
+
+                    <Button fx:id="analyzeButton" maxWidth="1.7976931348623157E308" mnemonicParsing="false"
+                            onAction="#handleAnalyze" styleClass="form-secondary-action"/>
+
+                    <VBox spacing="8.0">
+                        <Label styleClass="section-title" text="%dialog.image.shared.title"/>
+                        <TextField fx:id="titleField" styleClass="text-field"/>
+                    </VBox>
+
+                    <VBox spacing="8.0">
+                        <Label styleClass="section-title" text="%dialog.image.shared.notes"/>
+                        <TextArea fx:id="notesArea" prefRowCount="4" styleClass="readonly-area" wrapText="true"/>
+                    </VBox>
+
+                    <VBox spacing="8.0">
+                        <Label styleClass="section-title" text="%dialog.image.shared.summary"/>
+                        <TextArea fx:id="summaryArea" prefRowCount="5" styleClass="context-box" wrapText="true"/>
+                    </VBox>
+
+                    <VBox spacing="8.0">
+                        <Label styleClass="section-title" text="%dialog.image.shared.tags"/>
+                        <TextField fx:id="tagsField" styleClass="text-field"/>
+                    </VBox>
+
                     <VBox spacing="10.0" styleClass="lock-box">
                         <CheckBox fx:id="lockToggle" mnemonicParsing="false" styleClass="lock-toggle"/>
                         <PasswordField fx:id="lockPasswordField" styleClass="password-field"/>
@@ -45,6 +96,7 @@
                         <Label fx:id="confirmLockPasswordErrorLabel" managed="false" styleClass="field-error-label" visible="false" wrapText="true"/>
                         <Label fx:id="lockHintLabel" styleClass="muted-copy" wrapText="true"/>
                     </VBox>
+
                     <HBox alignment="CENTER_RIGHT" spacing="10.0" styleClass="dialog-actions">
                         <Button fx:id="cancelButton" cancelButton="true" mnemonicParsing="false"
                                 onAction="#handleCancel" styleClass="ghost-button"/>

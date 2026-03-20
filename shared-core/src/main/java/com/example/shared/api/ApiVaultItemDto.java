@@ -1,6 +1,7 @@
 package com.example.shared.api;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * Desktop-facing vault item response that mirrors the current local DAO shape.
@@ -21,6 +22,5 @@ public record ApiVaultItemDto(
         String lockPasswordHash,
         String lockSalt,
         String lockPayload,
-        String imageMimeType,
-        long imageByteCount) {
+        List<ApiVaultItemImageDto> images) {
 }

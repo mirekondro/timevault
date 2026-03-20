@@ -1,6 +1,7 @@
 package com.example.shared.api;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * Create/update payload for the desktop-facing vault API.
@@ -19,5 +20,5 @@ public record ApiVaultItemMutationRequest(
         String lockPasswordHash,
         String lockSalt,
         String lockPayload,
-        ApiStoredImageDto storedImage) {
+        List<ApiStoredImageDto> storedImages) {
 }

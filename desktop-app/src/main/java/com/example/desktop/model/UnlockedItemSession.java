@@ -1,6 +1,7 @@
 package com.example.desktop.model;
 
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * In-memory unlocked state for a protected item during the current desktop session.
@@ -9,12 +10,14 @@ public final class UnlockedItemSession {
 
     private final ProtectedItemData data;
     private final byte[] encryptionKey;
-    private final byte[] imageBytes;
+    private final List<GalleryImageFx> galleryImages;
 
-    public UnlockedItemSession(ProtectedItemData data, byte[] encryptionKey, byte[] imageBytes) {
+    public UnlockedItemSession(ProtectedItemData data, byte[] encryptionKey, List<GalleryImageFx> galleryImages) {
         this.data = data;
         this.encryptionKey = encryptionKey == null ? new byte[0] : encryptionKey.clone();
-        this.imageBytes = imageBytes == null ? new byte[0] : imageBytes.clone();
+        this.galleryImages = galleryImages == null ? List.of() : galleryImages.stream()
+                .map(GalleryImageFx::copy)
+                .toList();
     }
 
     public ProtectedItemData data() {
@@ -25,12 +28,18 @@ public final class UnlockedItemSession {
         return encryptionKey.clone();
     }
 
+    public List<GalleryImageFx> galleryImages() {
+        return galleryImages.stream()
+                .map(GalleryImageFx::copy)
+                .toList();
+    }
+
     public byte[] imageBytes() {
-        return imageBytes.clone();
+        return galleryImages.isEmpty() ? new byte[0] : galleryImages.getFirst().getCachedImageBytes();
     }
 
     public UnlockedItemSession copy() {
-        return new UnlockedItemSession(data, encryptionKey, imageBytes);
+        return new UnlockedItemSession(data, encryptionKey, galleryImages);
     }
 
     @Override
@@ -38,7 +47,7 @@ public final class UnlockedItemSession {
         return "UnlockedItemSession{"
                 + "data=" + data
                 + ", encryptionKeyBytes=" + encryptionKey.length
-                + ", imageBytes=" + imageBytes.length
+                + ", galleryImages=" + galleryImages.size()
                 + '}';
     }
 
@@ -46,7 +55,7 @@ public final class UnlockedItemSession {
     public int hashCode() {
         int result = data != null ? data.hashCode() : 0;
         result = 31 * result + Arrays.hashCode(encryptionKey);
-        result = 31 * result + Arrays.hashCode(imageBytes);
+        result = 31 * result + galleryImages.hashCode();
         return result;
     }
 
@@ -60,6 +69,6 @@ public final class UnlockedItemSession {
         }
         return java.util.Objects.equals(data, that.data)
                 && Arrays.equals(encryptionKey, that.encryptionKey)
-                && Arrays.equals(imageBytes, that.imageBytes);
+                && java.util.Objects.equals(galleryImages, that.galleryImages);
     }
 }

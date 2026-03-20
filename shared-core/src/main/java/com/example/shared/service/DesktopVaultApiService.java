@@ -2,6 +2,7 @@ package com.example.shared.service;
 
 import com.example.shared.api.ApiStoredImageDto;
 import com.example.shared.api.ApiVaultItemDto;
+import com.example.shared.api.ApiVaultItemImageDto;
 import com.example.shared.api.ApiVaultItemMutationRequest;
 import com.example.shared.model.VaultItem;
 import com.example.shared.model.VaultItemImage;
@@ -14,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Base64;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -72,10 +74,14 @@ public class DesktopVaultApiService {
     }
 
     @Transactional(readOnly = true)
-    public Optional<ApiStoredImageDto> findStoredImage(long userId, long itemId) {
+    public List<ApiStoredImageDto> findStoredImages(long userId, long itemId) {
         return vaultItemRepository.findByIdAndOwnerId(itemId, userId)
-                .map(VaultItem::getImage)
-                .map(this::toStoredImageDto);
+                .map(VaultItem::getImages)
+                .orElseGet(List::of)
+                .stream()
+                .sorted(imageComparator())
+                .map(this::toStoredImageDto)
+                .toList();
     }
 
     private VaultUser requireUser(long userId) {
@@ -114,43 +120,50 @@ public class DesktopVaultApiService {
         item.setLockSalt(emptyIfNull(request.lockSalt()));
         item.setLockPayload(emptyIfNull(request.lockPayload()));
 
-        applyStoredImage(item, request.storedImage(), createdAt, updatedAt);
+        applyStoredImages(item, request.storedImages(), createdAt, updatedAt);
     }
 
-    private void applyStoredImage(VaultItem item,
-                                  ApiStoredImageDto storedImage,
-                                  LocalDateTime createdAt,
-                                  LocalDateTime updatedAt) {
-        if (storedImage == null) {
-            item.setImage(null);
+    private void applyStoredImages(VaultItem item,
+                                   List<ApiStoredImageDto> storedImages,
+                                   LocalDateTime createdAt,
+                                   LocalDateTime updatedAt) {
+        item.clearImages();
+        if (storedImages == null || storedImages.isEmpty()) {
             return;
         }
 
-        byte[] imageData = decodeBase64(storedImage.imageDataBase64());
-        byte[] protectedImageData = decodeBase64(storedImage.protectedImageDataBase64());
-        long resolvedByteCount = Math.max(storedImage.byteCount(), Math.max(imageData.length, protectedImageData.length));
-        if (resolvedByteCount <= 0L) {
-            item.setImage(null);
-            return;
-        }
+        storedImages.stream()
+                .filter(java.util.Objects::nonNull)
+                .sorted(Comparator.comparingInt(ApiStoredImageDto::displayOrder)
+                        .thenComparing(image -> image.id() == null ? Long.MAX_VALUE : image.id()))
+                .forEach(storedImage -> {
+                    byte[] imageData = decodeBase64(storedImage.imageDataBase64());
+                    byte[] protectedImageData = decodeBase64(storedImage.protectedImageDataBase64());
+                    long resolvedByteCount = Math.max(storedImage.byteCount(), Math.max(imageData.length, protectedImageData.length));
+                    if (resolvedByteCount <= 0L) {
+                        return;
+                    }
 
-        VaultItemImage image = item.getImage();
-        if (image == null) {
-            image = new VaultItemImage();
-            image.setItem(item);
-        }
-
-        image.setMimeType(emptyIfNull(storedImage.mimeType()));
-        image.setByteCount(resolvedByteCount);
-        image.setImageData(imageData);
-        image.setProtectedImageData(protectedImageData);
-        image.setCreatedAt(image.getCreatedAt() == null ? createdAt : image.getCreatedAt());
-        image.setUpdatedAt(updatedAt);
-        item.setImage(image);
+                    VaultItemImage image = new VaultItemImage();
+                    if (storedImage.id() != null && storedImage.id() > 0L) {
+                        image.setId(storedImage.id());
+                    }
+                    image.setItem(item);
+                    image.setFileName(emptyIfNull(storedImage.fileName()));
+                    image.setAiContext(trimToNull(storedImage.aiContext()));
+                    image.setMimeType(emptyIfNull(storedImage.mimeType()));
+                    image.setByteCount(resolvedByteCount);
+                    image.setDisplayOrder(storedImage.displayOrder());
+                    image.setProtectedMetadata(emptyIfNull(storedImage.protectedMetadata()));
+                    image.setImageData(imageData);
+                    image.setProtectedImageData(protectedImageData);
+                    image.setCreatedAt(createdAt);
+                    image.setUpdatedAt(updatedAt);
+                    item.addImage(image);
+                });
     }
 
     private ApiVaultItemDto toItemDto(VaultItem item) {
-        VaultItemImage image = item.getImage();
         return new ApiVaultItemDto(
                 item.getId(),
                 item.getUserId(),
@@ -167,16 +180,38 @@ public class DesktopVaultApiService {
                 emptyIfNull(item.getLockPasswordHash()),
                 emptyIfNull(item.getLockSalt()),
                 emptyIfNull(item.getLockPayload()),
-                image == null ? "" : emptyIfNull(image.getMimeType()),
-                image == null ? 0L : image.getByteCount());
+                item.getImages().stream()
+                        .sorted(imageComparator())
+                        .map(this::toItemImageDto)
+                        .toList());
+    }
+
+    private ApiVaultItemImageDto toItemImageDto(VaultItemImage image) {
+        return new ApiVaultItemImageDto(
+                image.getId(),
+                emptyIfNull(image.getFileName()),
+                emptyIfNull(image.getAiContext()),
+                emptyIfNull(image.getMimeType()),
+                image.getByteCount(),
+                image.getDisplayOrder());
     }
 
     private ApiStoredImageDto toStoredImageDto(VaultItemImage image) {
         return new ApiStoredImageDto(
+                image.getId(),
+                emptyIfNull(image.getFileName()),
+                emptyIfNull(image.getAiContext()),
                 emptyIfNull(image.getMimeType()),
                 image.getByteCount(),
+                image.getDisplayOrder(),
+                emptyIfNull(image.getProtectedMetadata()),
                 encodeBase64(image.getImageData()),
                 encodeBase64(image.getProtectedImageData()));
+    }
+
+    private Comparator<VaultItemImage> imageComparator() {
+        return Comparator.comparingInt(VaultItemImage::getDisplayOrder)
+                .thenComparing(image -> image.getId() == null ? Long.MAX_VALUE : image.getId());
     }
 
     private String normalizeItemType(String itemType) {

@@ -12,11 +12,14 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * SHARED MODEL - Used by both Web and Desktop versions
@@ -83,9 +86,9 @@ public class VaultItem {
     @JsonIgnore
     private String lockPayload;
 
-    @OneToOne(mappedBy = "item", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "item", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
-    private VaultItemImage image;
+    private List<VaultItemImage> images = new ArrayList<>();
 
     @Column(name = "user_id", nullable = false, insertable = false, updatable = false)
     private Long userId = 1L; // Default user ID for single-user application
@@ -159,8 +162,31 @@ public class VaultItem {
     public String getLockPayload() { return lockPayload; }
     public void setLockPayload(String lockPayload) { this.lockPayload = lockPayload; }
 
-    public VaultItemImage getImage() { return image; }
-    public void setImage(VaultItemImage image) { this.image = image; }
+    public List<VaultItemImage> getImages() {
+        return Collections.unmodifiableList(images);
+    }
+
+    public void setImages(List<VaultItemImage> images) {
+        this.images.clear();
+        if (images == null) {
+            return;
+        }
+        for (VaultItemImage image : images) {
+            addImage(image);
+        }
+    }
+
+    public void addImage(VaultItemImage image) {
+        if (image == null) {
+            return;
+        }
+        image.setItem(this);
+        images.add(image);
+    }
+
+    public void clearImages() {
+        images.clear();
+    }
 
     public Long getUserId() { return userId; }
     public void setUserId(Long userId) { this.userId = userId; }

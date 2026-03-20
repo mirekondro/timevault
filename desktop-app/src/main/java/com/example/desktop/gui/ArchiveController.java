@@ -30,6 +30,7 @@ import java.util.function.Consumer;
 public class ArchiveController implements AppContextAware {
 
     private static final DialogWindowSize FORM_DIALOG_SIZE = new DialogWindowSize(760, 620, 640, 520);
+    private static final DialogWindowSize IMAGE_DIALOG_SIZE = new DialogWindowSize(920, 760, 760, 620);
     private static final DialogWindowSize DELETE_DIALOG_SIZE = new DialogWindowSize(700, 340, 580, 300);
     private static final DialogWindowSize RESTORE_DIALOG_SIZE = new DialogWindowSize(700, 340, 580, 300);
     private static final DialogWindowSize UNLOCK_DIALOG_SIZE = new DialogWindowSize(680, 320, 560, 280);
@@ -154,7 +155,7 @@ public class ArchiveController implements AppContextAware {
                     TextDialogController::prepareForCreate);
             case AppModel.TYPE_IMAGE -> openDialog(
                     "/com/example/desktop/gui/image-dialog.fxml",
-                    FORM_DIALOG_SIZE,
+                    IMAGE_DIALOG_SIZE,
                     ImageDialogController.class,
                     ImageDialogController::prepareForCreate);
             default -> appModel.showInfoKey("status.archive.chooseType");
@@ -186,7 +187,7 @@ public class ArchiveController implements AppContextAware {
                     controller -> controller.prepareForEdit(selectedItem));
             case AppModel.TYPE_IMAGE -> openDialog(
                     "/com/example/desktop/gui/image-dialog.fxml",
-                    FORM_DIALOG_SIZE,
+                    IMAGE_DIALOG_SIZE,
                     ImageDialogController.class,
                     controller -> controller.prepareForEdit(selectedItem));
             default -> appModel.showErrorKey("status.edit.unsupported");

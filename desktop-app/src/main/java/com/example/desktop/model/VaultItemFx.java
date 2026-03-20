@@ -8,6 +8,8 @@ import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Observable desktop model for one archived vault item.
@@ -32,6 +34,7 @@ public class VaultItemFx {
     private String lockSalt = "";
     private String lockPayload = "";
     private UnlockedItemSession unlockedSession;
+    private List<GalleryImageFx> galleryImages = new ArrayList<>();
     private String imageMimeType = "";
     private long imageByteCount;
     private byte[] cachedImageBytes = new byte[0];
@@ -220,12 +223,47 @@ public class VaultItemFx {
         unlockedSession = null;
     }
 
+    public List<GalleryImageFx> getGalleryImages() {
+        return galleryImages.stream()
+                .map(GalleryImageFx::copy)
+                .toList();
+    }
+
+    public void setGalleryImages(List<GalleryImageFx> galleryImages) {
+        this.galleryImages = galleryImages == null ? new ArrayList<>() : galleryImages.stream()
+                .map(GalleryImageFx::copy)
+                .sorted(java.util.Comparator.comparingInt(GalleryImageFx::getDisplayOrder)
+                        .thenComparingLong(GalleryImageFx::getId))
+                .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
+        syncPrimaryImageState();
+    }
+
+    public void clearGalleryImages() {
+        galleryImages.clear();
+        syncPrimaryImageState();
+    }
+
+    public int getImageCount() {
+        return galleryImages.size();
+    }
+
+    public boolean hasStoredImages() {
+        return !galleryImages.isEmpty();
+    }
+
+    public GalleryImageFx getPrimaryImage() {
+        return galleryImages.isEmpty() ? null : galleryImages.getFirst().copy();
+    }
+
     public String getImageMimeType() {
         return imageMimeType;
     }
 
     public void setImageMimeType(String imageMimeType) {
         this.imageMimeType = imageMimeType == null ? "" : imageMimeType;
+        if (!galleryImages.isEmpty()) {
+            galleryImages.getFirst().setMimeType(this.imageMimeType);
+        }
     }
 
     public long getImageByteCount() {
@@ -234,22 +272,34 @@ public class VaultItemFx {
 
     public void setImageByteCount(long imageByteCount) {
         this.imageByteCount = Math.max(imageByteCount, 0L);
+        if (!galleryImages.isEmpty()) {
+            galleryImages.getFirst().setByteCount(this.imageByteCount);
+        }
     }
 
     public boolean hasStoredImage() {
-        return imageByteCount > 0;
+        return hasStoredImages() || imageByteCount > 0L;
     }
 
     public byte[] getCachedImageBytes() {
+        if (!galleryImages.isEmpty()) {
+            return galleryImages.getFirst().getCachedImageBytes();
+        }
         return cachedImageBytes.clone();
     }
 
     public void setCachedImageBytes(byte[] cachedImageBytes) {
         this.cachedImageBytes = cachedImageBytes == null ? new byte[0] : cachedImageBytes.clone();
+        if (!galleryImages.isEmpty()) {
+            galleryImages.getFirst().setCachedImageBytes(this.cachedImageBytes);
+        }
     }
 
     public void clearCachedImageBytes() {
         cachedImageBytes = new byte[0];
+        for (GalleryImageFx galleryImage : galleryImages) {
+            galleryImage.clearCachedImageBytes();
+        }
     }
 
     public String getPreviewSource() {
@@ -262,6 +312,20 @@ public class VaultItemFx {
 
     public String getContentSource() {
         return firstNonBlank(getContent(), "");
+    }
+
+    private void syncPrimaryImageState() {
+        if (galleryImages.isEmpty()) {
+            imageMimeType = "";
+            imageByteCount = 0L;
+            cachedImageBytes = new byte[0];
+            return;
+        }
+
+        GalleryImageFx primaryImage = galleryImages.getFirst();
+        imageMimeType = primaryImage.getMimeType();
+        imageByteCount = primaryImage.getByteCount();
+        cachedImageBytes = primaryImage.getCachedImageBytes();
     }
 
     private String firstNonBlank(String... values) {
